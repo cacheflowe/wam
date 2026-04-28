@@ -5,7 +5,7 @@ export default {
   server: {
     host: true,
     port: "8005",
-    https: false,
+    https: true,
     headers: {
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Embedder-Policy": "require-corp",

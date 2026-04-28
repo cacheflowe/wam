@@ -38,7 +38,8 @@ class WebAudioAcid extends HTMLElement {
     this._blipfxControls = null;
     this._breakControls = null;
 
-    this._p = { bpm: 128 };
+    this._p = { bpm: 128, masterVolume: 1.0 };
+    this._volSlider = null;
 
     this.buildUI();
     this.addCSS();
@@ -53,7 +54,7 @@ class WebAudioAcid extends HTMLElement {
     this._ctx = new AudioContext();
 
     this._masterGain = this._ctx.createGain();
-    this._masterGain.gain.value = 1.0;
+    this._masterGain.gain.value = this._p.masterVolume;
     this._masterGain.connect(this._ctx.destination);
 
     // TB-303 acid
@@ -175,13 +176,13 @@ class WebAudioAcid extends HTMLElement {
           e.preventDefault();
           this._playing ? this._stop() : this._play();
           break;
-        case "z":
+        case "k":
           this._breakControls?.jumpToSegment(0);
           break;
-        case "x":
+        case "h":
           this._breakControls?.jumpToSegment(1);
           break;
-        case "c":
+        case "s":
           this._breakControls?.jumpToSegment(2);
           break;
         case "v":
@@ -205,6 +206,7 @@ class WebAudioAcid extends HTMLElement {
     return {
       v: 1,
       bpm: this._p.bpm,
+      masterVolume: this._p.masterVolume,
       root: parseInt(this._rootSelect.value),
       scale: this._scaleSelect.value,
       acid: this._acidControls?.toJSON(),
@@ -226,6 +228,11 @@ class WebAudioAcid extends HTMLElement {
           if (c) c.bpm = state.bpm;
         },
       );
+    }
+    if (state.masterVolume != null) {
+      this._p.masterVolume = state.masterVolume;
+      if (this._masterGain) this._masterGain.gain.value = state.masterVolume;
+      if (this._volSlider) this._volSlider.value = state.masterVolume;
     }
     if (state.root != null && this._rootSelect) this._rootSelect.value = state.root;
     if (state.scale != null && this._scaleSelect) this._scaleSelect.value = state.scale;
@@ -332,6 +339,21 @@ class WebAudioAcid extends HTMLElement {
       this._debouncedSave();
     });
     transport.appendChild(bpmSlider);
+
+    const volSlider = document.createElement("web-audio-slider");
+    volSlider.setAttribute("param", "masterVolume");
+    volSlider.setAttribute("label", "Vol");
+    volSlider.setAttribute("min", 0);
+    volSlider.setAttribute("max", 1);
+    volSlider.setAttribute("step", 0.01);
+    volSlider.value = this._p.masterVolume;
+    this._volSlider = volSlider;
+    volSlider.addEventListener("slider-input", (e) => {
+      this._p.masterVolume = e.detail.value;
+      if (this._masterGain) this._masterGain.gain.value = e.detail.value;
+      this._debouncedSave();
+    });
+    transport.appendChild(volSlider);
 
     // Global scale selects
     this._rootSelect = document.createElement("select");

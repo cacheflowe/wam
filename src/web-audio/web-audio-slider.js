@@ -276,9 +276,29 @@ export function injectControlsCSS() {
     }
     .wac-controls {
       display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding: 6px 14px 10px;
+    }
+    .wac-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 6px 0;
+    }
+    .wac-section + .wac-section {
+      border-top: 1px solid #1d1d1d;
+    }
+    .wac-section-label {
+      font-size: 0.55em;
+      color: #373737;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+    .wac-section-controls {
+      display: flex;
       flex-wrap: wrap;
       gap: 8px 14px;
-      padding: 10px 14px;
     }
     .wac-wave-row {
       display: flex;
@@ -372,6 +392,26 @@ export function injectControlsCSS() {
     }
   `;
   document.head.appendChild(s);
+}
+
+/**
+ * Create a labeled section group for use inside `.wac-controls`.
+ * Append the returned `el` to the controls container; add children to `controls`.
+ *
+ * @param {string} label  Section heading text
+ * @returns {{ el: HTMLElement, controls: HTMLElement }}
+ */
+export function createSection(label) {
+  const el = document.createElement("div");
+  el.className = "wac-section";
+  const lbl = document.createElement("div");
+  lbl.className = "wac-section-label";
+  lbl.textContent = label;
+  el.appendChild(lbl);
+  const controls = document.createElement("div");
+  controls.className = "wac-section-controls";
+  el.appendChild(controls);
+  return { el, controls };
 }
 
 /**

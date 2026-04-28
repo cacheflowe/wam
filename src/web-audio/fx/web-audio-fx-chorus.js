@@ -144,19 +144,18 @@ export default class WebAudioFxChorus {
         gain.connect(this._wetBus);
       }
 
-      // Start LFO with phase offset
-      lfo.start();
-      // Phase offset via negative start time (Web Audio treats this as phase shift)
-      // Each voice is offset by i/n of a full cycle
-      // Since we can't set phase directly, we use a per-voice frequency micro-detune
-      // approach won't work well. Instead, start at a computed offset:
-      // Actually, the cleanest approach: set different initial delay times to
-      // simulate phase offset, since LFOs all start at phase 0.
-      // Better: use setValueAtTime to offset the delay:
-      const phaseOffsetSec = i / n / Math.max(0.05, this._rate);
-      delay.delayTime.setValueAtTime(baseDelaySec + maxSweep * Math.sin((2 * Math.PI * i) / n), this.ctx.currentTime);
+      // Phase spread via micro-detune: each voice's LFO runs at a slightly
+      // different frequency so they drift in and out of phase over time,
+      // producing genuine chorus spread. ±10% spread across n voices.
+      const detuneFactor = n > 1 ? 1 + 0.1 * ((i / (n - 1)) * 2 - 1) : 1;
+      lfo.frequency.value = this._rate * detuneFactor;
 
-      this._voices.push({ delay, lfo, lfoGain, gain, panL, panR, phaseOffsetSec });
+      // Seed each voice at a different point in its cycle by offsetting the
+      // initial delay time (best approximation without true phase control).
+      delay.delayTime.setValueAtTime(baseDelaySec + maxSweep * Math.sin((2 * Math.PI * i) / n), this.ctx.currentTime);
+      lfo.start();
+
+      this._voices.push({ delay, lfo, lfoGain, gain, panL, panR });
     }
 
     if (useStereo) {
@@ -185,7 +184,11 @@ export default class WebAudioFxChorus {
   }
   set rate(v) {
     this._rate = Math.max(0.05, Math.min(10, v));
-    for (const voice of this._voices) voice.lfo.frequency.value = this._rate;
+    const n = this._voices.length;
+    this._voices.forEach((voice, i) => {
+      const detuneFactor = n > 1 ? 1 + 0.1 * ((i / (n - 1)) * 2 - 1) : 1;
+      voice.lfo.frequency.value = this._rate * detuneFactor;
+    });
   }
 
   get depth() {

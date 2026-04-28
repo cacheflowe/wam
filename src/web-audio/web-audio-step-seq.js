@@ -31,17 +31,16 @@ export default class WebAudioStepSeq extends HTMLElement {
     const style = document.createElement("style");
     style.textContent = `
       web-audio-step-seq {
-        display: flex;
-        flex-wrap: nowrap;
+        display: grid;
+        grid-template-columns: repeat(var(--seq-cols, 16), 1fr);
         gap: 4px;
-        overflow-x: auto;
       }
       web-audio-step-seq .wass-step {
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 3px;
-        min-width: 42px;
+        min-width: 0;
         padding: 4px 2px;
         border-radius: 4px;
         transition: background 0.05s;
@@ -75,6 +74,7 @@ export default class WebAudioStepSeq extends HTMLElement {
       web-audio-step-seq .wass-note {
         font-size: 0.6rem;
         width: 100%;
+        min-width: 0;
         background: #222;
         color: #ccc;
         border: 1px solid #444;
@@ -113,6 +113,16 @@ export default class WebAudioStepSeq extends HTMLElement {
 
   connectedCallback() {
     WebAudioStepSeq.#injectCSS();
+    this._ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width;
+      const cols = w < 350 ? 4 : w < 650 ? 8 : 16;
+      this.style.setProperty("--seq-cols", cols);
+    });
+    this._ro.observe(this);
+  }
+
+  disconnectedCallback() {
+    this._ro?.disconnect();
   }
 
   /**

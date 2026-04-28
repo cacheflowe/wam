@@ -1,5 +1,5 @@
 import "../web-audio-slider.js";
-import { injectControlsCSS, createTitleWithMute } from "../web-audio-slider.js";
+import { injectControlsCSS, createSection, createTitleWithMute } from "../web-audio-slider.js";
 import "../fx/web-audio-fx-unit.js";
 import "../web-audio-waveform.js";
 import "../fx/web-audio-pitch-shift.js";
@@ -395,11 +395,37 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
     controls.className = "wac-controls";
     this.appendChild(controls);
 
-    // File select
+    const mkSelect = (labelText, appendTo) => {
+      const wrap = document.createElement("div");
+      wrap.className = "wac-ctrl";
+      wrap.appendChild(Object.assign(document.createElement("label"), { textContent: labelText }));
+      const sel = document.createElement("select");
+      sel.className = "wac-select";
+      wrap.appendChild(sel);
+      appendTo.appendChild(wrap);
+      return sel;
+    };
+
+    const mkSlider = (def) => {
+      const s = document.createElement("web-audio-slider");
+      s.setAttribute("param", def.param);
+      s.setAttribute("label", def.label);
+      s.setAttribute("min", def.min);
+      s.setAttribute("max", def.max);
+      s.setAttribute("step", def.step);
+      if (def.scale) s.setAttribute("scale", def.scale);
+      s.value = instrument[def.param];
+      this._sliders[def.param] = s;
+      return s;
+    };
+
+    // ---- Loop ----
+    const { el: loopEl, controls: loopCtrl } = createSection("Loop");
+
     if (options.files?.length) {
       const fileWrap = document.createElement("div");
       fileWrap.className = "wac-ctrl wac-ctrl-wide";
-      fileWrap.appendChild(Object.assign(document.createElement("label"), { textContent: "Loop" }));
+      fileWrap.appendChild(Object.assign(document.createElement("label"), { textContent: "Sample" }));
       this._fileSelect = document.createElement("select");
       this._fileSelect.className = "wac-select";
       const noneOpt = document.createElement("option");
@@ -417,91 +443,56 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
         this._emitChange();
       });
       fileWrap.appendChild(this._fileSelect);
-      controls.appendChild(fileWrap);
+      loopCtrl.appendChild(fileWrap);
     }
 
-    // Speed select
-    const speedWrap = document.createElement("div");
-    speedWrap.className = "wac-ctrl";
-    speedWrap.appendChild(Object.assign(document.createElement("label"), { textContent: "Speed" }));
-    const speedSelect = document.createElement("select");
-    speedSelect.className = "wac-select";
-    this._speedSelect = speedSelect;
+    this._speedSelect = mkSelect("Speed", loopCtrl);
     for (const { label, value } of SPEED_MULTIPLIERS) {
       const opt = document.createElement("option");
       opt.value = value;
       opt.textContent = label;
       if (value === instrument.speedMultiplier) opt.selected = true;
-      speedSelect.appendChild(opt);
+      this._speedSelect.appendChild(opt);
     }
-    speedSelect.addEventListener("change", () => {
-      instrument.speedMultiplier = parseFloat(speedSelect.value);
+    this._speedSelect.addEventListener("change", () => {
+      instrument.speedMultiplier = parseFloat(this._speedSelect.value);
       this._emitChange();
     });
-    speedWrap.appendChild(speedSelect);
-    controls.appendChild(speedWrap);
 
-    // Subdivision select
-    const subdivWrap = document.createElement("div");
-    subdivWrap.className = "wac-ctrl";
-    subdivWrap.appendChild(Object.assign(document.createElement("label"), { textContent: "Jump Grid" }));
-    const subdivSelect = document.createElement("select");
-    subdivSelect.className = "wac-select";
-    this._subdivSelect = subdivSelect;
+    this._subdivSelect = mkSelect("Jump Grid", loopCtrl);
     for (const v of [4, 8, 16]) {
       const opt = document.createElement("option");
       opt.value = v;
       opt.textContent = `÷${v}`;
       if (v === instrument.subdivision) opt.selected = true;
-      subdivSelect.appendChild(opt);
+      this._subdivSelect.appendChild(opt);
     }
-    subdivSelect.addEventListener("change", () => {
-      instrument.subdivision = parseInt(subdivSelect.value);
+    this._subdivSelect.addEventListener("change", () => {
+      instrument.subdivision = parseInt(this._subdivSelect.value);
       this._emitChange();
     });
-    subdivWrap.appendChild(subdivSelect);
-    controls.appendChild(subdivWrap);
 
-    // Return steps select
-    const returnWrap = document.createElement("div");
-    returnWrap.className = "wac-ctrl";
-    returnWrap.appendChild(Object.assign(document.createElement("label"), { textContent: "Return" }));
-    const returnSelect = document.createElement("select");
-    returnSelect.className = "wac-select";
-    this._returnSelect = returnSelect;
-    for (const [v, lbl] of [
-      [1, "1 step"],
-      [2, "2 steps"],
-      [4, "4 steps"],
-      [8, "8 steps"],
-      [16, "16 steps"],
-    ]) {
+    this._returnSelect = mkSelect("Return", loopCtrl);
+    for (const [v, lbl] of [[1, "1 step"], [2, "2 steps"], [4, "4 steps"], [8, "8 steps"], [16, "16 steps"]]) {
       const opt = document.createElement("option");
       opt.value = v;
       opt.textContent = lbl;
       if (v === instrument.returnSteps) opt.selected = true;
-      returnSelect.appendChild(opt);
+      this._returnSelect.appendChild(opt);
     }
-    returnSelect.addEventListener("change", () => {
-      instrument.returnSteps = parseInt(returnSelect.value);
+    this._returnSelect.addEventListener("change", () => {
+      instrument.returnSteps = parseInt(this._returnSelect.value);
       this._emitChange();
     });
-    returnWrap.appendChild(returnSelect);
-    controls.appendChild(returnWrap);
 
-    // Sliders
-    for (const def of WebAudioBreakPlayerControls.SLIDER_DEFS) {
-      const slider = document.createElement("web-audio-slider");
-      slider.setAttribute("param", def.param);
-      slider.setAttribute("label", def.label);
-      slider.setAttribute("min", def.min);
-      slider.setAttribute("max", def.max);
-      slider.setAttribute("step", def.step);
-      if (def.scale) slider.setAttribute("scale", def.scale);
-      slider.value = instrument[def.param];
-      controls.appendChild(slider);
-      this._sliders[def.param] = slider;
-    }
+    controls.appendChild(loopEl);
+
+    // ---- Mix ----
+    const { el: mixEl, controls: mixCtrl } = createSection("Mix");
+    mixCtrl.appendChild(mkSlider({ param: "volume",        label: "Vol",     min: 0, max: 1,    step: 0.01 }));
+    mixCtrl.appendChild(mkSlider({ param: "randomChance",  label: "Random",  min: 0, max: 1,    step: 0.01 }));
+    mixCtrl.appendChild(mkSlider({ param: "reverseChance", label: "Reverse", min: 0, max: 0.25, step: 0.01 }));
+    controls.appendChild(mixEl);
 
     this.addEventListener("slider-input", (e) => {
       if (!this._instrument) return;
@@ -522,9 +513,9 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
     actionRow.className = "wac-action-row";
 
     for (const [label, seg, key] of [
-      ["K", 0, "Z"],
-      ["H", 1, "X"],
-      ["S", 2, "C"],
+      ["K", 0, "K"],
+      ["H", 1, "H"],
+      ["S", 2, "S"],
     ]) {
       const btn = document.createElement("button");
       btn.textContent = `${label} [${key}]`;

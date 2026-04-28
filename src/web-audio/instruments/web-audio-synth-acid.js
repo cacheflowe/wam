@@ -1,7 +1,7 @@
 import "../web-audio-slider.js";
-import { injectControlsCSS, createTitleWithMute } from "../web-audio-slider.js";
+import { injectControlsCSS, createSection, createTitleWithMute } from "../web-audio-slider.js";
 import "../web-audio-step-seq.js";
-import { scaleNoteOptions } from "../web-audio-scales.js";
+import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../web-audio-scales.js";
 
 /**
  * WebAudioSynthAcid — TB-303-style monophonic acid bass synthesizer.
@@ -53,6 +53,8 @@ export default class WebAudioSynthAcid {
     this._out = ctx.createGain();
     this.unisonVoices = 1;
     this.unisonDetune = 0;
+    this.octaveOffset = 0;
+    this.octaveJumpProb = 0;
     this.applyPreset(preset);
   }
 
@@ -140,7 +142,8 @@ export default class WebAudioSynthAcid {
    */
   trigger(midi, stepDurSec, accent, atTime) {
     const ctx = this.ctx;
-    const freq = this._midiToFreq(midi);
+    const shifted = midi + this.octaveOffset * 12 + (Math.random() < this.octaveJumpProb ? 12 : 0);
+    const freq = this._midiToFreq(shifted);
     const prevFreq = this._lastScheduledFreq;
     this._lastScheduledFreq = freq;
 
@@ -253,8 +256,10 @@ export class WebAudioSynthAcidControls extends HTMLElement {
     { param: "attack",     label: "Attack",     min: 0.001, max: 0.3,   step: 0.001 },
     { param: "distortion", label: "Distortion", min: 0,     max: 1,     step: 0.01 },
     { param: "portamento", label: "Portamento", min: 0,     max: 0.5,   step: 0.001 },
-    { param: "unisonVoices", label: "Unison",     min: 1,     max: 4,     step: 1 },
-    { param: "unisonDetune", label: "Detune",     min: 0,     max: 50,    step: 1 },
+    { param: "unisonVoices",   label: "Unison",    min: 1,  max: 4,  step: 1 },
+    { param: "unisonDetune",   label: "Detune",    min: 0,  max: 50, step: 1 },
+    { param: "octaveOffset",   label: "Octave",    min: -2, max: 2,  step: 1 },
+    { param: "octaveJumpProb", label: "Oct Jump",  min: 0,  max: 1,  step: 0.01 },
   ];
 
   static DEFAULT_PATTERN() {
@@ -294,7 +299,21 @@ export class WebAudioSynthAcidControls extends HTMLElement {
     controls.className = "wac-controls";
     this.appendChild(controls);
 
-    // SAW / SQR toggle
+    const mkSlider = (def) => {
+      const s = document.createElement("web-audio-slider");
+      s.setAttribute("param", def.param);
+      s.setAttribute("label", def.label);
+      s.setAttribute("min", def.min);
+      s.setAttribute("max", def.max);
+      s.setAttribute("step", def.step);
+      if (def.scale) s.setAttribute("scale", def.scale);
+      s.value = instrument[def.param];
+      this._sliders[def.param] = s;
+      return s;
+    };
+
+    // ---- Tone ----
+    const { el: toneEl, controls: toneCtrl } = createSection("Tone");
     const waveRow = document.createElement("div");
     waveRow.className = "wac-wave-row";
     ["sawtooth", "square"].forEach((type) => {
@@ -310,9 +329,7 @@ export class WebAudioSynthAcidControls extends HTMLElement {
       });
       waveRow.appendChild(btn);
     });
-    controls.appendChild(waveRow);
-
-    // Preset dropdown
+    toneCtrl.appendChild(waveRow);
     this._presetSelect = document.createElement("select");
     this._presetSelect.className = "wac-select";
     Object.keys(WebAudioSynthAcid.PRESETS).forEach((name) => {
@@ -325,21 +342,36 @@ export class WebAudioSynthAcidControls extends HTMLElement {
       this.applyPreset(this._presetSelect.value);
       this._emitChange();
     });
-    controls.appendChild(this._presetSelect);
+    toneCtrl.appendChild(this._presetSelect);
+    toneCtrl.appendChild(mkSlider({ param: "volume",         label: "Vol",      min: 0,  max: 1, step: 0.01 }));
+    toneCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Octave",   min: -2, max: 2, step: 1 }));
+    toneCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Oct Jump", min: 0,  max: 1, step: 0.01 }));
+    controls.appendChild(toneEl);
 
-    // Sliders
-    for (const def of WebAudioSynthAcidControls.SLIDER_DEFS) {
-      const slider = document.createElement("web-audio-slider");
-      slider.setAttribute("param", def.param);
-      slider.setAttribute("label", def.label);
-      slider.setAttribute("min", def.min);
-      slider.setAttribute("max", def.max);
-      slider.setAttribute("step", def.step);
-      if (def.scale) slider.setAttribute("scale", def.scale);
-      slider.value = instrument[def.param];
-      controls.appendChild(slider);
-      this._sliders[def.param] = slider;
-    }
+    // ---- Filter ----
+    const { el: filterEl, controls: filterCtrl } = createSection("Filter");
+    filterCtrl.appendChild(mkSlider({ param: "cutoff",    label: "Cutoff",    min: 50,   max: 10000, step: 1,    scale: "log" }));
+    filterCtrl.appendChild(mkSlider({ param: "resonance", label: "Resonance", min: 0.1,  max: 30,    step: 0.1 }));
+    filterCtrl.appendChild(mkSlider({ param: "envMod",    label: "Env Mod",   min: 0,    max: 1,     step: 0.01 }));
+    controls.appendChild(filterEl);
+
+    // ---- Envelope ----
+    const { el: envEl, controls: envCtrl } = createSection("Envelope");
+    envCtrl.appendChild(mkSlider({ param: "attack", label: "Attack", min: 0.001, max: 0.3, step: 0.001 }));
+    envCtrl.appendChild(mkSlider({ param: "decay",  label: "Decay",  min: 0.01,  max: 2,   step: 0.01 }));
+    controls.appendChild(envEl);
+
+    // ---- Character ----
+    const { el: charEl, controls: charCtrl } = createSection("Character");
+    charCtrl.appendChild(mkSlider({ param: "distortion", label: "Distortion", min: 0, max: 1,   step: 0.01 }));
+    charCtrl.appendChild(mkSlider({ param: "portamento", label: "Portamento", min: 0, max: 0.5, step: 0.001 }));
+    controls.appendChild(charEl);
+
+    // ---- Unison ----
+    const { el: unisonEl, controls: unisonCtrl } = createSection("Unison");
+    unisonCtrl.appendChild(mkSlider({ param: "unisonVoices", label: "Voices", min: 1, max: 4,  step: 1 }));
+    unisonCtrl.appendChild(mkSlider({ param: "unisonDetune", label: "Detune", min: 0, max: 50, step: 1 }));
+    controls.appendChild(unisonEl);
 
     // Delegated slider listener
     this.addEventListener("slider-input", (e) => {

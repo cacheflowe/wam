@@ -1,5 +1,5 @@
 import "../web-audio-slider.js";
-import { injectControlsCSS, createTitleWithMute } from "../web-audio-slider.js";
+import { injectControlsCSS, createSection, createTitleWithMute } from "../web-audio-slider.js";
 import "../web-audio-step-seq.js";
 import { buildChordFromScale, scaleNotesInRange, scaleNoteOptions } from "../web-audio-scales.js";
 
@@ -340,6 +340,8 @@ export default class WebAudioSynthFM {
 
     this._lfoInterval = 0; // beats (0 = off)
     this._bpm = 120;
+    this.octaveOffset = 0;
+    this.octaveJumpProb = 0;
 
     this.applyPreset(preset);
   }
@@ -451,9 +453,11 @@ export default class WebAudioSynthFM {
    * @param {number} atTime
    */
   trigger(midiNotes, stepDurSec, atTime) {
-    const notes = Array.isArray(midiNotes) ? midiNotes : [midiNotes];
+    const raw = Array.isArray(midiNotes) ? midiNotes : [midiNotes];
+    const shift = this.octaveOffset * 12 + (Math.random() < this.octaveJumpProb ? 12 : 0);
+    const notes = raw.map((n) => n + shift);
     const dur = this.attack + this.decay + this.release + 0.1;
-    const gainScale = 1 / notes.length; // prevent summed voices from clipping
+    const gainScale = 1 / notes.length;
     for (const midi of notes) this._voice(midi, dur, atTime, gainScale);
   }
 
@@ -515,19 +519,21 @@ export default class WebAudioSynthFM {
 
 export class WebAudioSynthFMControls extends HTMLElement {
   static SLIDER_DEFS = [
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
-    { param: "carrierRatio", label: "Carrier", min: 0.5, max: 4, step: 0.01 },
-    { param: "modRatio", label: "Mod Ratio", min: 0.5, max: 8, step: 0.01 },
-    { param: "modIndex", label: "Mod Index", min: 0, max: 10, step: 0.1 },
-    { param: "modDecay", label: "Mod Decay", min: 0.01, max: 2, step: 0.01 },
-    { param: "attack", label: "Attack", min: 0.001, max: 1, step: 0.001 },
-    { param: "decay", label: "Decay", min: 0.01, max: 2, step: 0.01 },
-    { param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01 },
-    { param: "release", label: "Release", min: 0.01, max: 3, step: 0.01 },
-    { param: "filterFreq", label: "Filter", min: 100, max: 12000, step: 1, scale: "log" },
-    { param: "filterQ", label: "Filter Q", min: 0.5, max: 20, step: 0.1 },
-    { param: "detune", label: "Detune", min: -50, max: 50, step: 1 },
-    { param: "lfoDepth", label: "LFO Depth", min: 0, max: 3000, step: 10 },
+    { param: "volume",         label: "Vol",       min: 0,    max: 1,     step: 0.01 },
+    { param: "octaveOffset",   label: "Octave",    min: -2,   max: 2,     step: 1 },
+    { param: "octaveJumpProb", label: "Oct Jump",  min: 0,    max: 1,     step: 0.01 },
+    { param: "carrierRatio",   label: "Carrier",   min: 0.5,  max: 4,     step: 0.01 },
+    { param: "modRatio",       label: "Mod Ratio", min: 0.5,  max: 8,     step: 0.01 },
+    { param: "modIndex",       label: "Mod Index", min: 0,    max: 10,    step: 0.1 },
+    { param: "modDecay",       label: "Mod Decay", min: 0.01, max: 2,     step: 0.01 },
+    { param: "attack",         label: "Attack",    min: 0.001,max: 1,     step: 0.001 },
+    { param: "decay",          label: "Decay",     min: 0.01, max: 2,     step: 0.01 },
+    { param: "sustain",        label: "Sustain",   min: 0,    max: 1,     step: 0.01 },
+    { param: "release",        label: "Release",   min: 0.01, max: 3,     step: 0.01 },
+    { param: "filterFreq",     label: "Filter",    min: 100,  max: 12000, step: 1,  scale: "log" },
+    { param: "filterQ",        label: "Filter Q",  min: 0.5,  max: 20,    step: 0.1 },
+    { param: "detune",         label: "Detune",    min: -50,  max: 50,    step: 1 },
+    { param: "lfoDepth",       label: "LFO Depth", min: 0,    max: 3000,  step: 10 },
   ];
 
   static DEFAULT_PATTERN() {
@@ -570,7 +576,32 @@ export class WebAudioSynthFMControls extends HTMLElement {
     controls.className = "wac-controls";
     this.appendChild(controls);
 
-    // Preset dropdown
+    const mkSlider = (def) => {
+      const s = document.createElement("web-audio-slider");
+      s.setAttribute("param", def.param);
+      s.setAttribute("label", def.label);
+      s.setAttribute("min", def.min);
+      s.setAttribute("max", def.max);
+      s.setAttribute("step", def.step);
+      if (def.scale) s.setAttribute("scale", def.scale);
+      s.value = instrument[def.param];
+      this._sliders[def.param] = s;
+      return s;
+    };
+
+    const mkSelect = (labelText, appendTo) => {
+      const wrap = document.createElement("div");
+      wrap.className = "wac-ctrl";
+      wrap.appendChild(Object.assign(document.createElement("label"), { textContent: labelText }));
+      const sel = document.createElement("select");
+      sel.className = "wac-select";
+      wrap.appendChild(sel);
+      appendTo.appendChild(wrap);
+      return sel;
+    };
+
+    // ---- Tone ----
+    const { el: toneEl, controls: toneCtrl } = createSection("Tone");
     this._presetSelect = document.createElement("select");
     this._presetSelect.className = "wac-select";
     Object.keys(WebAudioSynthFM.PRESETS).forEach((name) => {
@@ -583,27 +614,38 @@ export class WebAudioSynthFMControls extends HTMLElement {
       this.applyPreset(this._presetSelect.value);
       this._emitChange();
     });
-    controls.appendChild(this._presetSelect);
+    toneCtrl.appendChild(this._presetSelect);
+    toneCtrl.appendChild(mkSlider({ param: "volume",         label: "Vol",      min: 0,  max: 1, step: 0.01 }));
+    toneCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Octave",   min: -2, max: 2, step: 1 }));
+    toneCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Oct Jump", min: 0,  max: 1, step: 0.01 }));
+    controls.appendChild(toneEl);
 
-    for (const def of WebAudioSynthFMControls.SLIDER_DEFS) {
-      const slider = document.createElement("web-audio-slider");
-      slider.setAttribute("param", def.param);
-      slider.setAttribute("label", def.label);
-      slider.setAttribute("min", def.min);
-      slider.setAttribute("max", def.max);
-      slider.setAttribute("step", def.step);
-      if (def.scale) slider.setAttribute("scale", def.scale);
-      slider.value = instrument[def.param];
-      controls.appendChild(slider);
-      this._sliders[def.param] = slider;
-    }
+    // ---- FM ----
+    const { el: fmEl, controls: fmCtrl } = createSection("FM");
+    fmCtrl.appendChild(mkSlider({ param: "carrierRatio", label: "Carrier",   min: 0.5,  max: 4,  step: 0.01 }));
+    fmCtrl.appendChild(mkSlider({ param: "modRatio",     label: "Mod Ratio", min: 0.5,  max: 8,  step: 0.01 }));
+    fmCtrl.appendChild(mkSlider({ param: "modIndex",     label: "Mod Index", min: 0,    max: 10, step: 0.1 }));
+    fmCtrl.appendChild(mkSlider({ param: "modDecay",     label: "Mod Decay", min: 0.01, max: 2,  step: 0.01 }));
+    controls.appendChild(fmEl);
 
-    // LFO interval dropdown (BPM-synced)
-    const lfoIntWrap = document.createElement("div");
-    lfoIntWrap.className = "wac-ctrl";
-    lfoIntWrap.appendChild(Object.assign(document.createElement("label"), { textContent: "LFO Rate" }));
-    this._lfoIntervalSelect = document.createElement("select");
-    this._lfoIntervalSelect.className = "wac-select";
+    // ---- Envelope ----
+    const { el: envEl, controls: envCtrl } = createSection("Envelope");
+    envCtrl.appendChild(mkSlider({ param: "attack",  label: "Attack",  min: 0.001, max: 1, step: 0.001 }));
+    envCtrl.appendChild(mkSlider({ param: "decay",   label: "Decay",   min: 0.01,  max: 2, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "sustain", label: "Sustain", min: 0,     max: 1, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "release", label: "Release", min: 0.01,  max: 3, step: 0.01 }));
+    controls.appendChild(envEl);
+
+    // ---- Filter ----
+    const { el: filtEl, controls: filtCtrl } = createSection("Filter");
+    filtCtrl.appendChild(mkSlider({ param: "filterFreq", label: "Cutoff",   min: 100, max: 12000, step: 1,   scale: "log" }));
+    filtCtrl.appendChild(mkSlider({ param: "filterQ",    label: "Resonance",min: 0.5, max: 20,    step: 0.1 }));
+    filtCtrl.appendChild(mkSlider({ param: "detune",     label: "Detune",   min: -50, max: 50,    step: 1 }));
+    controls.appendChild(filtEl);
+
+    // ---- LFO ----
+    const { el: lfoEl, controls: lfoCtrl } = createSection("LFO");
+    this._lfoIntervalSelect = mkSelect("Rate", lfoCtrl);
     for (const { label, beats } of WebAudioSynthFM.LFO_INTERVALS) {
       const opt = document.createElement("option");
       opt.value = beats;
@@ -615,15 +657,7 @@ export class WebAudioSynthFMControls extends HTMLElement {
       this._instrument.lfoInterval = parseFloat(this._lfoIntervalSelect.value);
       this._emitChange();
     });
-    lfoIntWrap.appendChild(this._lfoIntervalSelect);
-    controls.appendChild(lfoIntWrap);
-
-    // LFO shape dropdown
-    const lfoWrap = document.createElement("div");
-    lfoWrap.className = "wac-ctrl";
-    lfoWrap.appendChild(Object.assign(document.createElement("label"), { textContent: "LFO Shape" }));
-    this._lfoShapeSelect = document.createElement("select");
-    this._lfoShapeSelect.className = "wac-select";
+    this._lfoShapeSelect = mkSelect("Shape", lfoCtrl);
     for (const shape of ["sine", "triangle", "sawtooth", "square"]) {
       const opt = document.createElement("option");
       opt.value = shape;
@@ -635,8 +669,8 @@ export class WebAudioSynthFMControls extends HTMLElement {
       this._instrument.lfoShape = this._lfoShapeSelect.value;
       this._emitChange();
     });
-    lfoWrap.appendChild(this._lfoShapeSelect);
-    controls.appendChild(lfoWrap);
+    lfoCtrl.appendChild(mkSlider({ param: "lfoDepth", label: "Depth", min: 0, max: 3000, step: 10 }));
+    controls.appendChild(lfoEl);
 
     this.addEventListener("slider-input", (e) => {
       if (!this._instrument) return;
