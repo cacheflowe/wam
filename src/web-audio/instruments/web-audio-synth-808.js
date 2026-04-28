@@ -1,7 +1,7 @@
-import "./web-audio-slider.js";
-import { injectControlsCSS, createTitleWithMute } from "./web-audio-slider.js";
-import "./web-audio-step-seq.js";
-import { scaleNoteOptions } from "./web-audio-scales.js";
+import "../web-audio-slider.js";
+import { injectControlsCSS, createTitleWithMute } from "../web-audio-slider.js";
+import "../web-audio-step-seq.js";
+import { scaleNoteOptions } from "../web-audio-scales.js";
 
 /**
  * WebAudioSynth808 — pitched 808-style sub-bass synthesizer.
@@ -22,14 +22,67 @@ import { scaleNoteOptions } from "./web-audio-scales.js";
  *   bass.trigger(36, stepDurSec, atTime); // C2
  */
 export default class WebAudioSynth808 {
-
   static PRESETS = {
-    Default: { pitchSweepSemitones: 24, pitchDecay: 0.10, decay: 0.80, distortion: 0,   click: 0.4, subOscMix: 0,   tone: 3000, volume: 1.0 },
-    Boom:    { pitchSweepSemitones: 12, pitchDecay: 0.20, decay: 3.0,  distortion: 0,   click: 0.2, subOscMix: 0.5, tone: 2000, volume: 0.9 },
-    Tight:   { pitchSweepSemitones: 24, pitchDecay: 0.06, decay: 0.40, distortion: 0,   click: 0.6, subOscMix: 0,   tone: 4000, volume: 1.0 },
-    Dirty:   { pitchSweepSemitones: 24, pitchDecay: 0.10, decay: 0.70, distortion: 0.5, click: 0.4, subOscMix: 0,   tone: 2500, volume: 0.85 },
-    Deep:    { pitchSweepSemitones: 8,  pitchDecay: 0.25, decay: 2.0,  distortion: 0,   click: 0.1, subOscMix: 0.7, tone: 1500, volume: 0.9 },
-    Trap:    { pitchSweepSemitones: 36, pitchDecay: 0.04, decay: 0.60, distortion: 0,   click: 0.8, subOscMix: 0.2, tone: 5000, volume: 0.95 },
+    Default: {
+      pitchSweepSemitones: 24,
+      pitchDecay: 0.1,
+      decay: 0.8,
+      distortion: 0,
+      click: 0.4,
+      subOscMix: 0,
+      tone: 3000,
+      volume: 1.0,
+    },
+    Boom: {
+      pitchSweepSemitones: 12,
+      pitchDecay: 0.2,
+      decay: 3.0,
+      distortion: 0,
+      click: 0.2,
+      subOscMix: 0.5,
+      tone: 2000,
+      volume: 0.9,
+    },
+    Tight: {
+      pitchSweepSemitones: 24,
+      pitchDecay: 0.06,
+      decay: 0.4,
+      distortion: 0,
+      click: 0.6,
+      subOscMix: 0,
+      tone: 4000,
+      volume: 1.0,
+    },
+    Dirty: {
+      pitchSweepSemitones: 24,
+      pitchDecay: 0.1,
+      decay: 0.7,
+      distortion: 0.5,
+      click: 0.4,
+      subOscMix: 0,
+      tone: 2500,
+      volume: 0.85,
+    },
+    Deep: {
+      pitchSweepSemitones: 8,
+      pitchDecay: 0.25,
+      decay: 2.0,
+      distortion: 0,
+      click: 0.1,
+      subOscMix: 0.7,
+      tone: 1500,
+      volume: 0.9,
+    },
+    Trap: {
+      pitchSweepSemitones: 36,
+      pitchDecay: 0.04,
+      decay: 0.6,
+      distortion: 0,
+      click: 0.8,
+      subOscMix: 0.2,
+      tone: 5000,
+      volume: 0.95,
+    },
   };
 
   /**
@@ -79,8 +132,12 @@ export default class WebAudioSynth808 {
     this._distortionCurve = this._makeDistortionCurve(v);
   }
 
-  get tone() { return this._filter.frequency.value; }
-  set tone(v) { this._filter.frequency.value = v; }
+  get tone() {
+    return this._filter.frequency.value;
+  }
+  set tone(v) {
+    this._filter.frequency.value = v;
+  }
 
   get volume() {
     return this._out.gain.value;
@@ -109,13 +166,13 @@ export default class WebAudioSynth808 {
     const p = WebAudioSynth808.PRESETS[name];
     if (!p) return;
     if (p.pitchSweepSemitones != null) this.pitchSweepSemitones = p.pitchSweepSemitones;
-    if (p.pitchDecay          != null) this.pitchDecay          = p.pitchDecay;
-    if (p.decay               != null) this.decay               = p.decay;
-    if (p.distortion          != null) this.distortion          = p.distortion;
-    if (p.click               != null) this.click               = p.click;
-    if (p.subOscMix           != null) this.subOscMix           = p.subOscMix;
-    if (p.tone                != null) this.tone                = p.tone;
-    if (p.volume              != null) this.volume              = p.volume;
+    if (p.pitchDecay != null) this.pitchDecay = p.pitchDecay;
+    if (p.decay != null) this.decay = p.decay;
+    if (p.distortion != null) this.distortion = p.distortion;
+    if (p.click != null) this.click = p.click;
+    if (p.subOscMix != null) this.subOscMix = p.subOscMix;
+    if (p.tone != null) this.tone = p.tone;
+    if (p.volume != null) this.volume = p.volume;
   }
 
   // ---- Helpers ----
@@ -167,11 +224,15 @@ export default class WebAudioSynth808 {
 
     osc.connect(dist);
     dist.connect(vca);
-    vca.connect(this._filter);   // → tone filter → _out
+    vca.connect(this._filter); // → tone filter → _out
 
     osc.start(atTime);
     osc.stop(atTime + this.decay + 0.05);
-    osc.onended = () => { osc.disconnect(); dist.disconnect(); vca.disconnect(); };
+    osc.onended = () => {
+      osc.disconnect();
+      dist.disconnect();
+      vca.disconnect();
+    };
 
     // Click transient — pre-baked noise burst, bypasses tone filter for raw punch
     if (this.click > 0) {
@@ -182,7 +243,10 @@ export default class WebAudioSynth808 {
       clickSrc.connect(clickGain);
       clickGain.connect(this._out);
       clickSrc.start(atTime);
-      clickSrc.onended = () => { clickSrc.disconnect(); clickGain.disconnect(); };
+      clickSrc.onended = () => {
+        clickSrc.disconnect();
+        clickGain.disconnect();
+      };
     }
 
     // Sub oscillator — one octave below, through tone filter
@@ -197,7 +261,10 @@ export default class WebAudioSynth808 {
       subGain.connect(this._filter);
       subOsc.start(atTime);
       subOsc.stop(atTime + this.decay + 0.05);
-      subOsc.onended = () => { subOsc.disconnect(); subGain.disconnect(); };
+      subOsc.onended = () => {
+        subOsc.disconnect();
+        subGain.disconnect();
+      };
     }
   }
 }
@@ -205,16 +272,15 @@ export default class WebAudioSynth808 {
 // ---- Controls companion component ----
 
 export class WebAudioSynth808Controls extends HTMLElement {
-
   static SLIDER_DEFS = [
-    { param: "volume",              label: "Vol",         min: 0,    max: 1,    step: 0.01 },
-    { param: "decay",               label: "Decay",       min: 0.1,  max: 3,    step: 0.01 },
-    { param: "pitchSweepSemitones", label: "Pitch Sweep", min: 0,    max: 36,   step: 1 },
-    { param: "pitchDecay",          label: "Pitch Decay",  min: 0.01, max: 1,    step: 0.01 },
-    { param: "distortion",          label: "Distortion",  min: 0,    max: 1,    step: 0.01 },
-    { param: "click",               label: "Click",       min: 0,    max: 1,    step: 0.01 },
-    { param: "subOscMix",           label: "Sub Mix",     min: 0,    max: 1,    step: 0.01 },
-    { param: "tone",                label: "Tone",        min: 50,   max: 8000, step: 1, scale: "log" },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
+    { param: "decay", label: "Decay", min: 0.1, max: 3, step: 0.01 },
+    { param: "pitchSweepSemitones", label: "Pitch Sweep", min: 0, max: 36, step: 1 },
+    { param: "pitchDecay", label: "Pitch Decay", min: 0.01, max: 1, step: 0.01 },
+    { param: "distortion", label: "Distortion", min: 0, max: 1, step: 0.01 },
+    { param: "click", label: "Click", min: 0, max: 1, step: 0.01 },
+    { param: "subOscMix", label: "Sub Mix", min: 0, max: 1, step: 0.01 },
+    { param: "tone", label: "Tone", min: 50, max: 8000, step: 1, scale: "log" },
   ];
 
   static DEFAULT_PATTERN() {
@@ -315,7 +381,9 @@ export class WebAudioSynth808Controls extends HTMLElement {
     }
   }
 
-  setActiveStep(i) { this._seq?.setActiveStep(i); }
+  setActiveStep(i) {
+    this._seq?.setActiveStep(i);
+  }
 
   setScale(rootMidi, scaleName) {
     this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 24, 48));
@@ -364,7 +432,9 @@ export class WebAudioSynth808Controls extends HTMLElement {
     if (this._presetSelect) this._presetSelect.value = name;
   }
 
-  set bpm(v) { if (this._fxUnit) this._fxUnit.bpm = v; }
+  set bpm(v) {
+    if (this._fxUnit) this._fxUnit.bpm = v;
+  }
 
   connect(node) {
     if (this._out) this._out.connect(node.input ?? node);

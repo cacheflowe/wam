@@ -1,5 +1,5 @@
-import "./web-audio-slider.js";
-import { injectControlsCSS, createTitleWithMute } from "./web-audio-slider.js";
+import "../web-audio-slider.js";
+import { injectControlsCSS, createTitleWithMute } from "../web-audio-slider.js";
 
 /**
  * WebAudioSynthBlipFX — procedural sound effect synthesizer.

@@ -1,8 +1,9 @@
-import "./web-audio-slider.js";
-import { injectControlsCSS, createTitleWithMute } from "./web-audio-slider.js";
-import "./web-audio-fx-unit.js";
-import "./web-audio-waveform.js";
-import "./web-audio-time-stretch.js";
+import "../web-audio-slider.js";
+import { injectControlsCSS, createTitleWithMute } from "../web-audio-slider.js";
+import "../fx/web-audio-fx-unit.js";
+import "../web-audio-waveform.js";
+import "../fx/web-audio-pitch-shift.js";
+import "../fx/web-audio-time-stretch.js";
 
 /**
  * WebAudioBreakPlayer — loads a drum loop, time-stretches it to the target
@@ -100,7 +101,7 @@ export default class WebAudioBreakPlayer {
 
     // Initialize pitch-shift effect node (lazy — only on first load when enabled)
     if (this._useTimeStretch && !this._pitchShiftNode) {
-      const { default: WebAudioPitchShift } = await import("./web-audio-pitch-shift.js");
+      const { default: WebAudioPitchShift } = await import("../fx/web-audio-pitch-shift.js");
       this._pitchShiftNode = new WebAudioPitchShift(this.ctx);
       await this._pitchShiftNode.ready;
       this._pitchShiftNode.connect(this._out);

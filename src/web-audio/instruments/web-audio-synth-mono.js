@@ -1,5 +1,5 @@
-import "./web-audio-slider.js";
-import { injectControlsCSS } from "./web-audio-slider.js";
+import "../web-audio-slider.js";
+import { injectControlsCSS, createTitleWithMute } from "../web-audio-slider.js";
 
 /**
  * WebAudioSynthMono — monophonic synth with lowpass filter and ADSR envelopes.
@@ -128,22 +128,26 @@ export default class WebAudioSynthMono {
   applyPreset(name) {
     const p = WebAudioSynthMono.PRESETS[name];
     if (!p) return;
-    if (p.oscType          != null) this.oscType          = p.oscType;
-    if (p.attack           != null) this.attack           = p.attack;
-    if (p.decay            != null) this.decay            = p.decay;
-    if (p.sustain          != null) this.sustain          = p.sustain;
-    if (p.release          != null) this.release          = p.release;
-    if (p.filterFreq       != null) this.filterFreq       = p.filterFreq;
-    if (p.filterQ          != null) this.filterQ          = p.filterQ;
+    if (p.oscType != null) this.oscType = p.oscType;
+    if (p.attack != null) this.attack = p.attack;
+    if (p.decay != null) this.decay = p.decay;
+    if (p.sustain != null) this.sustain = p.sustain;
+    if (p.release != null) this.release = p.release;
+    if (p.filterFreq != null) this.filterFreq = p.filterFreq;
+    if (p.filterQ != null) this.filterQ = p.filterQ;
     if (p.filterEnvOctaves != null) this.filterEnvOctaves = p.filterEnvOctaves;
-    if (p.detune           != null) this.detune           = p.detune;
-    if (p.detune2          != null) this.detune2          = p.detune2;
-    if (p.subGain          != null) this.subGain          = p.subGain;
-    if (p.volume           != null) this.volume           = p.volume;
+    if (p.detune != null) this.detune = p.detune;
+    if (p.detune2 != null) this.detune2 = p.detune2;
+    if (p.subGain != null) this.subGain = p.subGain;
+    if (p.volume != null) this.volume = p.volume;
   }
 
-  get volume() { return this._out.gain.value; }
-  set volume(v) { this._out.gain.value = v; }
+  get volume() {
+    return this._out.gain.value;
+  }
+  set volume(v) {
+    this._out.gain.value = v;
+  }
 
   /** AudioNode that downstream effects/nodes should connect to this._out. */
   get input() {
@@ -237,19 +241,18 @@ export default class WebAudioSynthMono {
 // ---- Controls companion component ----
 
 export class WebAudioSynthMonoControls extends HTMLElement {
-
   static SLIDER_DEFS = [
-    { param: "attack",          label: "Attack",     min: 0.001, max: 1,    step: 0.001 },
-    { param: "decay",           label: "Decay",      min: 0.01,  max: 2,    step: 0.01 },
-    { param: "sustain",         label: "Sustain",    min: 0,     max: 1,    step: 0.01 },
-    { param: "release",         label: "Release",    min: 0.01,  max: 3,    step: 0.01 },
-    { param: "filterFreq",      label: "Filter",     min: 20,    max: 12000,step: 1, scale: "log" },
-    { param: "filterQ",         label: "Filter Q",   min: 0.5,   max: 20,   step: 0.1 },
-    { param: "filterEnvOctaves",label: "Filt Env",   min: 0,     max: 6,    step: 0.1 },
-    { param: "detune",          label: "Detune",     min: -50,   max: 50,   step: 1 },
-    { param: "detune2",         label: "Spread",     min: 0,     max: 50,   step: 1 },
-    { param: "subGain",         label: "Sub",        min: 0,     max: 1,    step: 0.01 },
-    { param: "volume",          label: "Vol",        min: 0,     max: 1,    step: 0.01 },
+    { param: "attack", label: "Attack", min: 0.001, max: 1, step: 0.001 },
+    { param: "decay", label: "Decay", min: 0.01, max: 2, step: 0.01 },
+    { param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01 },
+    { param: "release", label: "Release", min: 0.01, max: 3, step: 0.01 },
+    { param: "filterFreq", label: "Filter", min: 20, max: 12000, step: 1, scale: "log" },
+    { param: "filterQ", label: "Filter Q", min: 0.5, max: 20, step: 0.1 },
+    { param: "filterEnvOctaves", label: "Filt Env", min: 0, max: 6, step: 0.1 },
+    { param: "detune", label: "Detune", min: -50, max: 50, step: 1 },
+    { param: "detune2", label: "Spread", min: 0, max: 50, step: 1 },
+    { param: "subGain", label: "Sub", min: 0, max: 1, step: 0.01 },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
   ];
 
   constructor() {
@@ -289,7 +292,9 @@ export class WebAudioSynthMonoControls extends HTMLElement {
       if (instrument.oscType === type) btn.classList.add("wac-wave-active");
       btn.addEventListener("click", () => {
         instrument.oscType = type;
-        waveRow.querySelectorAll(".wac-wave-btn").forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === type));
+        waveRow
+          .querySelectorAll(".wac-wave-btn")
+          .forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === type));
       });
       waveRow.appendChild(btn);
     });
@@ -350,11 +355,15 @@ export class WebAudioSynthMonoControls extends HTMLElement {
     if (this._presetSelect) this._presetSelect.value = name;
     const waveRow = this.querySelector(".wac-wave-row");
     if (waveRow) {
-      waveRow.querySelectorAll(".wac-wave-btn").forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === this._instrument.oscType));
+      waveRow
+        .querySelectorAll(".wac-wave-btn")
+        .forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === this._instrument.oscType));
     }
   }
 
-  set bpm(v) { if (this._fxUnit) this._fxUnit.bpm = v; }
+  set bpm(v) {
+    if (this._fxUnit) this._fxUnit.bpm = v;
+  }
 
   connect(node) {
     if (this._out) this._out.connect(node.input ?? node);

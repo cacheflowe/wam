@@ -1,12 +1,12 @@
-import WebAudioSynthMono from "../web-audio/web-audio-synth-mono.js";
-import WebAudioSynthPad from "../web-audio/web-audio-synth-pad.js";
-import WebAudioSynthFM from "../web-audio/web-audio-synth-fm.js";
-import WebAudioPercKick from "../web-audio/web-audio-perc-kick.js";
-import WebAudioPercHihat from "../web-audio/web-audio-perc-hihat.js";
-import WebAudioFxReverb from "../web-audio/web-audio-fx-reverb.js";
-import WebAudioFxDelay from "../web-audio/web-audio-fx-delay.js";
+import WebAudioSynthMono from "../web-audio/instruments/web-audio-synth-mono.js";
+import WebAudioSynthPad from "../web-audio/instruments/web-audio-synth-pad.js";
+import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
+import WebAudioPercKick from "../web-audio/instruments/web-audio-perc-kick.js";
+import WebAudioPercHihat from "../web-audio/instruments/web-audio-perc-hihat.js";
+import WebAudioFxReverb from "../web-audio/fx/web-audio-fx-reverb.js";
+import WebAudioFxDelay from "../web-audio/fx/web-audio-fx-delay.js";
 import "../web-audio/web-audio-slider.js";
-import "../web-audio/web-audio-fx-unit.js";
+import "../web-audio/fx/web-audio-fx-unit.js";
 import "../web-audio/web-audio-waveform.js";
 import WebAudioSequencer from "../web-audio/web-audio-sequencer.js";
 import { SCALES_ORDERED as SCALES, buildChordFromScale, LEAD_OSC_TYPES } from "../web-audio/web-audio-scales.js";
@@ -33,7 +33,7 @@ class WebAudioGenerativeMusic extends HTMLElement {
     this._started = false;
     this._autoPilot = false;
     this._autoRaf = null;
-    this._p = { mood: 0.5, excitement: 0.35, health: 0.8, volume: 0.75 };
+    this._p = { mood: 0.5, excitement: 0.35, health: 0.8, volume: 0.25 };
 
     this._autoPhase = {};
     this._autoPeriod = {};

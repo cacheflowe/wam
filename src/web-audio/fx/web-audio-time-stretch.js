@@ -17,8 +17,8 @@
  *   ts.seek(0.5);          // jump to 50% through buffer
  */
 
-import "./web-audio-slider.js";
-import { injectControlsCSS } from "./web-audio-slider.js";
+import "../web-audio-slider.js";
+import { injectControlsCSS } from "../web-audio-slider.js";
 
 export default class WebAudioTimeStretch {
   /**

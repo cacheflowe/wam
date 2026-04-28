@@ -1,9 +1,9 @@
 import WebAudioSequencer from "../web-audio/web-audio-sequencer.js";
-import WebAudioSynthAcid from "../web-audio/web-audio-synth-acid.js";
-import WebAudioSynth808 from "../web-audio/web-audio-synth-808.js";
-import WebAudioSynthBlipFX from "../web-audio/web-audio-synth-blipfx.js";
-import WebAudioBreakPlayer from "../web-audio/web-audio-break-player.js";
-import WebAudioSynthFM from "../web-audio/web-audio-synth-fm.js";
+import WebAudioSynthAcid from "../web-audio/instruments/web-audio-synth-acid.js";
+import WebAudioSynth808 from "../web-audio/instruments/web-audio-synth-808.js";
+import WebAudioSynthBlipFX from "../web-audio/instruments/web-audio-synth-blipfx.js";
+import WebAudioBreakPlayer from "../web-audio/instruments/web-audio-break-player.js";
+import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
 import "../web-audio/web-audio-slider.js";
 import { SCALES, NOTE_NAMES } from "../web-audio/web-audio-scales.js";
 

@@ -26,7 +26,7 @@ import WebAudioFxReverb from "./web-audio-fx-reverb.js";
 import WebAudioFxDelay from "./web-audio-fx-delay.js";
 import WebAudioFxChorus from "./web-audio-fx-chorus.js";
 import WebAudioFxFilter from "./web-audio-fx-filter.js";
-import "./web-audio-slider.js";
+import "../web-audio-slider.js";
 
 export default class WebAudioFxUnit extends HTMLElement {
   static #cssInjected = false;
@@ -171,7 +171,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     }
     if (obj.delayInterval != null && this._delay) {
       this._delay.interval = obj.delayInterval;
-      const sel = this.querySelector('.fx-select');
+      const sel = this.querySelector(".fx-select");
       if (sel) sel.value = obj.delayInterval;
     }
     if (obj.delayFeedback != null && this._delay) {
@@ -286,7 +286,10 @@ export default class WebAudioFxUnit extends HTMLElement {
     // Delay sliders
     this._addSlider("delayFeedback", "Feedbk", 0, 0.9, 0.01, options.delayFeedback ?? 0.35);
     this._addSlider("delayMix", "Mix", 0, 1, 0.01, options.delayMix ?? 0);
-    this._addSlider("delayFilterFreq", "Filter", 200, 12000, 1, options.delayFilterFreq ?? 12000, { hint: "dub", scale: "log" });
+    this._addSlider("delayFilterFreq", "Filter", 200, 12000, 1, options.delayFilterFreq ?? 12000, {
+      hint: "dub",
+      scale: "log",
+    });
     this._addSlider("delayModulation", "Mod", 0, 1, 0.01, 0);
 
     // Chorus controls
@@ -344,20 +347,48 @@ export default class WebAudioFxUnit extends HTMLElement {
     this.addEventListener("slider-input", (e) => {
       const { param, value } = e.detail;
       switch (param) {
-        case "reverbWet":       if (this._reverb) this._reverb.wet = value; break;
-        case "delayFeedback":   if (this._delay)  this._delay.feedback = value; break;
-        case "delayMix":        if (this._delay)  this._delay.wet = value; break;
-        case "delayFilterFreq": if (this._delay)  this._delay.filterFreq = value; break;
-        case "delayModulation": if (this._delay)  this._delay.modulation = value; break;
-        case "chorusRate":      if (this._chorus) this._chorus.rate = value; break;
-        case "chorusDepth":     if (this._chorus) this._chorus.depth = value; break;
-        case "chorusDelay":     if (this._chorus) this._chorus.delay = value; break;
-        case "chorusFeedback":  if (this._chorus) this._chorus.feedback = value; break;
-        case "chorusSpread":    if (this._chorus) this._chorus.spread = value; break;
-        case "chorusWet":       if (this._chorus) this._chorus.wet = value; break;
-        case "lpFreq":          if (this._filter) this._filter.lpFreq = value; break;
-        case "hpFreq":          if (this._filter) this._filter.hpFreq = value; break;
-        case "filterQ":         if (this._filter) this._filter.q = value; break;
+        case "reverbWet":
+          if (this._reverb) this._reverb.wet = value;
+          break;
+        case "delayFeedback":
+          if (this._delay) this._delay.feedback = value;
+          break;
+        case "delayMix":
+          if (this._delay) this._delay.wet = value;
+          break;
+        case "delayFilterFreq":
+          if (this._delay) this._delay.filterFreq = value;
+          break;
+        case "delayModulation":
+          if (this._delay) this._delay.modulation = value;
+          break;
+        case "chorusRate":
+          if (this._chorus) this._chorus.rate = value;
+          break;
+        case "chorusDepth":
+          if (this._chorus) this._chorus.depth = value;
+          break;
+        case "chorusDelay":
+          if (this._chorus) this._chorus.delay = value;
+          break;
+        case "chorusFeedback":
+          if (this._chorus) this._chorus.feedback = value;
+          break;
+        case "chorusSpread":
+          if (this._chorus) this._chorus.spread = value;
+          break;
+        case "chorusWet":
+          if (this._chorus) this._chorus.wet = value;
+          break;
+        case "lpFreq":
+          if (this._filter) this._filter.lpFreq = value;
+          break;
+        case "hpFreq":
+          if (this._filter) this._filter.hpFreq = value;
+          break;
+        case "filterQ":
+          if (this._filter) this._filter.q = value;
+          break;
       }
     });
   }

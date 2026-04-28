@@ -1,7 +1,7 @@
-import "./web-audio-slider.js";
-import { injectControlsCSS, createTitleWithMute } from "./web-audio-slider.js";
-import "./web-audio-step-seq.js";
-import { buildChordFromScale, scaleNotesInRange, scaleNoteOptions } from "./web-audio-scales.js";
+import "../web-audio-slider.js";
+import { injectControlsCSS, createTitleWithMute } from "../web-audio-slider.js";
+import "../web-audio-step-seq.js";
+import { buildChordFromScale, scaleNotesInRange, scaleNoteOptions } from "../web-audio-scales.js";
 
 /**
  * WebAudioSynthFM — polyphonic 2-operator FM synthesizer.
@@ -31,43 +31,274 @@ import { buildChordFromScale, scaleNotesInRange, scaleNoteOptions } from "./web-
  *   // or: new WebAudioSynthFM(ctx, WebAudioSynthFM.PRESETS["Bell"]);
  */
 export default class WebAudioSynthFM {
-
   /** Maps unprefixed preset keys to "fm"-prefixed param names used in demo UIs. */
   static PARAM_KEY_MAP = {
-    carrierRatio: "fmCarrierRatio", modRatio: "fmModRatio", modIndex: "fmModIndex",
-    modDecay: "fmModDecay", attack: "fmAttack", decay: "fmDecay",
-    sustain: "fmSustain", release: "fmRelease", filterFreq: "fmFilterFreq",
-    filterQ: "fmFilterQ", detune: "fmDetune", volume: "fmVolume",
+    carrierRatio: "fmCarrierRatio",
+    modRatio: "fmModRatio",
+    modIndex: "fmModIndex",
+    modDecay: "fmModDecay",
+    attack: "fmAttack",
+    decay: "fmDecay",
+    sustain: "fmSustain",
+    release: "fmRelease",
+    filterFreq: "fmFilterFreq",
+    filterQ: "fmFilterQ",
+    detune: "fmDetune",
+    volume: "fmVolume",
   };
 
   // ---- DX-7-inspired presets ----
 
   static LFO_INTERVALS = [
-    { label: "Off",   beats: 0 },
+    { label: "Off", beats: 0 },
     { label: "4 bar", beats: 16 },
     { label: "2 bar", beats: 8 },
     { label: "1 bar", beats: 4 },
-    { label: "1/2",   beats: 2 },
-    { label: "1/4",   beats: 1 },
-    { label: "1/8",   beats: 0.5 },
-    { label: "1/16",  beats: 0.25 },
+    { label: "1/2", beats: 2 },
+    { label: "1/4", beats: 1 },
+    { label: "1/8", beats: 0.5 },
+    { label: "1/16", beats: 0.25 },
   ];
 
   static PRESETS = {
-    E_Piano:   { carrierRatio: 1, modRatio: 2,   modIndex: 2.5, modDecay: 0.20, attack: 0.005, decay: 0.30, sustain: 0.15, release: 0.5,  filterFreq: 8000,  filterQ: 1,   detune: 0, volume: 0.4,  lfoInterval: 0, lfoDepth: 0, lfoShape: "sine" },
-    "Bell":    { carrierRatio: 1, modRatio: 3.5, modIndex: 5,   modDecay: 0.06, attack: 0.001, decay: 1.20, sustain: 0.0,  release: 2.5,  filterFreq: 10000, filterQ: 1,   detune: 0, volume: 0.35, lfoInterval: 0, lfoDepth: 0, lfoShape: "sine" },
-    "Vibes":   { carrierRatio: 1, modRatio: 4,   modIndex: 1.5, modDecay: 0.08, attack: 0.001, decay: 0.30, sustain: 0.0,  release: 0.6,  filterFreq: 6000,  filterQ: 1,   detune: 0, volume: 0.5,  lfoInterval: 0, lfoDepth: 0, lfoShape: "sine" },
-    "Organ":   { carrierRatio: 1, modRatio: 1,   modIndex: 1.5, modDecay: 1.00, attack: 0.015, decay: 0.08, sustain: 0.9,  release: 0.06, filterFreq: 5000,  filterQ: 1,   detune: 5, volume: 0.35, lfoInterval: 0, lfoDepth: 0, lfoShape: "sine" },
-    "Pad":     { carrierRatio: 1, modRatio: 2,   modIndex: 0.8, modDecay: 2.00, attack: 0.40,  decay: 0.60, sustain: 0.7,  release: 2.5,  filterFreq: 2500,  filterQ: 2,   detune: 8, volume: 0.3,  lfoInterval: 4, lfoDepth: 800, lfoShape: "sine" },
-    "Pluck":   { carrierRatio: 1, modRatio: 7,   modIndex: 7,   modDecay: 0.04, attack: 0.001, decay: 0.12, sustain: 0.0,  release: 0.15, filterFreq: 5000,  filterQ: 1,   detune: 0, volume: 0.55, lfoInterval: 0, lfoDepth: 0, lfoShape: "sine" },
-    "Brass":   { carrierRatio: 1, modRatio: 1,   modIndex: 3,   modDecay: 0.15, attack: 0.08,  decay: 0.20, sustain: 0.6,  release: 0.3,  filterFreq: 4000,  filterQ: 2,   detune: 0, volume: 0.4,  lfoInterval: 0, lfoDepth: 0, lfoShape: "sine" },
-    "Kalimba": { carrierRatio: 1, modRatio: 5,   modIndex: 2,   modDecay: 0.05, attack: 0.001, decay: 0.20, sustain: 0.0,  release: 0.35, filterFreq: 8000,  filterQ: 1,   detune: 0, volume: 0.5,  lfoInterval: 0, lfoDepth: 0, lfoShape: "sine" },
-    "Marimba": { carrierRatio: 1, modRatio: 4,   modIndex: 3,   modDecay: 0.10, attack: 0.002, decay: 0.40, sustain: 0.0,  release: 0.2,  filterFreq: 6000,  filterQ: 1,   detune: 0, volume: 0.9,  lfoInterval: 0, lfoDepth: 0, lfoShape: "sine" },
-    "Glass":   { carrierRatio: 1, modRatio: 7,   modIndex: 2,   modDecay: 0.80, attack: 0.01,  decay: 1.50, sustain: 0.2,  release: 1.0,  filterFreq: 10000, filterQ: 0.5, detune: 3, volume: 0.8,  lfoInterval: 0, lfoDepth: 0, lfoShape: "sine" },
-    "Sitar":   { carrierRatio: 1, modRatio: 5,   modIndex: 6,   modDecay: 0.30, attack: 0.003, decay: 0.80, sustain: 0.1,  release: 0.5,  filterFreq: 4000,  filterQ: 3,   detune: 0, volume: 0.85, lfoInterval: 0, lfoDepth: 0, lfoShape: "sine" },
-    "Wobble":  { carrierRatio: 1, modRatio: 2,   modIndex: 1.5, modDecay: 0.50, attack: 0.01,  decay: 0.40, sustain: 0.5,  release: 1.0,  filterFreq: 3000,  filterQ: 6,   detune: 0, volume: 0.4,  lfoInterval: 1, lfoDepth: 1500, lfoShape: "sine" },
-    "Shimmer": { carrierRatio: 1, modRatio: 3,   modIndex: 1.2, modDecay: 1.50, attack: 0.30,  decay: 0.80, sustain: 0.6,  release: 2.0,  filterFreq: 4000,  filterQ: 3,   detune: 6, volume: 0.35, lfoInterval: 8, lfoDepth: 1200, lfoShape: "triangle" },
-    "Reese":   { carrierRatio: 1, modRatio: 1,   modIndex: 0.5, modDecay: 0.80, attack: 0.02,  decay: 0.50, sustain: 0.6,  release: 1.5,  filterFreq: 1200,  filterQ: 4,   detune: 8, volume: 0.4,  lfoInterval: 4, lfoDepth: 600, lfoShape: "triangle" },
+    E_Piano: {
+      carrierRatio: 1,
+      modRatio: 2,
+      modIndex: 2.5,
+      modDecay: 0.2,
+      attack: 0.005,
+      decay: 0.3,
+      sustain: 0.15,
+      release: 0.5,
+      filterFreq: 8000,
+      filterQ: 1,
+      detune: 0,
+      volume: 0.4,
+      lfoInterval: 0,
+      lfoDepth: 0,
+      lfoShape: "sine",
+    },
+    Bell: {
+      carrierRatio: 1,
+      modRatio: 3.5,
+      modIndex: 5,
+      modDecay: 0.06,
+      attack: 0.001,
+      decay: 1.2,
+      sustain: 0.0,
+      release: 2.5,
+      filterFreq: 10000,
+      filterQ: 1,
+      detune: 0,
+      volume: 0.35,
+      lfoInterval: 0,
+      lfoDepth: 0,
+      lfoShape: "sine",
+    },
+    Vibes: {
+      carrierRatio: 1,
+      modRatio: 4,
+      modIndex: 1.5,
+      modDecay: 0.08,
+      attack: 0.001,
+      decay: 0.3,
+      sustain: 0.0,
+      release: 0.6,
+      filterFreq: 6000,
+      filterQ: 1,
+      detune: 0,
+      volume: 0.5,
+      lfoInterval: 0,
+      lfoDepth: 0,
+      lfoShape: "sine",
+    },
+    Organ: {
+      carrierRatio: 1,
+      modRatio: 1,
+      modIndex: 1.5,
+      modDecay: 1.0,
+      attack: 0.015,
+      decay: 0.08,
+      sustain: 0.9,
+      release: 0.06,
+      filterFreq: 5000,
+      filterQ: 1,
+      detune: 5,
+      volume: 0.35,
+      lfoInterval: 0,
+      lfoDepth: 0,
+      lfoShape: "sine",
+    },
+    Pad: {
+      carrierRatio: 1,
+      modRatio: 2,
+      modIndex: 0.8,
+      modDecay: 2.0,
+      attack: 0.4,
+      decay: 0.6,
+      sustain: 0.7,
+      release: 2.5,
+      filterFreq: 2500,
+      filterQ: 2,
+      detune: 8,
+      volume: 0.3,
+      lfoInterval: 4,
+      lfoDepth: 800,
+      lfoShape: "sine",
+    },
+    Pluck: {
+      carrierRatio: 1,
+      modRatio: 7,
+      modIndex: 7,
+      modDecay: 0.04,
+      attack: 0.001,
+      decay: 0.12,
+      sustain: 0.0,
+      release: 0.15,
+      filterFreq: 5000,
+      filterQ: 1,
+      detune: 0,
+      volume: 0.55,
+      lfoInterval: 0,
+      lfoDepth: 0,
+      lfoShape: "sine",
+    },
+    Brass: {
+      carrierRatio: 1,
+      modRatio: 1,
+      modIndex: 3,
+      modDecay: 0.15,
+      attack: 0.08,
+      decay: 0.2,
+      sustain: 0.6,
+      release: 0.3,
+      filterFreq: 4000,
+      filterQ: 2,
+      detune: 0,
+      volume: 0.4,
+      lfoInterval: 0,
+      lfoDepth: 0,
+      lfoShape: "sine",
+    },
+    Kalimba: {
+      carrierRatio: 1,
+      modRatio: 5,
+      modIndex: 2,
+      modDecay: 0.05,
+      attack: 0.001,
+      decay: 0.2,
+      sustain: 0.0,
+      release: 0.35,
+      filterFreq: 8000,
+      filterQ: 1,
+      detune: 0,
+      volume: 0.5,
+      lfoInterval: 0,
+      lfoDepth: 0,
+      lfoShape: "sine",
+    },
+    Marimba: {
+      carrierRatio: 1,
+      modRatio: 4,
+      modIndex: 3,
+      modDecay: 0.1,
+      attack: 0.002,
+      decay: 0.4,
+      sustain: 0.0,
+      release: 0.2,
+      filterFreq: 6000,
+      filterQ: 1,
+      detune: 0,
+      volume: 0.9,
+      lfoInterval: 0,
+      lfoDepth: 0,
+      lfoShape: "sine",
+    },
+    Glass: {
+      carrierRatio: 1,
+      modRatio: 7,
+      modIndex: 2,
+      modDecay: 0.8,
+      attack: 0.01,
+      decay: 1.5,
+      sustain: 0.2,
+      release: 1.0,
+      filterFreq: 10000,
+      filterQ: 0.5,
+      detune: 3,
+      volume: 0.8,
+      lfoInterval: 0,
+      lfoDepth: 0,
+      lfoShape: "sine",
+    },
+    Sitar: {
+      carrierRatio: 1,
+      modRatio: 5,
+      modIndex: 6,
+      modDecay: 0.3,
+      attack: 0.003,
+      decay: 0.8,
+      sustain: 0.1,
+      release: 0.5,
+      filterFreq: 4000,
+      filterQ: 3,
+      detune: 0,
+      volume: 0.85,
+      lfoInterval: 0,
+      lfoDepth: 0,
+      lfoShape: "sine",
+    },
+    Wobble: {
+      carrierRatio: 1,
+      modRatio: 2,
+      modIndex: 1.5,
+      modDecay: 0.5,
+      attack: 0.01,
+      decay: 0.4,
+      sustain: 0.5,
+      release: 1.0,
+      filterFreq: 3000,
+      filterQ: 6,
+      detune: 0,
+      volume: 0.4,
+      lfoInterval: 1,
+      lfoDepth: 1500,
+      lfoShape: "sine",
+    },
+    Shimmer: {
+      carrierRatio: 1,
+      modRatio: 3,
+      modIndex: 1.2,
+      modDecay: 1.5,
+      attack: 0.3,
+      decay: 0.8,
+      sustain: 0.6,
+      release: 2.0,
+      filterFreq: 4000,
+      filterQ: 3,
+      detune: 6,
+      volume: 0.35,
+      lfoInterval: 8,
+      lfoDepth: 1200,
+      lfoShape: "triangle",
+    },
+    Reese: {
+      carrierRatio: 1,
+      modRatio: 1,
+      modIndex: 0.5,
+      modDecay: 0.8,
+      attack: 0.02,
+      decay: 0.5,
+      sustain: 0.6,
+      release: 1.5,
+      filterFreq: 1200,
+      filterQ: 4,
+      detune: 8,
+      volume: 0.4,
+      lfoInterval: 4,
+      lfoDepth: 600,
+      lfoShape: "triangle",
+    },
   };
 
   /**
@@ -136,22 +367,38 @@ export default class WebAudioSynthFM {
     this._filter.Q.value = v;
   }
 
-  get lfoInterval() { return this._lfoInterval; }
-  set lfoInterval(v) { this._lfoInterval = v; this._updateLfoFreq(); }
+  get lfoInterval() {
+    return this._lfoInterval;
+  }
+  set lfoInterval(v) {
+    this._lfoInterval = v;
+    this._updateLfoFreq();
+  }
 
-  get bpm() { return this._bpm; }
-  set bpm(v) { this._bpm = v; this._updateLfoFreq(); }
+  get bpm() {
+    return this._bpm;
+  }
+  set bpm(v) {
+    this._bpm = v;
+    this._updateLfoFreq();
+  }
 
-  get lfoDepth() { return this._lfoGain.gain.value; }
-  set lfoDepth(v) { this._lfoGain.gain.value = v; }
+  get lfoDepth() {
+    return this._lfoGain.gain.value;
+  }
+  set lfoDepth(v) {
+    this._lfoGain.gain.value = v;
+  }
 
-  get lfoShape() { return this._lfo.type; }
-  set lfoShape(v) { this._lfo.type = v; }
+  get lfoShape() {
+    return this._lfo.type;
+  }
+  set lfoShape(v) {
+    this._lfo.type = v;
+  }
 
   _updateLfoFreq() {
-    this._lfo.frequency.value = this._lfoInterval > 0
-      ? (this._bpm / 60) / this._lfoInterval
-      : 0;
+    this._lfo.frequency.value = this._lfoInterval > 0 ? this._bpm / 60 / this._lfoInterval : 0;
   }
 
   // ---- Routing ----
@@ -173,21 +420,21 @@ export default class WebAudioSynthFM {
     const p = WebAudioSynthFM.PRESETS[name];
     if (!p) return;
     if (p.carrierRatio != null) this.carrierRatio = p.carrierRatio;
-    if (p.modRatio     != null) this.modRatio     = p.modRatio;
-    if (p.modIndex     != null) this.modIndex     = p.modIndex;
-    if (p.modAttack    != null) this.modAttack     = p.modAttack;
-    if (p.modDecay     != null) this.modDecay      = p.modDecay;
-    if (p.attack       != null) this.attack        = p.attack;
-    if (p.decay        != null) this.decay         = p.decay;
-    if (p.sustain      != null) this.sustain       = p.sustain;
-    if (p.release      != null) this.release       = p.release;
-    if (p.filterFreq   != null) this.filterFreq    = p.filterFreq;
-    if (p.filterQ      != null) this.filterQ       = p.filterQ;
-    if (p.detune       != null) this.detune        = p.detune;
-    if (p.volume       != null) this.volume        = p.volume;
-    if (p.lfoInterval != null) this.lfoInterval  = p.lfoInterval;
-    if (p.lfoDepth     != null) this.lfoDepth      = p.lfoDepth;
-    if (p.lfoShape     != null) this.lfoShape      = p.lfoShape;
+    if (p.modRatio != null) this.modRatio = p.modRatio;
+    if (p.modIndex != null) this.modIndex = p.modIndex;
+    if (p.modAttack != null) this.modAttack = p.modAttack;
+    if (p.modDecay != null) this.modDecay = p.modDecay;
+    if (p.attack != null) this.attack = p.attack;
+    if (p.decay != null) this.decay = p.decay;
+    if (p.sustain != null) this.sustain = p.sustain;
+    if (p.release != null) this.release = p.release;
+    if (p.filterFreq != null) this.filterFreq = p.filterFreq;
+    if (p.filterQ != null) this.filterQ = p.filterQ;
+    if (p.detune != null) this.detune = p.detune;
+    if (p.volume != null) this.volume = p.volume;
+    if (p.lfoInterval != null) this.lfoInterval = p.lfoInterval;
+    if (p.lfoDepth != null) this.lfoDepth = p.lfoDepth;
+    if (p.lfoShape != null) this.lfoShape = p.lfoShape;
   }
 
   // ---- Helpers ----
@@ -206,7 +453,7 @@ export default class WebAudioSynthFM {
   trigger(midiNotes, stepDurSec, atTime) {
     const notes = Array.isArray(midiNotes) ? midiNotes : [midiNotes];
     const dur = this.attack + this.decay + this.release + 0.1;
-    const gainScale = 1 / notes.length;  // prevent summed voices from clipping
+    const gainScale = 1 / notes.length; // prevent summed voices from clipping
     for (const midi of notes) this._voice(midi, dur, atTime, gainScale);
   }
 
@@ -267,21 +514,20 @@ export default class WebAudioSynthFM {
 // ---- Controls companion component ----
 
 export class WebAudioSynthFMControls extends HTMLElement {
-
   static SLIDER_DEFS = [
-    { param: "volume",       label: "Vol",        min: 0,    max: 1,     step: 0.01 },
-    { param: "carrierRatio", label: "Carrier",    min: 0.5,  max: 4,     step: 0.01 },
-    { param: "modRatio",     label: "Mod Ratio",  min: 0.5,  max: 8,     step: 0.01 },
-    { param: "modIndex",     label: "Mod Index",  min: 0,    max: 10,    step: 0.1 },
-    { param: "modDecay",     label: "Mod Decay",  min: 0.01, max: 2,     step: 0.01 },
-    { param: "attack",       label: "Attack",     min: 0.001,max: 1,     step: 0.001 },
-    { param: "decay",        label: "Decay",      min: 0.01, max: 2,     step: 0.01 },
-    { param: "sustain",      label: "Sustain",    min: 0,    max: 1,     step: 0.01 },
-    { param: "release",      label: "Release",    min: 0.01, max: 3,     step: 0.01 },
-    { param: "filterFreq",   label: "Filter",     min: 100,  max: 12000, step: 1, scale: "log" },
-    { param: "filterQ",      label: "Filter Q",   min: 0.5,  max: 20,    step: 0.1 },
-    { param: "detune",       label: "Detune",     min: -50,  max: 50,    step: 1 },
-    { param: "lfoDepth",     label: "LFO Depth",  min: 0,    max: 3000,  step: 10 },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
+    { param: "carrierRatio", label: "Carrier", min: 0.5, max: 4, step: 0.01 },
+    { param: "modRatio", label: "Mod Ratio", min: 0.5, max: 8, step: 0.01 },
+    { param: "modIndex", label: "Mod Index", min: 0, max: 10, step: 0.1 },
+    { param: "modDecay", label: "Mod Decay", min: 0.01, max: 2, step: 0.01 },
+    { param: "attack", label: "Attack", min: 0.001, max: 1, step: 0.001 },
+    { param: "decay", label: "Decay", min: 0.01, max: 2, step: 0.01 },
+    { param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01 },
+    { param: "release", label: "Release", min: 0.01, max: 3, step: 0.01 },
+    { param: "filterFreq", label: "Filter", min: 100, max: 12000, step: 1, scale: "log" },
+    { param: "filterQ", label: "Filter Q", min: 0.5, max: 20, step: 0.1 },
+    { param: "detune", label: "Detune", min: -50, max: 50, step: 1 },
+    { param: "lfoDepth", label: "LFO Depth", min: 0, max: 3000, step: 10 },
   ];
 
   static DEFAULT_PATTERN() {
@@ -482,7 +728,9 @@ export class WebAudioSynthFMControls extends HTMLElement {
     }
   }
 
-  setActiveStep(i) { this._seq?.setActiveStep(i); }
+  setActiveStep(i) {
+    this._seq?.setActiveStep(i);
+  }
 
   setScale(rootMidi, scaleName) {
     this._rootMidi = rootMidi;

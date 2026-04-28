@@ -1,57 +1,52 @@
-import "./web-audio-slider.js";
-import { injectControlsCSS } from "./web-audio-slider.js";
+import "../web-audio-slider.js";
+import { injectControlsCSS, createTitleWithMute } from "../web-audio-slider.js";
 
 /**
- * WebAudioPercHihat — bandpass-filtered white noise with fast amplitude decay.
+ * WebAudioPercKick — 808-style kick via sine oscillator with pitch sweep.
  *
- * A pre-generated noise buffer is reused across all triggers for efficiency.
- * Adjust filterFreq/filterQ for open vs closed character, decay for length.
+ * A sine starts at a high frequency and rapidly drops to a low thump,
+ * while the amplitude decays. Adjust startFreq/endFreq/sweepTime/decay
+ * for different flavors (punchy, boomy, snappy).
  *
  * Usage:
- *   const hihat = new WebAudioPercHihat(ctx, { decay: 0.04 }); // tight closed hat
- *   hihat.connect(ctx.destination);
- *   hihat.trigger(0.6, time);
+ *   const kick = new WebAudioPercKick(ctx);
+ *   kick.connect(ctx.destination);
+ *   kick.trigger(0.9, time);
  */
-export default class WebAudioPercHihat {
+export default class WebAudioPercKick {
   static PRESETS = {
-    Default: { filterFreq: 8000, filterQ: 0.8, decay: 0.06, volume: 1 },
-    Open: { filterFreq: 7000, filterQ: 0.6, decay: 0.3, volume: 0.8 },
-    Tight: { filterFreq: 9000, filterQ: 1.2, decay: 0.03, volume: 1 },
-    Shaker: { filterFreq: 6000, filterQ: 0.5, decay: 0.12, volume: 0.7 },
+    Default: { startFreq: 150, endFreq: 40, sweepTime: 0.08, decay: 0.35, volume: 1 },
+    Punchy: { startFreq: 200, endFreq: 50, sweepTime: 0.05, decay: 0.25, volume: 1 },
+    Boomy: { startFreq: 100, endFreq: 30, sweepTime: 0.15, decay: 0.6, volume: 0.9 },
+    Snap: { startFreq: 300, endFreq: 60, sweepTime: 0.03, decay: 0.18, volume: 1 },
   };
 
   constructor(ctx, preset = "Default") {
     this.ctx = ctx;
-    this._noiseBuffer = this._buildNoiseBuffer();
     this._out = ctx.createGain();
     this.applyPreset(preset);
   }
 
-  _buildNoiseBuffer() {
-    const ctx = this.ctx;
-    // Half-second of mono white noise, reused across all triggers
-    const length = Math.floor(ctx.sampleRate * 0.5);
-    const buf = ctx.createBuffer(1, length, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
-    return buf;
-  }
-
   /**
    * Apply a named preset, updating all synth parameters in place.
-   * @param {string} name  Key of WebAudioPercHihat.PRESETS
+   * @param {string} name  Key of WebAudioPercKick.PRESETS
    */
   applyPreset(name) {
-    const p = WebAudioPercHihat.PRESETS[name];
+    const p = WebAudioPercKick.PRESETS[name];
     if (!p) return;
-    if (p.filterFreq != null) this.filterFreq = p.filterFreq;
-    if (p.filterQ    != null) this.filterQ    = p.filterQ;
-    if (p.decay      != null) this.decay      = p.decay;
-    if (p.volume     != null) this.volume     = p.volume;
+    if (p.startFreq != null) this.startFreq = p.startFreq;
+    if (p.endFreq != null) this.endFreq = p.endFreq;
+    if (p.sweepTime != null) this.sweepTime = p.sweepTime;
+    if (p.decay != null) this.decay = p.decay;
+    if (p.volume != null) this.volume = p.volume;
   }
 
-  get volume() { return this._out.gain.value; }
-  set volume(v) { this._out.gain.value = v; }
+  get volume() {
+    return this._out.gain.value;
+  }
+  set volume(v) {
+    this._out.gain.value = v;
+  }
 
   get input() {
     return this._out;
@@ -70,24 +65,21 @@ export default class WebAudioPercHihat {
     const ctx = this.ctx;
     const t = atTime > 0 ? atTime : ctx.currentTime;
 
-    const noise = ctx.createBufferSource();
-    noise.buffer = this._noiseBuffer;
-
-    const filter = ctx.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.value = this.filterFreq;
-    filter.Q.value = this.filterQ;
-
+    const osc = ctx.createOscillator();
     const amp = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(this.startFreq, t);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(1, this.endFreq), t + this.sweepTime);
+
     amp.gain.setValueAtTime(velocity, t);
     amp.gain.exponentialRampToValueAtTime(0.001, t + this.decay);
 
-    noise.connect(filter);
-    filter.connect(amp);
+    osc.connect(amp);
     amp.connect(this._out);
 
-    noise.start(t);
-    noise.stop(t + this.decay + 0.05);
+    osc.start(t);
+    osc.stop(t + this.decay + 0.05);
 
     return this;
   }
@@ -95,13 +87,13 @@ export default class WebAudioPercHihat {
 
 // ---- Controls companion component ----
 
-export class WebAudioPercHihatControls extends HTMLElement {
-
+export class WebAudioPercKickControls extends HTMLElement {
   static SLIDER_DEFS = [
-    { param: "filterFreq", label: "Freq",  min: 2000, max: 16000, step: 1, scale: "log" },
-    { param: "filterQ",    label: "Q",     min: 0.1,  max: 5,     step: 0.1 },
-    { param: "decay",      label: "Decay", min: 0.01, max: 0.5,   step: 0.01 },
-    { param: "volume",     label: "Vol",   min: 0,    max: 1,     step: 0.01 },
+    { param: "startFreq", label: "Start Freq", min: 50, max: 500, step: 1 },
+    { param: "endFreq", label: "End Freq", min: 20, max: 200, step: 1 },
+    { param: "sweepTime", label: "Sweep", min: 0.01, max: 0.5, step: 0.01 },
+    { param: "decay", label: "Decay", min: 0.05, max: 1.5, step: 0.01 },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
   ];
 
   constructor() {
@@ -115,7 +107,7 @@ export class WebAudioPercHihatControls extends HTMLElement {
 
   bind(instrument, ctx, options = {}) {
     this._instrument = instrument;
-    const color = options.color || "#ff0";
+    const color = options.color || "#f44";
     this.innerHTML = "";
     injectControlsCSS();
     this.style.setProperty("--slider-accent", color);
@@ -123,7 +115,7 @@ export class WebAudioPercHihatControls extends HTMLElement {
 
     const title = document.createElement("div");
     title.className = "wac-title";
-    title.textContent = options.title || "Hi-Hat";
+    title.textContent = options.title || "Kick";
     this.appendChild(title);
 
     const controls = document.createElement("div");
@@ -132,7 +124,7 @@ export class WebAudioPercHihatControls extends HTMLElement {
 
     this._presetSelect = document.createElement("select");
     this._presetSelect.className = "wac-select";
-    Object.keys(WebAudioPercHihat.PRESETS).forEach((name) => {
+    Object.keys(WebAudioPercKick.PRESETS).forEach((name) => {
       const opt = document.createElement("option");
       opt.value = name;
       opt.textContent = name.replace(/_/g, " ");
@@ -141,7 +133,7 @@ export class WebAudioPercHihatControls extends HTMLElement {
     this._presetSelect.addEventListener("change", () => this.applyPreset(this._presetSelect.value));
     controls.appendChild(this._presetSelect);
 
-    for (const def of WebAudioPercHihatControls.SLIDER_DEFS) {
+    for (const def of WebAudioPercKickControls.SLIDER_DEFS) {
       const slider = document.createElement("web-audio-slider");
       slider.setAttribute("param", def.param);
       slider.setAttribute("label", def.label);
@@ -161,7 +153,7 @@ export class WebAudioPercHihatControls extends HTMLElement {
 
     this._fxUnit = document.createElement("web-audio-fx-unit");
     this.appendChild(this._fxUnit);
-    this._fxUnit.init(ctx, { title: "HiHat FX", bpm: options.fx?.bpm ?? 120, ...options.fx });
+    this._fxUnit.init(ctx, { title: "Kick FX", bpm: options.fx?.bpm ?? 120, ...options.fx });
 
     const waveform = document.createElement("web-audio-waveform");
     this.appendChild(waveform);
@@ -177,14 +169,16 @@ export class WebAudioPercHihatControls extends HTMLElement {
   applyPreset(name) {
     if (!this._instrument) return;
     this._instrument.applyPreset(name);
-    for (const def of WebAudioPercHihatControls.SLIDER_DEFS) {
+    for (const def of WebAudioPercKickControls.SLIDER_DEFS) {
       const slider = this._sliders[def.param];
       if (slider) slider.value = this._instrument[def.param];
     }
     if (this._presetSelect) this._presetSelect.value = name;
   }
 
-  set bpm(v) { if (this._fxUnit) this._fxUnit.bpm = v; }
+  set bpm(v) {
+    if (this._fxUnit) this._fxUnit.bpm = v;
+  }
 
   connect(node) {
     if (this._out) this._out.connect(node.input ?? node);
@@ -192,4 +186,4 @@ export class WebAudioPercHihatControls extends HTMLElement {
   }
 }
 
-customElements.define("web-audio-perc-hihat-controls", WebAudioPercHihatControls);
+customElements.define("web-audio-perc-kick-controls", WebAudioPercKickControls);

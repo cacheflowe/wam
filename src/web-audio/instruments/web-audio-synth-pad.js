@@ -1,5 +1,5 @@
-import "./web-audio-slider.js";
-import { injectControlsCSS } from "./web-audio-slider.js";
+import "../web-audio-slider.js";
+import { injectControlsCSS, createTitleWithMute } from "../web-audio-slider.js";
 
 /**
  * WebAudioSynthPad — polyphonic pad synth for chord stabs.
@@ -34,15 +34,19 @@ export default class WebAudioSynthPad {
     const p = WebAudioSynthPad.PRESETS[name];
     if (!p) return;
     if (p.oscType != null) this.oscType = p.oscType;
-    if (p.attack  != null) this.attack  = p.attack;
-    if (p.decay   != null) this.decay   = p.decay;
+    if (p.attack != null) this.attack = p.attack;
+    if (p.decay != null) this.decay = p.decay;
     if (p.sustain != null) this.sustain = p.sustain;
     if (p.release != null) this.release = p.release;
-    if (p.volume  != null) this.volume  = p.volume;
+    if (p.volume != null) this.volume = p.volume;
   }
 
-  get volume() { return this._out.gain.value; }
-  set volume(v) { this._out.gain.value = v; }
+  get volume() {
+    return this._out.gain.value;
+  }
+  set volume(v) {
+    this._out.gain.value = v;
+  }
 
   get input() {
     return this._out;
@@ -94,13 +98,12 @@ export default class WebAudioSynthPad {
 // ---- Controls companion component ----
 
 export class WebAudioSynthPadControls extends HTMLElement {
-
   static SLIDER_DEFS = [
-    { param: "attack",  label: "Attack",  min: 0.01, max: 2,  step: 0.01 },
-    { param: "decay",   label: "Decay",   min: 0.01, max: 2,  step: 0.01 },
-    { param: "sustain", label: "Sustain", min: 0,    max: 1,  step: 0.01 },
-    { param: "release", label: "Release", min: 0.01, max: 5,  step: 0.01 },
-    { param: "volume",  label: "Vol",     min: 0,    max: 1,  step: 0.01 },
+    { param: "attack", label: "Attack", min: 0.01, max: 2, step: 0.01 },
+    { param: "decay", label: "Decay", min: 0.01, max: 2, step: 0.01 },
+    { param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01 },
+    { param: "release", label: "Release", min: 0.01, max: 5, step: 0.01 },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
   ];
 
   constructor() {
@@ -140,7 +143,9 @@ export class WebAudioSynthPadControls extends HTMLElement {
       if (instrument.oscType === type) btn.classList.add("wac-wave-active");
       btn.addEventListener("click", () => {
         instrument.oscType = type;
-        waveRow.querySelectorAll(".wac-wave-btn").forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === type));
+        waveRow
+          .querySelectorAll(".wac-wave-btn")
+          .forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === type));
       });
       waveRow.appendChild(btn);
     });
@@ -201,11 +206,15 @@ export class WebAudioSynthPadControls extends HTMLElement {
     if (this._presetSelect) this._presetSelect.value = name;
     const waveRow = this.querySelector(".wac-wave-row");
     if (waveRow) {
-      waveRow.querySelectorAll(".wac-wave-btn").forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === this._instrument.oscType));
+      waveRow
+        .querySelectorAll(".wac-wave-btn")
+        .forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === this._instrument.oscType));
     }
   }
 
-  set bpm(v) { if (this._fxUnit) this._fxUnit.bpm = v; }
+  set bpm(v) {
+    if (this._fxUnit) this._fxUnit.bpm = v;
+  }
 
   connect(node) {
     if (this._out) this._out.connect(node.input ?? node);
