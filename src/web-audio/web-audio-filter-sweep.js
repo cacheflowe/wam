@@ -94,6 +94,17 @@ export default class WebAudioFilterSweep extends HTMLElement {
         }),
       );
     });
+
+    this._range.addEventListener("dblclick", () => {
+      this._range.value = 0;
+      this._updateDisplay(0);
+      this.dispatchEvent(
+        new CustomEvent("slider-input", {
+          bubbles: true,
+          detail: { param: this.getAttribute("param") || "filterSweep", value: 0 },
+        }),
+      );
+    });
   }
 
   _updateDisplay(v) {
