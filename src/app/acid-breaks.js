@@ -5,6 +5,8 @@ import WebAudioSynthBlipFX from "../web-audio/instruments/web-audio-synth-blipfx
 import WebAudioBreakPlayer from "../web-audio/instruments/web-audio-break-player.js";
 import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
 import "../web-audio/web-audio-slider.js";
+import "../web-audio/web-audio-waveform.js";
+import "../web-audio/fx/web-audio-fx-unit.js";
 import { SCALES, NOTE_NAMES } from "../web-audio/web-audio-scales.js";
 
 const BASE_PATH = "/audio/breaks/";
@@ -21,6 +23,8 @@ class WebAudioAcid extends HTMLElement {
   connectedCallback() {
     this._ctx = null;
     this._masterGain = null;
+    this._masterFxUnit = null;
+    this._masterAnalyser = null;
     this._acid = null;
     this._808 = null;
     this._break = null;
@@ -55,7 +59,19 @@ class WebAudioAcid extends HTMLElement {
 
     this._masterGain = this._ctx.createGain();
     this._masterGain.gain.value = this._p.masterVolume;
-    this._masterGain.connect(this._ctx.destination);
+
+    this._masterFxUnit = this.querySelector("web-audio-fx-unit.master-fx");
+    this._masterFxUnit.init(this._ctx, { bpm: this._p.bpm, title: "Master FX" });
+
+    this._masterAnalyser = this._ctx.createAnalyser();
+    this._masterAnalyser.fftSize = 2048;
+
+    this._masterGain.connect(this._masterFxUnit.input);
+    this._masterFxUnit.connect(this._masterAnalyser);
+    this._masterAnalyser.connect(this._ctx.destination);
+
+    const masterWaveform = this.querySelector("web-audio-waveform.master-waveform");
+    if (masterWaveform) masterWaveform.init(this._masterAnalyser, "#fff");
 
     // TB-303 acid
     this._acid = new WebAudioSynthAcid(this._ctx);
@@ -214,6 +230,7 @@ class WebAudioAcid extends HTMLElement {
       fm: this._fmControls?.toJSON(),
       blipfx: this._blipfxControls?.toJSON(),
       break: this._breakControls?.toJSON(),
+      masterFx: this._masterFxUnit?.toJSON(),
     };
   }
 
@@ -242,6 +259,7 @@ class WebAudioAcid extends HTMLElement {
     if (state.fm) this._fmControls?.fromJSON(state.fm);
     if (state.blipfx || state.zzfx) this._blipfxControls?.fromJSON(state.blipfx ?? state.zzfx);
     if (state.break) this._breakControls?.fromJSON(state.break);
+    if (state.masterFx) this._masterFxUnit?.fromJSON(state.masterFx);
   }
 
   _debouncedSave() {
@@ -311,8 +329,12 @@ class WebAudioAcid extends HTMLElement {
   }
 
   buildUI() {
-    // ---- Transport ----
-    const transport = this.injectHTML(`<div class="acid-transport"></div>`);
+    // ---- Transport panel (instrument-group style) ----
+    const transportGroup = this.injectHTML(`<div class="instrument-group transport-group"></div>`);
+
+    const transport = document.createElement("div");
+    transport.className = "acid-transport";
+    transportGroup.appendChild(transport);
     this._playBtn = document.createElement("button");
     this._playBtn.textContent = "▶ Play";
     this._playBtn.className = "acid-play";
@@ -331,6 +353,7 @@ class WebAudioAcid extends HTMLElement {
       const v = e.detail.value;
       this._p.bpm = v;
       if (this._seq) this._seq.bpm = v;
+      if (this._masterFxUnit) this._masterFxUnit.bpm = v;
       if (this._acidControls) this._acidControls.bpm = v;
       if (this._808Controls) this._808Controls.bpm = v;
       if (this._fmControls) this._fmControls.bpm = v;
@@ -402,6 +425,15 @@ class WebAudioAcid extends HTMLElement {
     this._shareBtn.addEventListener("click", () => this._shareURL());
     transport.appendChild(this._shareBtn);
 
+    // Master waveform + FX on the transport panel
+    const masterWaveform = document.createElement("web-audio-waveform");
+    masterWaveform.className = "master-waveform";
+    transportGroup.appendChild(masterWaveform);
+
+    const masterFxUnit = document.createElement("web-audio-fx-unit");
+    masterFxUnit.className = "master-fx";
+    transportGroup.appendChild(masterFxUnit);
+
     // ---- Break group ----
     const breakGroup = this.injectHTML(`<div class="instrument-group break-group"></div>`);
     this._breakControls = document.createElement("web-audio-break-player-controls");
@@ -458,6 +490,7 @@ class WebAudioAcid extends HTMLElement {
       .chord-fm-group { --fx-accent: #4af; }
       .blipfx-group    { --fx-accent: #c0f; }
       .acid-group    { --fx-accent: #0f0; }
+      .transport-group { --fx-accent: #aaa; }
 
       /* ---- Transport ---- */
       .acid-transport {
