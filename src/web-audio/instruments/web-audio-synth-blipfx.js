@@ -1,5 +1,5 @@
 import "../web-audio-slider.js";
-import { injectControlsCSS, createTitleWithMute } from "../web-audio-slider.js";
+import { injectControlsCSS, createSection, createTitleWithMute } from "../web-audio-slider.js";
 
 /**
  * WebAudioSynthBlipFX — procedural sound effect synthesizer.
@@ -660,7 +660,21 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
     controls.className = "wac-controls";
     this.appendChild(controls);
 
-    // Preset dropdown
+    const mkSlider = (def, val) => {
+      const s = document.createElement("web-audio-slider");
+      s.setAttribute("param", def.param);
+      s.setAttribute("label", def.label);
+      s.setAttribute("min", def.min);
+      s.setAttribute("max", def.max);
+      s.setAttribute("step", def.step);
+      if (def.scale) s.setAttribute("scale", def.scale);
+      s.value = val ?? (def.param === "chance" ? this._chance : instrument[def.param]);
+      this._sliders[def.param] = s;
+      return s;
+    };
+
+    // ---- Tone ----
+    const { el: toneEl, controls: toneCtrl } = createSection("Tone");
     this._presetSelect = document.createElement("select");
     this._presetSelect.className = "wac-select";
     Object.keys(WebAudioSynthBlipFX.PRESETS).forEach((name) => {
@@ -674,9 +688,7 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
       this._syncSliders();
       this._emitChange();
     });
-    controls.appendChild(this._presetSelect);
-
-    // Shape dropdown
+    toneCtrl.appendChild(this._presetSelect);
     this._shapeSelect = document.createElement("select");
     this._shapeSelect.className = "wac-select";
     WebAudioSynthBlipFX.SHAPES.forEach((name, i) => {
@@ -690,21 +702,45 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
       instrument.shape = parseInt(this._shapeSelect.value);
       this._emitChange();
     });
-    controls.appendChild(this._shapeSelect);
+    toneCtrl.appendChild(this._shapeSelect);
+    toneCtrl.appendChild(mkSlider({ param: "volume",    label: "Vol",    min: 0,  max: 1,    step: 0.01 }));
+    toneCtrl.appendChild(mkSlider({ param: "frequency", label: "Freq",   min: 20, max: 2000, step: 1, scale: "log" }));
+    toneCtrl.appendChild(mkSlider({ param: "chance",    label: "Chance", min: 0,  max: 1,    step: 0.01 }));
+    controls.appendChild(toneEl);
 
-    // Sliders
-    for (const def of WebAudioSynthBlipFXControls.SLIDER_DEFS) {
-      const slider = document.createElement("web-audio-slider");
-      slider.setAttribute("param", def.param);
-      slider.setAttribute("label", def.label);
-      slider.setAttribute("min", def.min);
-      slider.setAttribute("max", def.max);
-      slider.setAttribute("step", def.step);
-      if (def.scale) slider.setAttribute("scale", def.scale);
-      slider.value = def.param === "chance" ? this._chance : instrument[def.param];
-      controls.appendChild(slider);
-      this._sliders[def.param] = slider;
-    }
+    // ---- Envelope ----
+    const { el: envEl, controls: envCtrl } = createSection("Envelope");
+    envCtrl.appendChild(mkSlider({ param: "attack",        label: "Attack",  min: 0,    max: 0.2, step: 0.001 }));
+    envCtrl.appendChild(mkSlider({ param: "decay",         label: "Decay",   min: 0,    max: 0.5, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "sustain",       label: "Sustain", min: 0,    max: 0.3, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "sustainVolume", label: "Sus Vol", min: 0,    max: 1,   step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "release",       label: "Release", min: 0.01, max: 1,   step: 0.01 }));
+    controls.appendChild(envEl);
+
+    // ---- Pitch ----
+    const { el: pitchEl, controls: pitchCtrl } = createSection("Pitch");
+    pitchCtrl.appendChild(mkSlider({ param: "slide",         label: "Slide",      min: -40, max: 40,  step: 0.5 }));
+    pitchCtrl.appendChild(mkSlider({ param: "deltaSlide",    label: "Slide Accel",min: -30, max: 30,  step: 0.5 }));
+    pitchCtrl.appendChild(mkSlider({ param: "pitchJump",     label: "P.Jump",     min: -36, max: 36,  step: 1 }));
+    pitchCtrl.appendChild(mkSlider({ param: "pitchJumpTime", label: "Jump Time",  min: 0,   max: 0.3, step: 0.01 }));
+    pitchCtrl.appendChild(mkSlider({ param: "repeatTime",    label: "Repeat",     min: 0,   max: 0.5, step: 0.01 }));
+    controls.appendChild(pitchEl);
+
+    // ---- Character ----
+    const { el: charEl, controls: charCtrl } = createSection("Character");
+    charCtrl.appendChild(mkSlider({ param: "noise",      label: "Noise",     min: 0,   max: 1, step: 0.01 }));
+    charCtrl.appendChild(mkSlider({ param: "modulation", label: "FM Mod",    min: 0,   max: 1, step: 0.01 }));
+    charCtrl.appendChild(mkSlider({ param: "shapeCurve", label: "Shape Pwr", min: 0.1, max: 5, step: 0.1 }));
+    charCtrl.appendChild(mkSlider({ param: "tremolo",    label: "Tremolo",   min: 0,   max: 1, step: 0.01 }));
+    charCtrl.appendChild(mkSlider({ param: "bitCrush",   label: "BitCrush",  min: 0,   max: 1, step: 0.01 }));
+    controls.appendChild(charEl);
+
+    // ---- Filter ----
+    const { el: filtEl, controls: filtCtrl } = createSection("Filter");
+    filtCtrl.appendChild(mkSlider({ param: "lpfFreq",     label: "LPF",       min: 80, max: 8000, step: 1, scale: "log" }));
+    filtCtrl.appendChild(mkSlider({ param: "hpfFreq",     label: "HPF",       min: 20, max: 2000, step: 1, scale: "log" }));
+    filtCtrl.appendChild(mkSlider({ param: "lpfResonance",label: "Resonance", min: 0.5,max: 15,   step: 0.1 }));
+    controls.appendChild(filtEl);
 
     this.addEventListener("slider-input", (e) => {
       if (!this._instrument) return;

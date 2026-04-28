@@ -343,9 +343,7 @@ export class WebAudioSynthAcidControls extends HTMLElement {
       this._emitChange();
     });
     toneCtrl.appendChild(this._presetSelect);
-    toneCtrl.appendChild(mkSlider({ param: "volume",         label: "Vol",      min: 0,  max: 1, step: 0.01 }));
-    toneCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Octave",   min: -2, max: 2, step: 1 }));
-    toneCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Oct Jump", min: 0,  max: 1, step: 0.01 }));
+    toneCtrl.appendChild(mkSlider({ param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(toneEl);
 
     // ---- Filter ----
@@ -372,6 +370,12 @@ export class WebAudioSynthAcidControls extends HTMLElement {
     unisonCtrl.appendChild(mkSlider({ param: "unisonVoices", label: "Voices", min: 1, max: 4,  step: 1 }));
     unisonCtrl.appendChild(mkSlider({ param: "unisonDetune", label: "Detune", min: 0, max: 50, step: 1 }));
     controls.appendChild(unisonEl);
+
+    // ---- Octave ----
+    const { el: octEl, controls: octCtrl } = createSection("Octave");
+    octCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Offset",   min: -2, max: 2, step: 1 }));
+    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0,  max: 1, step: 0.01 }));
+    controls.appendChild(octEl);
 
     // Delegated slider listener
     this.addEventListener("slider-input", (e) => {

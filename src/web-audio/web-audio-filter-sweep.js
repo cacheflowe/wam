@@ -4,8 +4,8 @@
  * Center = bypass. Left half = LP sweep (20kHz→80Hz log).
  * Right half = HP sweep (20Hz→8kHz log).
  *
- * Track is visually split: blue zone left / divider / orange zone right.
- * Value display shows "LP 2.4k" / "open" / "HP 380".
+ * Value display shows "LP 2.4k" / "open" / "HP 380" with mode-colored text.
+ * Visually matches <web-audio-slider> exactly; only the value display differs.
  *
  * Dispatches: slider-input { param, value: -1..1 }
  *
@@ -13,6 +13,7 @@
  *   <web-audio-filter-sweep param="filterSweep" label="Filter"></web-audio-filter-sweep>
  */
 
+import WebAudioSlider from "./web-audio-slider.js";
 import { sweepToLpFreq, sweepToHpFreq } from "./fx/web-audio-fx-filter.js";
 
 function fmtFreq(hz) {
@@ -32,6 +33,7 @@ export default class WebAudioFilterSweep extends HTMLElement {
   }
 
   connectedCallback() {
+    WebAudioSlider._injectCSS();
     WebAudioFilterSweep.#injectCSS();
     if (!this._built) this._build();
   }
@@ -49,36 +51,36 @@ export default class WebAudioFilterSweep extends HTMLElement {
   _build() {
     this._built = true;
     const color = this.getAttribute("color");
-    if (color) this.style.setProperty("--sweep-accent", color);
+    if (color) this.style.setProperty("--slider-accent", color);
 
+    // Top row — identical structure to WebAudioSlider
     const top = document.createElement("div");
-    top.className = "wfs-top";
-    const lbl = document.createElement("span");
-    lbl.className = "wfs-lbl";
-    lbl.textContent = (this.getAttribute("label") || "Filter") + " ";
+    top.className = "was-top";
+
+    const lbl = document.createElement("label");
+    lbl.className = "was-label";
+
+    const labelText = document.createElement("span");
+    labelText.className = "was-label-text";
+    labelText.textContent = (this.getAttribute("label") || "Filter") + " ";
+
     this._valEl = document.createElement("span");
-    this._valEl.className = "wfs-val";
+    this._valEl.className = "was-val";
+
+    lbl.appendChild(labelText);
+    lbl.appendChild(this._valEl);
     top.appendChild(lbl);
-    top.appendChild(this._valEl);
     this.appendChild(top);
 
-    // Track wrap: custom-painted background behind the native range
-    const wrap = document.createElement("div");
-    wrap.className = "wfs-wrap";
-
-    const bg = document.createElement("div");
-    bg.className = "wfs-bg";
-    wrap.appendChild(bg);
-
+    // Range input — identical to WebAudioSlider's range
     this._range = document.createElement("input");
     this._range.type = "range";
-    this._range.className = "wfs-range";
+    this._range.className = "was-range";
     this._range.min = -1;
     this._range.max = 1;
     this._range.step = 0.001;
     this._range.value = parseFloat(this.getAttribute("value") || "0");
-    wrap.appendChild(this._range);
-    this.appendChild(wrap);
+    this.appendChild(this._range);
 
     this._updateDisplay(parseFloat(this._range.value));
 
@@ -120,87 +122,9 @@ export default class WebAudioFilterSweep extends HTMLElement {
         min-width: 80px;
         font-family: monospace;
       }
-      .wfs-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-      }
-      .wfs-lbl {
-        font-size: 0.7em;
-        color: #555;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-      .wfs-val {
-        font-size: 0.7em;
-        font-family: monospace;
-        color: #555;
-        transition: color 0.1s;
-      }
-      .wfs-val[data-mode="lp"] { color: #48f; }
-      .wfs-val[data-mode="hp"] { color: #fa6; }
-      .wfs-wrap {
-        position: relative;
-        display: flex;
-        align-items: center;
-        height: 20px;
-      }
-      .wfs-bg {
-        position: absolute;
-        left: 7px;
-        right: 7px;
-        height: 4px;
-        border-radius: 2px;
-        background: linear-gradient(to right,
-          #0d2540 0%, #0d2540 49%,
-          #1a1a1a 49%, #1a1a1a 51%,
-          #2b1400 51%, #2b1400 100%
-        );
-        pointer-events: none;
-      }
-      .wfs-range {
-        position: relative;
-        width: 100%;
-        background: transparent;
-        -webkit-appearance: none;
-        appearance: none;
-        height: 20px;
-        cursor: pointer;
-      }
-      .wfs-range::-webkit-slider-runnable-track {
-        background: transparent;
-        height: 4px;
-      }
-      .wfs-range::-moz-range-track {
-        background: transparent;
-        height: 4px;
-        border: none;
-      }
-      .wfs-range::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: var(--sweep-accent, var(--slider-accent, #0f0));
-        cursor: pointer;
-        margin-top: -5px;
-        box-shadow: 0 0 0 1px #000;
-      }
-      .wfs-range::-moz-range-thumb {
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: var(--sweep-accent, var(--slider-accent, #0f0));
-        cursor: pointer;
-        border: none;
-        box-shadow: 0 0 0 1px #000;
-      }
-      .wfs-range:focus {
-        outline: none;
-      }
-      .wfs-range:focus-visible::-webkit-slider-thumb {
-        box-shadow: 0 0 0 2px var(--sweep-accent, var(--slider-accent, #0f0));
-      }
+      web-audio-filter-sweep .was-val[data-mode="open"] { color: #555; }
+      web-audio-filter-sweep .was-val[data-mode="lp"]   { color: #48f; transition: color 0.1s; }
+      web-audio-filter-sweep .was-val[data-mode="hp"]   { color: #fa6; transition: color 0.1s; }
     `;
     document.head.appendChild(s);
   }

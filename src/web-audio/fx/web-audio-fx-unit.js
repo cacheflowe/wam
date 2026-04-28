@@ -7,11 +7,9 @@
  *   - WebAudioFxChorus  (multi-voice chorus with stereo spread)
  *   - WebAudioFxFilter  (combined HP + LP with shared Q)
  *
- * Audio chain:
- *   in → reverb (dry=1, wet adjustable) → pre_out
- *   in → delay (wet/dry internal)       → pre_out
- *   in → chorus (wet/dry internal)      → pre_out
- *   pre_out → filter (HP → LP)          → out
+ * Audio chain (serial):
+ *   in → filter → delay → chorus → reverb → out
+ * Each stage handles its own dry/wet internally.
  *
  * Usage:
  *   const fx = document.createElement("web-audio-fx-unit");
@@ -69,25 +67,15 @@ export default class WebAudioFxUnit extends HTMLElement {
   init(ctx, options = {}) {
     this._ctx = ctx;
 
-    // ---- Audio chain ----
+    // ---- Audio chain (serial: filter → delay → chorus → reverb) ----
     this._in = ctx.createGain();
-    const preOut = ctx.createGain();
     this._out = ctx.createGain();
 
-    // Explicit dry path — only one copy of the dry signal reaches preOut.
-    // Each effect below is used as a pure wet send (internal dry zeroed out).
-    this._in.connect(preOut);
-
-    // Reverb — pure wet send
-    this._reverb = new WebAudioFxReverb(ctx, {
-      decay: options.reverbDecay ?? 2.5,
-      wet: options.reverbWet ?? 0,
+    this._filter = new WebAudioFxFilter(ctx, {
+      sweep: options.filterSweep ?? 0,
+      q: options.filterQ ?? 0.7,
     });
-    this._reverb._dry.gain.value = 0;
-    this._in.connect(this._reverb.input);
-    this._reverb.connect(preOut);
 
-    // Delay — pure wet send
     this._delay = new WebAudioFxDelay(ctx, {
       interval: options.delayInterval ?? 0.75,
       bpm: options.bpm ?? 120,
@@ -96,11 +84,7 @@ export default class WebAudioFxUnit extends HTMLElement {
       filterFreq: options.delayFilterFreq ?? 12000,
       modulation: 0,
     });
-    this._delay._dry.gain.value = 0;
-    this._in.connect(this._delay.input);
-    this._delay.connect(preOut);
 
-    // Chorus — pure wet send
     this._chorus = new WebAudioFxChorus(ctx, {
       voices: options.chorusVoices ?? 3,
       rate: options.chorusRate ?? 0.8,
@@ -111,17 +95,17 @@ export default class WebAudioFxUnit extends HTMLElement {
       spread: options.chorusSpread ?? 1,
       shape: options.chorusShape ?? "sine",
     });
-    this._chorus._dry.gain.value = 0;
-    this._in.connect(this._chorus.input);
-    this._chorus.connect(preOut);
 
-    // Filter — HP → LP on master output
-    this._filter = new WebAudioFxFilter(ctx, {
-      sweep: options.filterSweep ?? 0,
-      q: options.filterQ ?? 0.7,
+    this._reverb = new WebAudioFxReverb(ctx, {
+      decay: options.reverbDecay ?? 2.5,
+      wet: options.reverbWet ?? 0,
     });
-    preOut.connect(this._filter.input);
-    this._filter.connect(this._out);
+
+    this._in.connect(this._filter.input);
+    this._filter.connect(this._delay.input);
+    this._delay.connect(this._chorus.input);
+    this._chorus.connect(this._reverb.input);
+    this._reverb.connect(this._out);
 
     // ---- UI ----
     WebAudioFxUnit._injectCSS();
@@ -278,10 +262,15 @@ export default class WebAudioFxUnit extends HTMLElement {
       return sel;
     };
 
-    // ---- Reverb ----
-    const { el: revEl, controls: revCtrl } = createSection("Reverb");
-    revCtrl.appendChild(this._addSlider("reverbWet", "Wet", 0, 1, 0.01, options.reverbWet ?? 0));
-    this.appendChild(revEl);
+    // ---- Filter ----
+    const { el: filtEl, controls: filtCtrl } = createSection("Filter");
+    const sweep = document.createElement("web-audio-filter-sweep");
+    sweep.setAttribute("param", "filterSweep");
+    sweep.setAttribute("label", "Sweep");
+    sweep.value = options.filterSweep ?? 0;
+    filtCtrl.appendChild(sweep);
+    filtCtrl.appendChild(this._addSlider("filterQ", "Q", 0.5, 15, 0.1, options.filterQ ?? 0.7));
+    this.appendChild(filtEl);
 
     // ---- Delay ----
     const { el: delEl, controls: delCtrl } = createSection("Delay");
@@ -336,15 +325,10 @@ export default class WebAudioFxUnit extends HTMLElement {
     chorCtrl.appendChild(this._addSlider("chorusWet",      "Wet",    0,    1,   0.01, options.chorusWet      ?? 0));
     this.appendChild(chorEl);
 
-    // ---- Filter ----
-    const { el: filtEl, controls: filtCtrl } = createSection("Filter");
-    const sweep = document.createElement("web-audio-filter-sweep");
-    sweep.setAttribute("param", "filterSweep");
-    sweep.setAttribute("label", "Sweep");
-    sweep.value = options.filterSweep ?? 0;
-    filtCtrl.appendChild(sweep);
-    filtCtrl.appendChild(this._addSlider("filterQ", "Q", 0.5, 15, 0.1, options.filterQ ?? 0.7));
-    this.appendChild(filtEl);
+    // ---- Reverb ----
+    const { el: revEl, controls: revCtrl } = createSection("Reverb");
+    revCtrl.appendChild(this._addSlider("reverbWet", "Wet", 0, 1, 0.01, options.reverbWet ?? 0));
+    this.appendChild(revEl);
 
     // Delegated listener for all sliders
     this.addEventListener("slider-input", (e) => {

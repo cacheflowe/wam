@@ -615,9 +615,7 @@ export class WebAudioSynthFMControls extends HTMLElement {
       this._emitChange();
     });
     toneCtrl.appendChild(this._presetSelect);
-    toneCtrl.appendChild(mkSlider({ param: "volume",         label: "Vol",      min: 0,  max: 1, step: 0.01 }));
-    toneCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Octave",   min: -2, max: 2, step: 1 }));
-    toneCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Oct Jump", min: 0,  max: 1, step: 0.01 }));
+    toneCtrl.appendChild(mkSlider({ param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(toneEl);
 
     // ---- FM ----
@@ -671,6 +669,12 @@ export class WebAudioSynthFMControls extends HTMLElement {
     });
     lfoCtrl.appendChild(mkSlider({ param: "lfoDepth", label: "Depth", min: 0, max: 3000, step: 10 }));
     controls.appendChild(lfoEl);
+
+    // ---- Octave ----
+    const { el: octEl, controls: octCtrl } = createSection("Octave");
+    octCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Offset",    min: -2, max: 2, step: 1 }));
+    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0,  max: 1, step: 0.01 }));
+    controls.appendChild(octEl);
 
     this.addEventListener("slider-input", (e) => {
       if (!this._instrument) return;
