@@ -1,5 +1,5 @@
 import "../web-audio-slider.js";
-import { injectControlsCSS, createSection, createTitleWithMute } from "../web-audio-slider.js";
+import { injectControlsCSS, createSection, createChannelStrip } from "../web-audio-slider.js";
 
 /**
  * WebAudioSynthBlipFX — procedural sound effect synthesizer.
@@ -640,6 +640,8 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
     this._shapeSelect = null;
     this._fxUnit = null;
     this._out = null;
+    this._pan = null;
+    this._panSlider = null;
     this._chance = 0.15;
     this._lastStep = -1;
   }
@@ -654,11 +656,29 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
     this.style.setProperty("--slider-accent", color);
     this.style.setProperty("--fx-accent", color);
 
-    this._muteHandle = createTitleWithMute(this, options.title || "BlipFX Sound Effects", () => this._out);
+    const strip = createChannelStrip(this, {
+      title: options.title || "BlipFX Sound Effects",
+      getOutGain: () => this._out,
+      initialVol: instrument.volume,
+      initialPan: 0,
+    });
+    this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted };
+    this._sliders["volume"] = strip.volSlider;
+    this._panSlider = strip.panSlider;
 
+    // Waveform — always visible (visualizer)
+    const waveform = document.createElement("web-audio-waveform");
+    this.appendChild(waveform);
+
+    // Expanded panel — hidden when collapsed
+    const expanded = document.createElement("div");
+    expanded.className = "wac-expanded";
+    this.appendChild(expanded);
+
+    // Controls wrapper inside expanded
     const controls = document.createElement("div");
     controls.className = "wac-controls";
-    this.appendChild(controls);
+    expanded.appendChild(controls);
 
     const mkSlider = (def, val) => {
       const s = document.createElement("web-audio-slider");
@@ -703,7 +723,6 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
       this._emitChange();
     });
     toneCtrl.appendChild(this._shapeSelect);
-    toneCtrl.appendChild(mkSlider({ param: "volume",    label: "Vol",    min: 0,  max: 1,    step: 0.01 }));
     toneCtrl.appendChild(mkSlider({ param: "frequency", label: "Freq",   min: 20, max: 2000, step: 1, scale: "log" }));
     toneCtrl.appendChild(mkSlider({ param: "chance",    label: "Chance", min: 0,  max: 1,    step: 0.01 }));
     controls.appendChild(toneEl);
@@ -744,10 +763,13 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
 
     this.addEventListener("slider-input", (e) => {
       if (!this._instrument) return;
-      if (e.detail.param === "chance") {
-        this._chance = e.detail.value;
+      const { param, value } = e.detail;
+      if (param === "pan") {
+        if (this._pan) this._pan.pan.value = value;
+      } else if (param === "chance") {
+        this._chance = value;
       } else {
-        this._instrument[e.detail.param] = e.detail.value;
+        this._instrument[param] = value;
       }
       this._emitChange();
     });
@@ -785,22 +807,26 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
     playBtn.addEventListener("click", () => this.triggerNow());
     actionRow.appendChild(playBtn);
 
-    this.appendChild(actionRow);
+    expanded.appendChild(actionRow);
 
     // FX unit
     this._fxUnit = document.createElement("web-audio-fx-unit");
-    this.appendChild(this._fxUnit);
+    expanded.appendChild(this._fxUnit);
     this._fxUnit.init(ctx, { title: "SFX FX", bpm: options.fx?.bpm ?? 120, ...options.fx });
 
-    // Waveform
-    const waveform = document.createElement("web-audio-waveform");
-    this.appendChild(waveform);
-
-    const analyser = ctx.createAnalyser();
-    instrument.connect(analyser);
-    analyser.connect(this._fxUnit.input);
+    // Audio routing: instrument → fxUnit → _out → _pan
+    // analyser taps from _out so waveform goes dark when muted
+    instrument.connect(this._fxUnit.input);
     this._out = ctx.createGain();
     this._fxUnit.connect(this._out);
+    this._pan = ctx.createStereoPanner();
+    this._out.connect(this._pan);
+    const analyser = ctx.createAnalyser();
+    this._out.connect(analyser);
+    const meterAnalyser = ctx.createAnalyser();
+    meterAnalyser.fftSize = 256;
+    this._out.connect(meterAnalyser);
+    strip.meter.setAnalyser(meterAnalyser);
     waveform.init(analyser, color);
   }
 
@@ -860,7 +886,7 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
       params[def.param] = def.param === "chance" ? this._chance : this._instrument[def.param];
     }
     params.shape = this._instrument.shape;
-    return { params, fx: this._fxUnit?.toJSON(), muted: this._muteHandle?.isMuted() ?? false };
+    return { params, fx: this._fxUnit?.toJSON(), muted: this._muteHandle?.isMuted() ?? false, pan: this._pan?.pan.value ?? 0 };
   }
 
   fromJSON(obj) {
@@ -880,6 +906,10 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
     }
     if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
     if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
+    if (obj.pan != null && this._pan) {
+      this._pan.pan.value = obj.pan;
+      if (this._panSlider) this._panSlider.value = obj.pan;
+    }
   }
 
   // ---- Routing ----
@@ -889,7 +919,7 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
   }
 
   connect(node) {
-    if (this._out) this._out.connect(node.input ?? node);
+    (this._pan ?? this._out)?.connect(node.input ?? node);
     return this;
   }
 }

@@ -1,3 +1,8 @@
+import "./web-audio-level-meter.js";
+
+// Set to false to start all channel strips expanded by default.
+export const CHANNEL_STRIP_COLLAPSED_DEFAULT = true;
+
 /**
  * WebAudioSlider — shared range-input web component for audio parameter controls.
  *
@@ -404,6 +409,47 @@ export function injectControlsCSS() {
       color: #fff;
       border-color: #a00;
     }
+    /* ---- Channel strip ---- */
+    .wac-channel-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px 12px;
+      flex-wrap: wrap;
+      padding: 8px 14px;
+      border-bottom: 1px solid #1d1d1d;
+    }
+    .wac-strip-header {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+      min-width: 72px;
+    }
+    .wac-strip-name {
+      font-size: 0.7em;
+      color: var(--slider-accent, #0f0);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      opacity: 0.75;
+    }
+    .wac-strip-chevron {
+      font-size: 0.7em;
+      color: #555;
+      transition: transform 0.15s ease;
+      line-height: 1;
+    }
+    [data-collapsed] .wac-strip-chevron { transform: rotate(-90deg); }
+    .wac-channel-strip web-audio-slider {
+      flex: 1 1 80px;
+      max-width: 160px;
+    }
+    .wac-channel-strip web-audio-slider[param="pan"] {
+      max-width: 110px;
+    }
+    /* ---- Expanded / collapsed ---- */
+    [data-collapsed] .wac-expanded { display: none; }
   `;
   document.head.appendChild(s);
 }
@@ -472,6 +518,107 @@ export function createTitleWithMute(parentEl, titleText, getOutGain) {
 
   return {
     el: row,
+    isMuted: () => muted,
+    setMuted: (v) => {
+      muted = !!v;
+      const out = getOutGain();
+      if (muted) {
+        preMuteVolume = out?.gain.value ?? 1;
+        if (out) out.gain.value = 0;
+      }
+      muteBtn.classList.toggle("wac-muted", muted);
+      muteBtn.textContent = muted ? "Muted" : "Mute";
+    },
+  };
+}
+
+/**
+ * Create a channel strip row for an instrument controls panel.
+ * Includes instrument name (collapse toggle), level meter, vol slider, pan slider, mute button.
+ * Applies CHANNEL_STRIP_COLLAPSED_DEFAULT to parentEl immediately.
+ *
+ * @param {HTMLElement} parentEl
+ * @param {object} opts
+ * @param {string}   opts.title
+ * @param {function} opts.getOutGain   Getter returning the controls output GainNode
+ * @param {number}   [opts.initialVol=1]
+ * @param {number}   [opts.initialPan=0]
+ * @returns {{ volSlider, panSlider, meter, isMuted, setMuted }}
+ */
+export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1, initialPan = 0 }) {
+  if (CHANNEL_STRIP_COLLAPSED_DEFAULT) parentEl.setAttribute("data-collapsed", "");
+
+  const strip = document.createElement("div");
+  strip.className = "wac-channel-strip";
+
+  // Name + expand/collapse toggle
+  const header = document.createElement("div");
+  header.className = "wac-strip-header";
+  const nameEl = document.createElement("span");
+  nameEl.className = "wac-strip-name";
+  nameEl.textContent = title;
+  const chevron = document.createElement("span");
+  chevron.className = "wac-strip-chevron";
+  chevron.textContent = "▾";
+  header.appendChild(nameEl);
+  header.appendChild(chevron);
+  header.addEventListener("click", () => parentEl.toggleAttribute("data-collapsed"));
+  strip.appendChild(header);
+
+  // Level meter
+  const meter = document.createElement("web-audio-level-meter");
+  strip.appendChild(meter);
+
+  // Volume slider
+  const volSlider = document.createElement("web-audio-slider");
+  volSlider.setAttribute("param", "volume");
+  volSlider.setAttribute("label", "Vol");
+  volSlider.setAttribute("min", "0");
+  volSlider.setAttribute("max", "1");
+  volSlider.setAttribute("step", "0.01");
+  volSlider.value = initialVol;
+  strip.appendChild(volSlider);
+
+  // Pan slider (double-click resets to center)
+  const panSlider = document.createElement("web-audio-slider");
+  panSlider.setAttribute("param", "pan");
+  panSlider.setAttribute("label", "Pan");
+  panSlider.setAttribute("min", "-1");
+  panSlider.setAttribute("max", "1");
+  panSlider.setAttribute("step", "0.01");
+  panSlider.setAttribute("default", "0");
+  panSlider.value = initialPan;
+  strip.appendChild(panSlider);
+
+  // Mute button
+  const muteBtn = document.createElement("button");
+  muteBtn.className = "wac-mute-btn";
+  muteBtn.textContent = "Mute";
+  strip.appendChild(muteBtn);
+
+  parentEl.appendChild(strip);
+
+  let muted = false;
+  let preMuteVolume = 1;
+
+  muteBtn.addEventListener("click", () => {
+    muted = !muted;
+    const out = getOutGain();
+    if (muted) {
+      preMuteVolume = out?.gain.value ?? 1;
+      if (out) out.gain.value = 0;
+    } else {
+      if (out) out.gain.value = preMuteVolume;
+    }
+    muteBtn.classList.toggle("wac-muted", muted);
+    muteBtn.textContent = muted ? "Muted" : "Mute";
+    parentEl.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
+  });
+
+  return {
+    volSlider,
+    panSlider,
+    meter,
     isMuted: () => muted,
     setMuted: (v) => {
       muted = !!v;

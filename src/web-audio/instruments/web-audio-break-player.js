@@ -1,5 +1,5 @@
 import "../web-audio-slider.js";
-import { injectControlsCSS, createSection, createTitleWithMute } from "../web-audio-slider.js";
+import { injectControlsCSS, createSection, createChannelStrip } from "../web-audio-slider.js";
 import "../fx/web-audio-fx-unit.js";
 import "../web-audio-waveform.js";
 import "../fx/web-audio-pitch-shift.js";
@@ -364,6 +364,8 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
     this._tsControls = null;
     this._fxUnit = null;
     this._out = null;
+    this._pan = null;
+    this._panSlider = null;
     this._basePath = "";
     this._pendingSegment = -1;
     this._globalStep = 0;
@@ -389,11 +391,29 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
     this.style.setProperty("--slider-accent", color);
     this.style.setProperty("--fx-accent", color);
 
-    this._muteHandle = createTitleWithMute(this, options.title || "Break Player", () => this._out);
+    const strip = createChannelStrip(this, {
+      title: options.title || "Break Player",
+      getOutGain: () => this._out,
+      initialVol: instrument.volume,
+      initialPan: 0,
+    });
+    this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted };
+    this._sliders["volume"] = strip.volSlider;
+    this._panSlider = strip.panSlider;
 
+    // Waveform — always visible (visualizer)
+    const waveform = document.createElement("web-audio-waveform");
+    this.appendChild(waveform);
+
+    // Expanded panel — hidden when collapsed
+    const expanded = document.createElement("div");
+    expanded.className = "wac-expanded";
+    this.appendChild(expanded);
+
+    // Controls wrapper inside expanded
     const controls = document.createElement("div");
     controls.className = "wac-controls";
-    this.appendChild(controls);
+    expanded.appendChild(controls);
 
     const mkSelect = (labelText, appendTo) => {
       const wrap = document.createElement("div");
@@ -489,14 +509,18 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
 
     // ---- Mix ----
     const { el: mixEl, controls: mixCtrl } = createSection("Mix");
-    mixCtrl.appendChild(mkSlider({ param: "volume",        label: "Vol",     min: 0, max: 1,    step: 0.01 }));
     mixCtrl.appendChild(mkSlider({ param: "randomChance",  label: "Random",  min: 0, max: 1,    step: 0.01 }));
     mixCtrl.appendChild(mkSlider({ param: "reverseChance", label: "Reverse", min: 0, max: 0.25, step: 0.01 }));
     controls.appendChild(mixEl);
 
     this.addEventListener("slider-input", (e) => {
       if (!this._instrument) return;
-      this._instrument[e.detail.param] = e.detail.value;
+      const { param, value } = e.detail;
+      if (param === "pan") {
+        if (this._pan) this._pan.pan.value = value;
+      } else {
+        this._instrument[param] = value;
+      }
       this._emitChange();
     });
 
@@ -504,7 +528,7 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
     this._tsControls = null;
     if (instrument._useTimeStretch) {
       this._tsControls = document.createElement("web-audio-time-stretch-controls");
-      this.appendChild(this._tsControls);
+      expanded.appendChild(this._tsControls);
       this._tsControls.init(instrument, { color });
     }
 
@@ -525,23 +549,26 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
       });
       actionRow.appendChild(btn);
     }
-    this.appendChild(actionRow);
+    expanded.appendChild(actionRow);
 
     // FX unit
     this._fxUnit = document.createElement("web-audio-fx-unit");
-    this.appendChild(this._fxUnit);
+    expanded.appendChild(this._fxUnit);
     this._fxUnit.init(ctx, { title: "Break FX", bpm: options.fx?.bpm ?? 120, ...options.fx });
 
-    // Waveform
-    const waveform = document.createElement("web-audio-waveform");
-    this.appendChild(waveform);
-
-    // Audio routing: instrument → analyser → fxUnit → _out
-    const analyser = ctx.createAnalyser();
-    instrument.connect(analyser);
-    analyser.connect(this._fxUnit.input);
+    // Audio routing: instrument → fxUnit → _out → _pan
+    // analyser taps from _out so waveform goes dark when muted
+    instrument.connect(this._fxUnit.input);
     this._out = ctx.createGain();
     this._fxUnit.connect(this._out);
+    this._pan = ctx.createStereoPanner();
+    this._out.connect(this._pan);
+    const analyser = ctx.createAnalyser();
+    this._out.connect(analyser);
+    const meterAnalyser = ctx.createAnalyser();
+    meterAnalyser.fftSize = 256;
+    this._out.connect(meterAnalyser);
+    strip.meter.setAnalyser(meterAnalyser);
     waveform.init(analyser, color);
   }
 
@@ -612,6 +639,7 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
       ts: this._tsControls?.toJSON(),
       fx: this._fxUnit?.toJSON(),
       muted: this._muteHandle?.isMuted() ?? false,
+      pan: this._pan?.pan.value ?? 0,
     };
   }
 
@@ -647,6 +675,10 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
     if (obj.ts) this._tsControls?.fromJSON(obj.ts);
     if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
     if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
+    if (obj.pan != null && this._pan) {
+      this._pan.pan.value = obj.pan;
+      if (this._panSlider) this._panSlider.value = obj.pan;
+    }
   }
 
   // ---- Routing ----
@@ -656,7 +688,7 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
   }
 
   connect(node) {
-    if (this._out) this._out.connect(node.input ?? node);
+    (this._pan ?? this._out)?.connect(node.input ?? node);
     return this;
   }
 }

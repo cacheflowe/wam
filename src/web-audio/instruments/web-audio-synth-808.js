@@ -1,5 +1,5 @@
 import "../web-audio-slider.js";
-import { injectControlsCSS, createSection, createTitleWithMute } from "../web-audio-slider.js";
+import { injectControlsCSS, createSection, createChannelStrip } from "../web-audio-slider.js";
 import "../web-audio-step-seq.js";
 import { scaleNoteOptions, STEP_WEIGHTS } from "../web-audio-scales.js";
 
@@ -293,6 +293,8 @@ export class WebAudioSynth808Controls extends HTMLElement {
     this._sliders = {};
     this._presetSelect = null;
     this._out = null;
+    this._pan = null;
+    this._panSlider = null;
     this._seq = null;
     this._rootMidi = 29;
     this._scaleName = "Minor";
@@ -305,11 +307,29 @@ export class WebAudioSynth808Controls extends HTMLElement {
     injectControlsCSS();
     this.style.setProperty("--slider-accent", color);
 
-    this._muteHandle = createTitleWithMute(this, options.title || "808 Bass", () => this._out);
+    const strip = createChannelStrip(this, {
+      title: options.title || "808 Bass",
+      getOutGain: () => this._out,
+      initialVol: instrument.volume,
+      initialPan: 0,
+    });
+    this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted };
+    this._sliders["volume"] = strip.volSlider;
+    this._panSlider = strip.panSlider;
 
+    // Waveform — always visible (visualizer)
+    const waveform = document.createElement("web-audio-waveform");
+    this.appendChild(waveform);
+
+    // Expanded panel — hidden when collapsed
+    const expanded = document.createElement("div");
+    expanded.className = "wac-expanded";
+    this.appendChild(expanded);
+
+    // Controls wrapper inside expanded
     const controls = document.createElement("div");
     controls.className = "wac-controls";
-    this.appendChild(controls);
+    expanded.appendChild(controls);
 
     const mkSlider = (def) => {
       const s = document.createElement("web-audio-slider");
@@ -339,7 +359,6 @@ export class WebAudioSynth808Controls extends HTMLElement {
       this._emitChange();
     });
     toneCtrl.appendChild(this._presetSelect);
-    toneCtrl.appendChild(mkSlider({ param: "volume", label: "Vol",  min: 0,  max: 1,    step: 0.01 }));
     toneCtrl.appendChild(mkSlider({ param: "tone",   label: "Tone", min: 50, max: 8000, step: 1, scale: "log" }));
     controls.appendChild(toneEl);
 
@@ -359,7 +378,12 @@ export class WebAudioSynth808Controls extends HTMLElement {
 
     this.addEventListener("slider-input", (e) => {
       if (!this._instrument) return;
-      this._instrument[e.detail.param] = e.detail.value;
+      const { param, value } = e.detail;
+      if (param === "pan") {
+        if (this._pan) this._pan.pan.value = value;
+      } else {
+        this._instrument[param] = value;
+      }
       this._emitChange();
     });
 
@@ -371,7 +395,7 @@ export class WebAudioSynth808Controls extends HTMLElement {
     randBtn.className = "wac-action-btn";
     randBtn.addEventListener("click", () => this.randomize());
     actionRow.appendChild(randBtn);
-    this.appendChild(actionRow);
+    expanded.appendChild(actionRow);
 
     // Step sequencer
     this._seq = document.createElement("web-audio-step-seq");
@@ -381,17 +405,21 @@ export class WebAudioSynth808Controls extends HTMLElement {
       noteOptions: noteOpts,
       color,
     });
-    this.appendChild(this._seq);
+    expanded.appendChild(this._seq);
     this._seq.addEventListener("step-change", () => this._emitChange());
 
-    const waveform = document.createElement("web-audio-waveform");
-    this.appendChild(waveform);
-
-    // Audio routing: instrument → analyser → _out (no FX unit)
-    const analyser = ctx.createAnalyser();
-    instrument.connect(analyser);
+    // Audio routing: instrument → _out → _pan
+    // analyser taps from _out so waveform goes dark when muted
     this._out = ctx.createGain();
-    analyser.connect(this._out);
+    instrument.connect(this._out);
+    this._pan = ctx.createStereoPanner();
+    this._out.connect(this._pan);
+    const analyser = ctx.createAnalyser();
+    this._out.connect(analyser);
+    const meterAnalyser = ctx.createAnalyser();
+    meterAnalyser.fftSize = 256;
+    this._out.connect(meterAnalyser);
+    strip.meter.setAnalyser(meterAnalyser);
     waveform.init(analyser, color);
   }
 
@@ -450,6 +478,7 @@ export class WebAudioSynth808Controls extends HTMLElement {
       params,
       steps: this._seq?.steps ?? [],
       muted: this._muteHandle?.isMuted() ?? false,
+      pan: this._pan?.pan.value ?? 0,
     };
   }
 
@@ -463,6 +492,10 @@ export class WebAudioSynth808Controls extends HTMLElement {
     }
     if (obj.steps && this._seq) this._seq.steps = obj.steps;
     if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
+    if (obj.pan != null && this._pan) {
+      this._pan.pan.value = obj.pan;
+      if (this._panSlider) this._panSlider.value = obj.pan;
+    }
   }
 
   // ---- Preset / routing ----
@@ -480,7 +513,7 @@ export class WebAudioSynth808Controls extends HTMLElement {
   set bpm(_) { /* 808 has no FX unit to sync */ }
 
   connect(node) {
-    if (this._out) this._out.connect(node.input ?? node);
+    (this._pan ?? this._out)?.connect(node.input ?? node);
     return this;
   }
 }

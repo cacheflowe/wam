@@ -1,7 +1,9 @@
 import PicoTheme from "./pico-theme.js";
 
+// import apps
 import "../app/acid-breaks.js";
 import "../app/generative-music.js";
+import "../app/generative-music-plants.js";
 
 class CustomApp extends HTMLElement {
   connectedCallback() {
@@ -52,7 +54,8 @@ class CustomApp extends HTMLElement {
           <header><h1>wam</h1></header>
           <div>
             <a href="#acid-breaks" role="button">Acid Breaks</a><br /><br />
-            <a href="#generative-music" role="button">Generative Music</a>
+            <a href="#generative-music" role="button">Generative Music</a><br /><br />
+            <a href="#generative-music-plants" role="button">Plantasia</a>
           </div>
         </section>
       </main>

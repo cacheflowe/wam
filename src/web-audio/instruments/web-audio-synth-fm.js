@@ -1,5 +1,5 @@
 import "../web-audio-slider.js";
-import { injectControlsCSS, createSection, createTitleWithMute } from "../web-audio-slider.js";
+import { injectControlsCSS, createSection, createChannelStrip } from "../web-audio-slider.js";
 import "../web-audio-step-seq.js";
 import { buildChordFromScale, scaleNotesInRange, scaleNoteOptions } from "../web-audio-scales.js";
 
@@ -552,6 +552,8 @@ export class WebAudioSynthFMControls extends HTMLElement {
     this._lfoIntervalSelect = null;
     this._fxUnit = null;
     this._out = null;
+    this._pan = null;
+    this._panSlider = null;
     this._seq = null;
     this._rootMidi = 29;
     this._scaleName = "Minor";
@@ -570,11 +572,29 @@ export class WebAudioSynthFMControls extends HTMLElement {
     this.style.setProperty("--slider-accent", color);
     this.style.setProperty("--fx-accent", color);
 
-    this._muteHandle = createTitleWithMute(this, options.title || "FM Chord Synth", () => this._out);
+    const strip = createChannelStrip(this, {
+      title: options.title || "FM Chord Synth",
+      getOutGain: () => this._out,
+      initialVol: instrument.volume,
+      initialPan: 0,
+    });
+    this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted };
+    this._sliders["volume"] = strip.volSlider;
+    this._panSlider = strip.panSlider;
 
+    // Waveform — always visible (visualizer)
+    const waveform = document.createElement("web-audio-waveform");
+    this.appendChild(waveform);
+
+    // Expanded panel — hidden when collapsed
+    const expanded = document.createElement("div");
+    expanded.className = "wac-expanded";
+    this.appendChild(expanded);
+
+    // Controls wrapper inside expanded
     const controls = document.createElement("div");
     controls.className = "wac-controls";
-    this.appendChild(controls);
+    expanded.appendChild(controls);
 
     const mkSlider = (def) => {
       const s = document.createElement("web-audio-slider");
@@ -615,7 +635,6 @@ export class WebAudioSynthFMControls extends HTMLElement {
       this._emitChange();
     });
     toneCtrl.appendChild(this._presetSelect);
-    toneCtrl.appendChild(mkSlider({ param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(toneEl);
 
     // ---- FM ----
@@ -678,7 +697,12 @@ export class WebAudioSynthFMControls extends HTMLElement {
 
     this.addEventListener("slider-input", (e) => {
       if (!this._instrument) return;
-      this._instrument[e.detail.param] = e.detail.value;
+      const { param, value } = e.detail;
+      if (param === "pan") {
+        if (this._pan) this._pan.pan.value = value;
+      } else {
+        this._instrument[param] = value;
+      }
       this._emitChange();
     });
 
@@ -724,7 +748,7 @@ export class WebAudioSynthFMControls extends HTMLElement {
     chordBtn.addEventListener("click", () => this.triggerJamChord());
     actionRow.appendChild(chordBtn);
 
-    this.appendChild(actionRow);
+    expanded.appendChild(actionRow);
 
     // Step sequencer
     this._seq = document.createElement("web-audio-step-seq");
@@ -734,24 +758,27 @@ export class WebAudioSynthFMControls extends HTMLElement {
       noteOptions: noteOpts,
       color,
     });
-    this.appendChild(this._seq);
+    expanded.appendChild(this._seq);
     this._seq.addEventListener("step-change", () => this._emitChange());
 
     // FX unit
     this._fxUnit = document.createElement("web-audio-fx-unit");
-    this.appendChild(this._fxUnit);
+    expanded.appendChild(this._fxUnit);
     this._fxUnit.init(ctx, { title: "FM FX", bpm: options.fx?.bpm ?? 120, ...options.fx });
 
-    // Waveform
-    const waveform = document.createElement("web-audio-waveform");
-    this.appendChild(waveform);
-
-    // Audio routing
-    const analyser = ctx.createAnalyser();
-    instrument.connect(analyser);
-    analyser.connect(this._fxUnit.input);
+    // Audio routing: instrument → fxUnit → _out → _pan
+    // analyser taps from _out so waveform goes dark when muted
+    instrument.connect(this._fxUnit.input);
     this._out = ctx.createGain();
     this._fxUnit.connect(this._out);
+    this._pan = ctx.createStereoPanner();
+    this._out.connect(this._pan);
+    const analyser = ctx.createAnalyser();
+    this._out.connect(analyser);
+    const meterAnalyser = ctx.createAnalyser();
+    meterAnalyser.fftSize = 256;
+    this._out.connect(meterAnalyser);
+    strip.meter.setAnalyser(meterAnalyser);
     waveform.init(analyser, color);
   }
 
@@ -814,6 +841,7 @@ export class WebAudioSynthFMControls extends HTMLElement {
       chordSize: this._chordSize,
       fx: this._fxUnit?.toJSON(),
       muted: this._muteHandle?.isMuted() ?? false,
+      pan: this._pan?.pan.value ?? 0,
     };
   }
 
@@ -842,6 +870,10 @@ export class WebAudioSynthFMControls extends HTMLElement {
     if (obj.steps && this._seq) this._seq.steps = obj.steps;
     if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
     if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
+    if (obj.pan != null && this._pan) {
+      this._pan.pan.value = obj.pan;
+      if (this._panSlider) this._panSlider.value = obj.pan;
+    }
   }
 
   // ---- Preset / routing ----
@@ -864,7 +896,7 @@ export class WebAudioSynthFMControls extends HTMLElement {
   }
 
   connect(node) {
-    if (this._out) this._out.connect(node.input ?? node);
+    (this._pan ?? this._out)?.connect(node.input ?? node);
     return this;
   }
 }
