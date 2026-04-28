@@ -1,0 +1,76 @@
+/* Global CSS variables */
+:root {
+  --spacing-company: 3rem;
+  --font-weight: 400;
+  --border-radius: 0;
+  --text-bg: rgba(255, 255, 255, 0.6);
+}
+
+@media only screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --pico-background-color: #111;
+    --text-bg: rgba(0, 0, 0, 0.6);
+  }
+}
+
+header {
+  margin-bottom: calc(var(--pico-spacing) * 2);
+  text-align: left;
+
+  img {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    mix-blend-mode: screen;
+  }
+}
+
+@media screen and (min-width: 768px) {
+  header {
+    text-align: center;
+  }
+}
+
+/* Typography */
+h2,
+h3,
+hgroup > :last-child {
+  font-weight: 200;
+}
+
+small {
+  color: var(--muted-color);
+}
+
+.container {
+  padding: 4rem 2rem;
+}
+
+/* Small inputs */
+[small] {
+  input,
+  select,
+  button {
+    font-size: 0.7rem !important;
+    padding: 0.5rem !important;
+    height: 2rem !important;
+  }
+}
+
+/* Flash animation */
+
+@keyframes flash-anim {
+  0% {
+    background-color: rgba(0, 255, 0, 0.5);
+  }
+  30% {
+    background-color: rgba(0, 255, 0, 0.5);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.flash {
+  animation: flash-anim 2s 1;
+}
