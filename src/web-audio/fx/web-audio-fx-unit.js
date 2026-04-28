@@ -49,6 +49,9 @@ export default class WebAudioFxUnit extends HTMLElement {
    * @param {number}  [options.bpm=120]
    * @param {number}  [options.reverbDecay=2.5]
    * @param {number}  [options.reverbWet=0]
+   * @param {number}  [options.reverbPreDelay=0]    ms (0–80)
+   * @param {number}  [options.reverbHpFreq=80]     Hz
+   * @param {number}  [options.reverbLpFreq=8000]   Hz
    * @param {number}  [options.delayInterval=0.75]   beat multiplier
    * @param {number}  [options.delayFeedback=0.35]
    * @param {number}  [options.delayMix=0]
@@ -99,6 +102,9 @@ export default class WebAudioFxUnit extends HTMLElement {
     this._reverb = new WebAudioFxReverb(ctx, {
       decay: options.reverbDecay ?? 2.5,
       wet: options.reverbWet ?? 0,
+      preDelay: options.reverbPreDelay ?? 0,
+      hpFreq: options.reverbHpFreq ?? 80,
+      lpFreq: options.reverbLpFreq ?? 8000,
     });
 
     this._in.connect(this._filter.input);
@@ -134,6 +140,9 @@ export default class WebAudioFxUnit extends HTMLElement {
   toJSON() {
     return {
       reverbWet: this._reverb?.wet ?? 0,
+      reverbPreDelay: this._reverb?.preDelay ?? 0,
+      reverbHpFreq: this._reverb?.hpFreq ?? 80,
+      reverbLpFreq: this._reverb?.lpFreq ?? 8000,
       delayInterval: this._delay?.interval ?? 0.75,
       delayFeedback: this._delay?.feedback ?? 0.35,
       delayMix: this._delay?.wet ?? 0,
@@ -158,6 +167,21 @@ export default class WebAudioFxUnit extends HTMLElement {
       this._reverb.wet = obj.reverbWet;
       const s = this.querySelector('web-audio-slider[param="reverbWet"]');
       if (s) s.value = obj.reverbWet;
+    }
+    if (obj.reverbPreDelay != null && this._reverb) {
+      this._reverb.preDelay = obj.reverbPreDelay;
+      const s = this.querySelector('web-audio-slider[param="reverbPreDelay"]');
+      if (s) s.value = obj.reverbPreDelay;
+    }
+    if (obj.reverbHpFreq != null && this._reverb) {
+      this._reverb.hpFreq = obj.reverbHpFreq;
+      const s = this.querySelector('web-audio-slider[param="reverbHpFreq"]');
+      if (s) s.value = obj.reverbHpFreq;
+    }
+    if (obj.reverbLpFreq != null && this._reverb) {
+      this._reverb.lpFreq = obj.reverbLpFreq;
+      const s = this.querySelector('web-audio-slider[param="reverbLpFreq"]');
+      if (s) s.value = obj.reverbLpFreq;
     }
     if (obj.delayInterval != null && this._delay) {
       this._delay.interval = obj.delayInterval;
@@ -327,7 +351,10 @@ export default class WebAudioFxUnit extends HTMLElement {
 
     // ---- Reverb ----
     const { el: revEl, controls: revCtrl } = createSection("Reverb");
-    revCtrl.appendChild(this._addSlider("reverbWet", "Wet", 0, 1, 0.01, options.reverbWet ?? 0));
+    revCtrl.appendChild(this._addSlider("reverbWet",      "Wet",      0,   1,     0.01, options.reverbWet      ?? 0));
+    revCtrl.appendChild(this._addSlider("reverbPreDelay", "Pre-dly",  0,   80,    1,    options.reverbPreDelay ?? 0));
+    revCtrl.appendChild(this._addSlider("reverbHpFreq",   "HP",       20,  800,   1,    options.reverbHpFreq   ?? 80,   { scale: "log" }));
+    revCtrl.appendChild(this._addSlider("reverbLpFreq",   "Damp",     2000, 20000, 1,   options.reverbLpFreq   ?? 8000, { scale: "log" }));
     this.appendChild(revEl);
 
     // Delegated listener for all sliders
@@ -336,6 +363,15 @@ export default class WebAudioFxUnit extends HTMLElement {
       switch (param) {
         case "reverbWet":
           if (this._reverb) this._reverb.wet = value;
+          break;
+        case "reverbPreDelay":
+          if (this._reverb) this._reverb.preDelay = value;
+          break;
+        case "reverbHpFreq":
+          if (this._reverb) this._reverb.hpFreq = value;
+          break;
+        case "reverbLpFreq":
+          if (this._reverb) this._reverb.lpFreq = value;
           break;
         case "delayFeedback":
           if (this._delay) this._delay.feedback = value;

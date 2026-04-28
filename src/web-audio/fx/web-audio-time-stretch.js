@@ -258,6 +258,7 @@ export class WebAudioTimeStretchControls extends HTMLElement {
     pitchSlider.setAttribute("min", -24);
     pitchSlider.setAttribute("max", 24);
     pitchSlider.setAttribute("step", 0.1);
+    pitchSlider.setAttribute("default", 0);
     pitchSlider.value = target.pitchShift ?? 0;
     controls.appendChild(pitchSlider);
     this._pitchSlider = pitchSlider;

@@ -160,6 +160,20 @@ export default class WebAudioSlider extends HTMLElement {
         }),
       );
     });
+
+    const defaultAttr = this.getAttribute("default");
+    if (defaultAttr !== null) {
+      this._range.addEventListener("dblclick", () => {
+        const def = parseFloat(defaultAttr);
+        this.value = def;
+        this.dispatchEvent(
+          new CustomEvent("slider-input", {
+            bubbles: true,
+            detail: { param, value: def },
+          }),
+        );
+      });
+    }
   }
 
   // ---- Log scale helpers ----
