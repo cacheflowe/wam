@@ -118,6 +118,11 @@ export default class WebAudioSlider extends HTMLElement {
     const labelText = document.createElement("span");
     labelText.className = "was-label-text";
     labelText.textContent = label + " ";
+    const tooltip = this.getAttribute("data-tooltip");
+    if (tooltip) {
+      labelText.setAttribute("data-tooltip", tooltip);
+      this.removeAttribute("data-tooltip");
+    }
     this._valEl = document.createElement("span");
     this._valEl.className = "was-val";
     lbl.appendChild(labelText);
@@ -282,8 +287,12 @@ export function injectControlsCSS() {
       background: #141414;
       border: 1px solid #222;
       border-radius: 6px;
-      overflow: hidden;
       font-family: monospace;
+    }
+    /* Clip channel strip and waveform to the top rounded corners */
+    .wac-channel-strip {
+      border-radius: 5px 5px 0 0;
+      overflow: hidden;
     }
     .wac-title {
       font-size: 0.7em;
@@ -308,12 +317,7 @@ export function injectControlsCSS() {
     .wac-section + .wac-section {
       border-top: 1px solid #1d1d1d;
     }
-    .wac-section-label {
-      font-size: 0.55em;
-      color: #373737;
-      text-transform: uppercase;
-      letter-spacing: 0.18em;
-    }
+    .wac-section .wac-title { padding: 0; }
     .wac-section-controls {
       display: flex;
       flex-wrap: wrap;
@@ -347,6 +351,7 @@ export function injectControlsCSS() {
       border-radius: 3px;
       padding: 4px 5px;
       cursor: pointer;
+      max-width: 160px;
     }
     .wac-action-row {
       display: flex;
@@ -382,15 +387,6 @@ export function injectControlsCSS() {
       color: #888;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-    }
-    .wac-title-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 14px 0;
-    }
-    .wac-title-row .wac-title {
-      padding: 0;
     }
     .wac-mute-btn {
       font-family: monospace;
@@ -440,7 +436,7 @@ export function injectControlsCSS() {
       transition: transform 0.15s ease;
       line-height: 1;
     }
-    [data-collapsed] .wac-strip-chevron { transform: rotate(-90deg); }
+    [data-collapsed] > .wac-channel-strip .wac-strip-chevron { transform: rotate(-90deg); }
     .wac-channel-strip web-audio-slider {
       flex: 1 1 80px;
       max-width: 160px;
@@ -449,7 +445,22 @@ export function injectControlsCSS() {
       max-width: 110px;
     }
     /* ---- Expanded / collapsed ---- */
-    [data-collapsed] .wac-expanded { display: none; }
+    [data-collapsed] > .wac-expanded { display: none; }
+    /* ---- PicoCSS tooltip overrides for slider label ---- */
+    .was-label-text[data-tooltip] {
+      cursor: help;
+      /* border-bottom: 1px dotted #555; */
+      border-bottom: 0;
+    }
+    .was-label-text[data-tooltip]::before {
+      white-space: normal;
+      overflow: visible;
+      width: 130px;
+      text-align: left;
+      line-height: 1;
+      font-family: monospace;
+      font-size: 0.5rem;
+    }
   `;
   document.head.appendChild(s);
 }
@@ -465,7 +476,7 @@ export function createSection(label) {
   const el = document.createElement("div");
   el.className = "wac-section";
   const lbl = document.createElement("div");
-  lbl.className = "wac-section-label";
+  lbl.className = "wac-title";
   lbl.textContent = label;
   el.appendChild(lbl);
   const controls = document.createElement("div");
@@ -474,63 +485,6 @@ export function createSection(label) {
   return { el, controls };
 }
 
-/**
- * Create a mute toggle button for an instrument controls panel.
- * Operates on the controls component's _out gain node.
- *
- * @param {HTMLElement} parentEl  Container element to append the title row to
- * @param {string} titleText     Title text for the instrument
- * @param {function} getOutGain  Getter that returns the _out GainNode (may be null during init)
- * @returns {{ el: HTMLElement, isMuted: () => boolean, setMuted: (v: boolean) => void }}
- */
-export function createTitleWithMute(parentEl, titleText, getOutGain) {
-  const row = document.createElement("div");
-  row.className = "wac-title-row";
-
-  const title = document.createElement("div");
-  title.className = "wac-title";
-  title.textContent = titleText;
-  row.appendChild(title);
-
-  const muteBtn = document.createElement("button");
-  muteBtn.className = "wac-mute-btn";
-  muteBtn.textContent = "Mute";
-  row.appendChild(muteBtn);
-
-  let muted = false;
-  let preMuteVolume = 1;
-
-  muteBtn.addEventListener("click", () => {
-    muted = !muted;
-    const out = getOutGain();
-    if (muted) {
-      preMuteVolume = out?.gain.value ?? 1;
-      if (out) out.gain.value = 0;
-    } else {
-      if (out) out.gain.value = preMuteVolume;
-    }
-    muteBtn.classList.toggle("wac-muted", muted);
-    muteBtn.textContent = muted ? "Muted" : "Mute";
-    parentEl.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
-  });
-
-  parentEl.appendChild(row);
-
-  return {
-    el: row,
-    isMuted: () => muted,
-    setMuted: (v) => {
-      muted = !!v;
-      const out = getOutGain();
-      if (muted) {
-        preMuteVolume = out?.gain.value ?? 1;
-        if (out) out.gain.value = 0;
-      }
-      muteBtn.classList.toggle("wac-muted", muted);
-      muteBtn.textContent = muted ? "Muted" : "Mute";
-    },
-  };
-}
 
 /**
  * Create a channel strip row for an instrument controls panel.
@@ -620,6 +574,9 @@ export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1
     panSlider,
     meter,
     isMuted: () => muted,
+    setPreMuteVolume: (v) => {
+      preMuteVolume = v;
+    },
     setMuted: (v) => {
       muted = !!v;
       const out = getOutGain();

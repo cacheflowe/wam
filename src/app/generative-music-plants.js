@@ -815,12 +815,9 @@ class WebAudioGenerativeMusicPlants extends HTMLElement {
     ];
 
     for (const { label, tag, inst, color } of INSTRUMENTS) {
-      const { root, body } = this._makeCollapsible(label, true);
-      root.classList.add("gm-instrument-sub");
       const ctrl = document.createElement(tag);
-      body.appendChild(ctrl);
       ctrl.bind(inst, this._ctx, { title: label, color, fx: { bpm: this._bpm() } });
-      this._debugPanel.appendChild(root);
+      this._debugPanel.appendChild(ctrl);
       this._debugControls.push(ctrl);
     }
   }
@@ -851,9 +848,9 @@ class WebAudioGenerativeMusicPlants extends HTMLElement {
             <li><b>Mood</b> (via <code>wet = 1 - dryness/10</code>): wet plants shift toward brighter, happier scales.</li>
             <li><b>Health</b>: wet + smooth = stable in-scale melody; drier plants risk chromatic drift in the lead.</li>
             <li><b>Lead</b>: dryness &gt; 0.6 adds random pitch detune and sub-oscillator detuning for a gritty, unstable tone.</li>
-            <li><b>Lead delay</b>: dry plants get more rhythmic stab echoes (wet × 0.2 added to delay mix).</li>
-            <li><b>Bass delay</b>: dry plants add a secondary echo pulse (wet × 0.1 added to feedback).</li>
-            <li><b>Lead reverb</b>: wetter plants bloom into longer, wider reverb tails (wet × 0.7).</li>
+            <li><b>Lead delay</b>: dry plants get more rhythmic stab echoes (<code>dry × 0.2</code> added to delay mix, <code>dry × 0.35</code> to feedback).</li>
+            <li><b>Bass delay</b>: dryness and branching together drive echo density — <code>wet = br×0.2 + dry×0.1</code>, <code>feedback = br×0.3 + dry×0.08</code>.</li>
+            <li><b>Lead reverb</b>: wetter plants bloom into longer, wider reverb tails (<code>0.1 + wet×0.7</code>).</li>
           </ul>
         </div>
 
@@ -864,9 +861,9 @@ class WebAudioGenerativeMusicPlants extends HTMLElement {
           <ul>
             <li><b>BPM</b>: <code>110 - siz × 60</code> → small=110 BPM, large=50 BPM.</li>
             <li><b>Excitement</b> (via <code>1 - siz</code>): small plants are inherently more energetic.</li>
-            <li><b>Kick</b>: large plant = long boomy decay (up to 0.9s); small = tight punch (0.2s).</li>
-            <li><b>Reverb decays</b>: lead reverb 2–6s, pad reverb 3–8s — all scale with plant size.</li>
-            <li><b>Pad</b>: size affects reverb wash length, making large plants feel more cavernous.</li>
+            <li><b>Kick decay</b>: <code>0.2 + siz × 0.7</code> → small=0.2s punch, large=0.9s boom.</li>
+            <li><b>Reverb decays</b>: lead reverb 2–6s, pad reverb 3–8s — both scale with size.</li>
+            <li><b>Note envelopes</b>: size extends the decay and release of lead, bass, and FM. Large plants let notes ring longer; combined with texture for the full formula (see Texture).</li>
           </ul>
         </div>
 
@@ -876,30 +873,35 @@ class WebAudioGenerativeMusicPlants extends HTMLElement {
           <p>Structural complexity of the plant. More branches = more musical activity, harmonic density, and rhythmic variation.</p>
           <ul>
             <li><b>Excitement</b> (via <code>br × 0.5</code>): branching directly raises energy level alongside size.</li>
-            <li><b>Hihat offbeats</b>: high branching adds probabilistic 16th-note offbeats (<code>br × 0.4</code> bonus).</li>
-            <li><b>Bass</b>: more active bass lines with wider note choices (thirds, fifths, octave runs).</li>
-            <li><b>Pad chords</b>: branching &gt; 0.6 adds a 7th chord extension; &gt; 0.8 may add a 9th.</li>
-            <li><b>FM modulation</b>: branching multiplies <code>modIndex</code> post-preset (<code>0.6 + br × 0.9</code>), making the FM timbre richer and more complex with more branches.</li>
-            <li><b>Delays</b>: higher branching increases both bass and lead delay feedback.</li>
-            <li><b>Master filter</b>: branching contributes 45% of filter openness (alongside texture).</li>
+            <li><b>Hihat offbeats</b>: high branching adds probabilistic 16th-note offbeats (<code>br × 0.4</code> bonus per offbeat slot).</li>
+            <li><b>Bass activity</b>: more branching increases the probability of extra notes (thirds, repeated roots, octave runs) in the bass pattern.</li>
+            <li><b>Pad chords</b>: branching &gt; 0.6 adds a 7th chord extension when the scale supports it.</li>
+            <li><b>FM modulation</b>: branching multiplies <code>modIndex</code> post-preset (<code>0.6 + br × 0.9</code>), making the FM timbre richer and more complex.</li>
+            <li><b>Delays</b>: higher branching increases both bass delay wet/feedback and lead delay feedback.</li>
+            <li><b>Master filter</b>: branching contributes 45% of filter openness (<code>(1-tex)×0.55 + br×0.45</code>).</li>
           </ul>
         </div>
 
         <div class="gm-guide-param">
           <div class="gm-guide-name">Texture <span class="gm-guide-range">0–1</span></div>
           <div class="gm-guide-hint">Spiky (0) → Smooth (1)</div>
-          <p>The physical surface of the plant. Spiky plants are bright, staccato, and dense; smooth plants are warm, legato, and spacious.</p>
+          <p>The physical surface of the plant. Spiky plants are bright, staccato, and dense; smooth plants are warm, legato, and spacious. Texture is the primary driver of envelope shape across all melodic instruments.</p>
           <ul>
             <li><b>Note duration</b>: <code>step × (0.25 + tex × 1.75)</code> — spiky=25% of a step, smooth=200%.</li>
-            <li><b>Lead density</b>: spiky adds up to 0.3 bonus probability to every note slot.</li>
-            <li><b>Lead intervals</b>: spiky allows wider melodic leaps (up to 9 semitones); smooth stays stepwise (4–7 semitones based on mood).</li>
-            <li><b>Chromatic drift</b>: spiky plants (tex &lt; 0.2) can introduce notes ±1 semitone outside the scale, like unhealthy plants.</li>
+            <li><b>Lead density</b>: spiky adds up to 0.3 bonus probability to every note slot in the 16-step pattern.</li>
+            <li><b>Lead intervals</b>: spiky allows wider melodic leaps (up to 9 semitones); smooth stays stepwise (4–7 semitones, modulated by mood).</li>
+            <li><b>Chromatic drift</b>: spiky plants (tex &lt; 0.2) and unhealthy plants (health &lt; 0.4) can introduce notes ±1 semitone outside the scale.</li>
+            <li><b>Bass pattern</b>: spiky drives busier bass lines — more thirds, repeated hits, and octave jumps alongside excitement-based activity.</li>
+            <li><b>Attack</b>: lead <code>tex × 0.03s</code>, bass <code>tex × 0.02s</code>, FM <code>tex × 0.04s</code> — spiky instruments hit instantly (0ms); smooth ones ramp up gently.</li>
+            <li><b>Decay</b>: lead <code>0.04 + siz×0.15 + tex×0.2</code>, bass <code>0.05 + siz×0.2 + tex×0.25</code>, FM <code>0.1 + siz×0.4 + tex×0.3</code> — texture and size both lengthen the note body.</li>
+            <li><b>Sustain</b>: lead <code>0.3 + tex×0.4</code>, bass <code>0.2 + tex×0.5</code> — spiky notes die quickly after peak; smooth notes hold their level.</li>
+            <li><b>Release</b>: lead <code>0.03 + tex×0.35 + siz×0.1</code>, bass <code>0.04 + tex×0.4 + siz×0.1</code>, FM <code>0.1 + tex×0.8 + siz×0.2</code> — smooth/large plants trail off slowly.</li>
             <li><b>Master filter</b>: spiky = bright open filter; smooth = warm filtered sound. Formula: <code>(1 - tex) × 0.55 + br × 0.45</code>.</li>
-            <li><b>Bass filter</b>: spiky = 1200 Hz resonant ring; smooth = 300 Hz warm low-pass.</li>
-            <li><b>Kick</b>: spiky = high-frequency punch (180 Hz start, tight 25ms sweep); smooth = slow thudding sweep (100 Hz start, 125ms).</li>
+            <li><b>Bass filter</b>: spiky = 1200 Hz resonant ring (<code>Q up to 10</code>); smooth = 300 Hz warm low-pass (<code>Q=3</code>).</li>
+            <li><b>Kick</b>: spiky = tight 25ms sweep from 180 Hz; smooth = slow 125ms sweep from 100 Hz.</li>
             <li><b>Hihat</b>: spiky = bright 12 kHz crisp snap (30ms decay); smooth = dark 3 kHz wash (250ms).</li>
             <li><b>Pad</b>: spiky = quick 50ms attack, 0.5s release; smooth = slow 1.5s bloom, 3.5s release.</li>
-            <li><b>FM modDecay</b>: spiky = short clicking FM transient; smooth = long evolving timbre.</li>
+            <li><b>FM modDecay</b>: <code>0.05 + (1-tex)×0.08 + tex×0.8</code> — spiky = short clicking transient; smooth = long evolving timbre.</li>
           </ul>
         </div>
 
@@ -907,9 +909,24 @@ class WebAudioGenerativeMusicPlants extends HTMLElement {
           <div class="gm-guide-name">Derived States</div>
           <div class="gm-guide-hint">Computed each bar from the four inputs above</div>
           <ul>
-            <li><b>mood</b> = <code>tex × 0.5 + wet × 0.5</code> — 0=dark/minor, 1=bright/major. Selects scale, lead oscillator type, bass waveform.</li>
-            <li><b>excitement</b> = <code>br × 0.5 + (1 - siz) × 0.5</code> — 0=calm, 1=energetic. Drives note density in all patterns, kick complexity, velocity.</li>
-            <li><b>health</b> = <code>wet × 0.6 + tex × 0.4</code> — 0=stressed, 1=thriving. Low health introduces chromatic notes into the lead melody.</li>
+            <li><b>mood</b> = <code>tex × 0.5 + wet × 0.5</code> — 0=dark/minor, 1=bright/major. Selects scale, lead oscillator type, bass waveform (square vs sawtooth), sub-oscillator mix.</li>
+            <li><b>excitement</b> = <code>br × 0.5 + (1 - siz) × 0.5</code> — 0=calm, 1=energetic. Drives note density in all patterns, kick pattern complexity, velocity, lead/bass delay amounts.</li>
+            <li><b>health</b> = <code>wet × 0.6 + tex × 0.4</code> — 0=stressed, 1=thriving. Low health introduces chromatic notes (±1 semitone) into the lead melody, alongside spiky texture.</li>
+          </ul>
+        </div>
+
+        <div class="gm-guide-param">
+          <div class="gm-guide-name">Presets</div>
+          <div class="gm-guide-hint">Reference values for named plant archetypes</div>
+          <ul>
+            <li><b>Cactus</b>: dry=9, size=120, branch=2, tex=0.0 — fastest BPM, spiky stabs, bright filter, no attack.</li>
+            <li><b>Seedling</b>: dry=4, size=90, branch=3, tex=0.4 — fast, moderately bright, light reverb.</li>
+            <li><b>Fern</b>: dry=2, size=200, branch=9, tex=0.7 — complex branching, lush reverb, wide chords.</li>
+            <li><b>Shrub</b>: dry=5, size=320, branch=6, tex=0.5 — balanced midpoint across all params.</li>
+            <li><b>Oak</b>: dry=2, size=580, branch=8, tex=1.0 — slow BPM, smooth envelopes, maximum attack ramp, deep resonance.</li>
+            <li><b>Willow</b>: dry=1, size=700, branch=7, tex=0.9 — wettest, slowest, most atmospheric.</li>
+            <li><b>Unhealthy</b>: dry=9, size=320, branch=5, tex=0.3 (papery) — dry and stressed; chromatic drift, bright but rough.</li>
+            <li><b>Healthy</b>: dry=2, size=520, branch=7, tex=0.8 (waxy) — moist and thriving; smooth, lush, in-scale.</li>
           </ul>
         </div>
 

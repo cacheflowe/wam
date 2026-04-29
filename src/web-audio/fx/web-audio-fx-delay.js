@@ -4,7 +4,7 @@
  *
  * Audio chain:
  *   in → delay → wetGain → out
- *        delay → filter (LP) → feedback → delay (loop)
+ *        delay → filter (LP or HP) → feedback → delay (loop)
  *   in → dry → out
  *   LFO (0.3 Hz sine) → lfoGain → delay.delayTime
  *
@@ -19,6 +19,8 @@
  * Usage (direct):
  *   const delay = new WebAudioFxDelay(ctx, { delayTime: 0.25 });
  */
+import { sweepToLpFreq, sweepToHpFreq } from "./web-audio-fx-filter.js";
+
 export default class WebAudioFxDelay {
   static INTERVALS = [
     { label: "1/16", beats: 0.25 },
@@ -45,6 +47,7 @@ export default class WebAudioFxDelay {
 
     this._bpm = options.bpm ?? 120;
     this._interval = options.interval ?? null; // null = direct delayTime mode
+    this._filterSweep = 0;
 
     // Set initial delay time
     if (this._interval != null) {
@@ -54,6 +57,11 @@ export default class WebAudioFxDelay {
     }
 
     this._feedback.gain.value = Math.min(0.95, Math.max(0, options.feedback ?? 0.3));
+
+    // Apply initial filter state (sweep takes priority over filterFreq)
+    if (options.filterSweep != null && options.filterSweep !== 0) {
+      this.filterSweep = options.filterSweep;
+    }
 
     // in → dry → out
     this._in.connect(this._dry);
@@ -136,6 +144,24 @@ export default class WebAudioFxDelay {
   }
   set filterFreq(v) {
     this._filter.frequency.value = v;
+  }
+
+  /** Bipolar sweep -1..+1 (LP←0→HP). Negative = LP, positive = HP, 0 = bypass. */
+  get filterSweep() {
+    return this._filterSweep;
+  }
+  set filterSweep(v) {
+    this._filterSweep = Math.max(-1, Math.min(1, v));
+    if (Math.abs(this._filterSweep) < 0.005) {
+      this._filter.type = "lowpass";
+      this._filter.frequency.value = 20000;
+    } else if (this._filterSweep < 0) {
+      this._filter.type = "lowpass";
+      this._filter.frequency.value = sweepToLpFreq(this._filterSweep);
+    } else {
+      this._filter.type = "highpass";
+      this._filter.frequency.value = sweepToHpFreq(this._filterSweep);
+    }
   }
 
   /** Modulation depth 0–1 (scaled internally to seconds). */

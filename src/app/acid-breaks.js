@@ -18,7 +18,7 @@ const BREAK_FILES = [
 ];
 
 class WebAudioAcid extends HTMLElement {
-  static STORAGE_KEY = "web-audio-acid-state";
+  static STORAGE_KEY = "acid-breaks-state";
 
   connectedCallback() {
     this._ctx = null;
@@ -467,13 +467,14 @@ class WebAudioAcid extends HTMLElement {
         touch-action: manipulation;
       }
 
-      web-audio-acid {
+      acid-breaks {
         display: block;
         font-family: monospace;
         background: #111;
         color: #ccc;
         padding: 16px;
         border-radius: 6px;
+        padding: 1rem;
       }
 
       /* ---- Instrument groups ---- */

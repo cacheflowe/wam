@@ -1,7 +1,8 @@
 import "../web-audio-slider.js";
-import { injectControlsCSS, createSection, createChannelStrip } from "../web-audio-slider.js";
 import "../web-audio-step-seq.js";
 import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../web-audio-scales.js";
+import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
+import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
 
 /**
  * WebAudioSynthAcid — TB-303-style monophonic acid bass synthesizer.
@@ -20,7 +21,7 @@ import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../web-audio-
  *   acid.trigger(midi, stepDurSec, accent, atTime);
  *   acid.reset(); // clear portamento tracking (call on stop/restart)
  */
-export default class WebAudioSynthAcid {
+export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
 
   static PRESETS = {
     Default: { cutoff: 600,  resonance: 18, envMod: 0.6, decay: 0.25, attack: 0.005, distortion: 0,   portamento: 0,    oscType: "sawtooth", volume: 1.0, unisonVoices: 1, unisonDetune: 0 },
@@ -32,25 +33,11 @@ export default class WebAudioSynthAcid {
     Hoover:  { cutoff: 600,  resonance: 10, envMod: 0.5, decay: 0.4,  attack: 0.01,  distortion: 0.3, portamento: 0.08, oscType: "sawtooth", volume: 0.85, unisonVoices: 4, unisonDetune: 30 },
   };
 
-  /**
-   * @param {AudioContext} ctx
-   * @param {object} [options]
-   * @param {number} [options.cutoff=600]       Base filter frequency in Hz
-   * @param {number} [options.resonance=18]     Filter Q
-   * @param {number} [options.envMod=0.6]       Filter envelope depth (0–1)
-   * @param {number} [options.decay=0.25]       Filter/amp decay in seconds
-   * @param {number} [options.attack=0.005]     Filter/amp attack in seconds
-   * @param {number} [options.distortion=0]     Distortion amount (0–1)
-   * @param {number} [options.portamento=0]     Glide time in seconds
-   * @param {'sawtooth'|'square'} [options.oscType='sawtooth']
-   * @param {number} [options.volume=1.0]
-   */
   constructor(ctx, preset = "Default") {
-    this.ctx = ctx;
+    super(ctx, null); // creates ctx + _out but skips preset
     this._distortion = 0;
     this._distortionCurve = this._makeDistortionCurve(0);
     this._lastScheduledFreq = null;
-    this._out = ctx.createGain();
     this.unisonVoices = 1;
     this.unisonDetune = 0;
     this.octaveOffset = 0;
@@ -69,30 +56,7 @@ export default class WebAudioSynthAcid {
     this._distortionCurve = this._makeDistortionCurve(v);
   }
 
-  get volume() {
-    return this._out.gain.value;
-  }
-
-  set volume(v) {
-    this._out.gain.value = v;
-  }
-
-  // ---- Routing ----
-
-  get input() {
-    return this._out;
-  }
-
-  connect(node) {
-    this._out.connect(node.input ?? node);
-    return this;
-  }
-
   // ---- Helpers ----
-
-  _midiToFreq(midi) {
-    return 440 * Math.pow(2, (midi - 69) / 12);
-  }
 
   _makeDistortionCurve(amount) {
     const n = 512;
@@ -103,26 +67,6 @@ export default class WebAudioSynthAcid {
       curve[i] = k > 0 ? ((Math.PI + k) * x) / (Math.PI + k * Math.abs(x)) : x;
     }
     return curve;
-  }
-
-  /**
-   * Apply a named preset, updating all synth parameters in place.
-   * @param {string} name  Key of WebAudioSynthAcid.PRESETS
-   */
-  applyPreset(name) {
-    const p = WebAudioSynthAcid.PRESETS[name];
-    if (!p) return;
-    if (p.cutoff     != null) this.cutoff     = p.cutoff;
-    if (p.resonance  != null) this.resonance  = p.resonance;
-    if (p.envMod     != null) this.envMod     = p.envMod;
-    if (p.decay      != null) this.decay      = p.decay;
-    if (p.attack     != null) this.attack     = p.attack;
-    if (p.distortion != null) this.distortion = p.distortion;
-    if (p.portamento != null) this.portamento = p.portamento;
-    if (p.oscType    != null) this.oscType    = p.oscType;
-    if (p.volume     != null) this.volume     = p.volume;
-    if (p.unisonVoices != null) this.unisonVoices = p.unisonVoices;
-    if (p.unisonDetune != null) this.unisonDetune = p.unisonDetune;
   }
 
   /** Clear portamento memory — call when stopping/restarting the sequencer. */
@@ -143,7 +87,7 @@ export default class WebAudioSynthAcid {
   trigger(midi, stepDurSec, accent, atTime) {
     const ctx = this.ctx;
     const shifted = midi + this.octaveOffset * 12 + (Math.random() < this.octaveJumpProb ? 12 : 0);
-    const freq = this._midiToFreq(shifted);
+    const freq = WebAudioInstrumentBase._midiToFreq(shifted);
     const prevFreq = this._lastScheduledFreq;
     this._lastScheduledFreq = freq;
 
@@ -245,21 +189,21 @@ export default class WebAudioSynthAcid {
  *   // On each sequencer tick:
  *   controls.step(index, time, stepDurationSec);
  */
-export class WebAudioSynthAcidControls extends HTMLElement {
+export class WebAudioSynthAcidControls extends WebAudioControlsBase {
 
   static SLIDER_DEFS = [
     { param: "volume",     label: "Vol",        min: 0,     max: 1,     step: 0.01 },
-    { param: "cutoff",     label: "Cutoff",     min: 50,    max: 10000, step: 1, scale: "log" },
-    { param: "resonance",  label: "Resonance",  min: 0.1,   max: 30,    step: 0.1 },
-    { param: "envMod",     label: "Env Mod",    min: 0,     max: 1,     step: 0.01 },
-    { param: "decay",      label: "Decay",      min: 0.01,  max: 2,     step: 0.01 },
-    { param: "attack",     label: "Attack",     min: 0.001, max: 0.3,   step: 0.001 },
-    { param: "distortion", label: "Distortion", min: 0,     max: 1,     step: 0.01 },
-    { param: "portamento", label: "Portamento", min: 0,     max: 0.5,   step: 0.001 },
-    { param: "unisonVoices",   label: "Unison",    min: 1,  max: 4,  step: 1 },
-    { param: "unisonDetune",   label: "Detune",    min: 0,  max: 50, step: 1 },
-    { param: "octaveOffset",   label: "Octave",    min: -2, max: 2,  step: 1 },
-    { param: "octaveJumpProb", label: "Oct Jump",  min: 0,  max: 1,  step: 0.01 },
+    { param: "cutoff",     label: "Cutoff",     min: 50,    max: 10000, step: 1, scale: "log", tooltip: "Base filter cutoff. Lower = darker tone." },
+    { param: "resonance",  label: "Resonance",  min: 0.1,   max: 30,    step: 0.1,             tooltip: "Filter resonance. High values add a nasal peak at the cutoff." },
+    { param: "envMod",     label: "Env Mod",    min: 0,     max: 1,     step: 0.01,            tooltip: "How much the envelope opens the filter. Higher = more 'wah'." },
+    { param: "decay",      label: "Decay",      min: 0.01,  max: 2,     step: 0.01,            tooltip: "Envelope decay time. Sets how quickly the filter closes." },
+    { param: "attack",     label: "Attack",     min: 0.001, max: 0.3,   step: 0.001,           tooltip: "Envelope attack time. Short = sharp pluck, long = swell." },
+    { param: "distortion", label: "Distortion", min: 0,     max: 1,     step: 0.01,            tooltip: "Waveshaper distortion. Adds harmonic grit to the bass." },
+    { param: "portamento", label: "Portamento", min: 0,     max: 0.5,   step: 0.001,           tooltip: "Slide time between notes. 0 = instant pitch change." },
+    { param: "unisonVoices",   label: "Unison",    min: 1,  max: 4,  step: 1,                  tooltip: "Number of detuned oscillator voices stacked together." },
+    { param: "unisonDetune",   label: "Detune",    min: 0,  max: 50, step: 1,                  tooltip: "Pitch spread between unison voices in cents." },
+    { param: "octaveOffset",   label: "Octave",    min: -2, max: 2,  step: 1,                  tooltip: "Shift all notes up or down by octaves." },
+    { param: "octaveJumpProb", label: "Oct Jump",  min: 0,  max: 1,  step: 0.01,               tooltip: "Probability of randomly jumping an octave on each note." },
   ];
 
   static DEFAULT_PATTERN() {
@@ -271,97 +215,25 @@ export class WebAudioSynthAcidControls extends HTMLElement {
 
   constructor() {
     super();
-    this._instrument = null;
-    this._ctx = null;
-    this._sliders = {};
-    this._presetSelect = null;
-    this._fxUnit = null;
-    this._out = null;
-    this._pan = null;
-    this._panSlider = null;
     this._seq = null;
     this._rootMidi = 29;
     this._scaleName = "Minor";
     this._pendingNote = null;
   }
 
-  bind(instrument, ctx, options = {}) {
-    this._instrument = instrument;
-    this._ctx = ctx;
-    const color = options.color || "#0f0";
-    this.innerHTML = "";
-    injectControlsCSS();
-    this.style.setProperty("--slider-accent", color);
-    this.style.setProperty("--fx-accent", color);
+  // ---- Base class overrides ----
 
-    const strip = createChannelStrip(this, {
-      title: options.title || "TB-303 Acid",
-      getOutGain: () => this._out,
-      initialVol: instrument.volume,
-      initialPan: 0,
-    });
-    this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted };
-    this._sliders["volume"] = strip.volSlider;
-    this._panSlider = strip.panSlider;
+  _defaultColor() { return "#0f0"; }
+  _defaultTitle() { return "TB-303 Acid"; }
+  _fxTitle() { return "Acid FX"; }
 
-    // Waveform — always visible (visualizer)
-    const waveform = document.createElement("web-audio-waveform");
-    this.appendChild(waveform);
-
-    // Expanded panel — hidden when collapsed
-    const expanded = document.createElement("div");
-    expanded.className = "wac-expanded";
-    this.appendChild(expanded);
-
-    // Controls wrapper inside expanded
-    const controls = document.createElement("div");
-    controls.className = "wac-controls";
-    expanded.appendChild(controls);
-
-    const mkSlider = (def) => {
-      const s = document.createElement("web-audio-slider");
-      s.setAttribute("param", def.param);
-      s.setAttribute("label", def.label);
-      s.setAttribute("min", def.min);
-      s.setAttribute("max", def.max);
-      s.setAttribute("step", def.step);
-      if (def.scale) s.setAttribute("scale", def.scale);
-      s.value = instrument[def.param];
-      this._sliders[def.param] = s;
-      return s;
-    };
+  _buildControls(controls, expanded, mkSlider, ctx, options) {
+    const color = options.color || this._defaultColor();
 
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
-    const waveRow = document.createElement("div");
-    waveRow.className = "wac-wave-row";
-    ["sawtooth", "square"].forEach((type) => {
-      const btn = document.createElement("button");
-      btn.className = "wac-wave-btn";
-      btn.textContent = type === "sawtooth" ? "SAW" : "SQR";
-      btn.dataset.type = type;
-      if (instrument.oscType === type) btn.classList.add("wac-wave-active");
-      btn.addEventListener("click", () => {
-        instrument.oscType = type;
-        waveRow.querySelectorAll(".wac-wave-btn").forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === type));
-        this._emitChange();
-      });
-      waveRow.appendChild(btn);
-    });
-    toneCtrl.appendChild(waveRow);
-    this._presetSelect = document.createElement("select");
-    this._presetSelect.className = "wac-select";
-    Object.keys(WebAudioSynthAcid.PRESETS).forEach((name) => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name.replace(/_/g, " ");
-      this._presetSelect.appendChild(opt);
-    });
-    this._presetSelect.addEventListener("change", () => {
-      this.applyPreset(this._presetSelect.value);
-      this._emitChange();
-    });
-    toneCtrl.appendChild(this._presetSelect);
+    this._makeWaveRow(["sawtooth", "square"], toneCtrl);
+    this._makePresetDropdown(WebAudioSynthAcid.PRESETS, toneCtrl);
     controls.appendChild(toneEl);
 
     // ---- Filter ----
@@ -395,18 +267,6 @@ export class WebAudioSynthAcidControls extends HTMLElement {
     octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0,  max: 1, step: 0.01 }));
     controls.appendChild(octEl);
 
-    // Delegated slider listener
-    this.addEventListener("slider-input", (e) => {
-      if (!this._instrument) return;
-      const { param, value } = e.detail;
-      if (param === "pan") {
-        if (this._pan) this._pan.pan.value = value;
-      } else {
-        this._instrument[param] = value;
-      }
-      this._emitChange();
-    });
-
     // Action row — randomize + note buttons
     const actionRow = document.createElement("div");
     actionRow.className = "wac-action-row";
@@ -436,26 +296,36 @@ export class WebAudioSynthAcidControls extends HTMLElement {
     });
     expanded.appendChild(this._seq);
     this._seq.addEventListener("step-change", () => this._emitChange());
+  }
 
-    // FX unit
-    this._fxUnit = document.createElement("web-audio-fx-unit");
-    expanded.appendChild(this._fxUnit);
-    this._fxUnit.init(ctx, { title: "Acid FX", bpm: options.fx?.bpm ?? 120, ...options.fx });
+  // ---- Serialization hooks ----
 
-    // Audio routing: instrument → fxUnit → _out → _pan
-    // analyser taps from _out so waveform goes dark when muted
-    instrument.connect(this._fxUnit.input);
-    this._out = ctx.createGain();
-    this._fxUnit.connect(this._out);
-    this._pan = ctx.createStereoPanner();
-    this._out.connect(this._pan);
-    const analyser = ctx.createAnalyser();
-    this._out.connect(analyser);
-    const meterAnalyser = ctx.createAnalyser();
-    meterAnalyser.fftSize = 256;
-    this._out.connect(meterAnalyser);
-    strip.meter.setAnalyser(meterAnalyser);
-    waveform.init(analyser, color);
+  _extraToJSON(params) {
+    params.oscType = this._instrument.oscType;
+  }
+
+  _extendJSON(obj) {
+    obj.steps = this._seq?.steps ?? [];
+    if (this._presetSelect) obj.preset = this._presetSelect.value;
+  }
+
+  _restoreParam(key, val) {
+    if (key === "oscType") {
+      this._instrument.oscType = val;
+      this._syncWaveRow();
+    } else {
+      this._instrument[key] = val;
+      if (this._sliders[key]) this._sliders[key].value = val;
+    }
+  }
+
+  _restoreExtra(obj) {
+    if (obj.steps && this._seq) this._seq.steps = obj.steps;
+    if (obj.preset && this._presetSelect) this._presetSelect.value = obj.preset;
+  }
+
+  _syncExtraControls() {
+    this._syncWaveRow();
   }
 
   // ---- Sequencer integration ----
@@ -516,72 +386,6 @@ export class WebAudioSynthAcidControls extends HTMLElement {
     newSteps[0] = { active: true, note: root, accent: Math.random() < 0.5 };
     this._seq.steps = newSteps;
     this._emitChange();
-  }
-
-  // ---- Serialization ----
-
-  _emitChange() {
-    this.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
-  }
-
-  toJSON() {
-    if (!this._instrument) return null;
-    const params = {};
-    for (const def of WebAudioSynthAcidControls.SLIDER_DEFS) params[def.param] = this._instrument[def.param];
-    params.oscType = this._instrument.oscType;
-    return {
-      params,
-      steps: this._seq?.steps ?? [],
-      fx: this._fxUnit?.toJSON(),
-      muted: this._muteHandle?.isMuted() ?? false,
-      pan: this._pan?.pan.value ?? 0,
-    };
-  }
-
-  fromJSON(obj) {
-    if (!obj || !this._instrument) return;
-    if (obj.params) {
-      for (const [key, val] of Object.entries(obj.params)) {
-        if (key === "oscType") {
-          this._instrument.oscType = val;
-          const waveRow = this.querySelector(".wac-wave-row");
-          if (waveRow) waveRow.querySelectorAll(".wac-wave-btn").forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === val));
-        } else {
-          this._instrument[key] = val;
-          if (this._sliders[key]) this._sliders[key].value = val;
-        }
-      }
-    }
-    if (obj.steps && this._seq) this._seq.steps = obj.steps;
-    if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
-    if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
-    if (obj.pan != null && this._pan) {
-      this._pan.pan.value = obj.pan;
-      if (this._panSlider) this._panSlider.value = obj.pan;
-    }
-  }
-
-  // ---- Preset / routing ----
-
-  applyPreset(name) {
-    if (!this._instrument) return;
-    this._instrument.applyPreset(name);
-    for (const def of WebAudioSynthAcidControls.SLIDER_DEFS) {
-      const slider = this._sliders[def.param];
-      if (slider) slider.value = this._instrument[def.param];
-    }
-    if (this._presetSelect) this._presetSelect.value = name;
-    const waveRow = this.querySelector(".wac-wave-row");
-    if (waveRow) {
-      waveRow.querySelectorAll(".wac-wave-btn").forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === this._instrument.oscType));
-    }
-  }
-
-  set bpm(v) { if (this._fxUnit) this._fxUnit.bpm = v; }
-
-  connect(node) {
-    (this._pan ?? this._out)?.connect(node.input ?? node);
-    return this;
   }
 }
 

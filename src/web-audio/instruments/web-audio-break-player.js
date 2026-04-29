@@ -1,9 +1,10 @@
 import "../web-audio-slider.js";
-import { injectControlsCSS, createSection, createChannelStrip } from "../web-audio-slider.js";
 import "../fx/web-audio-fx-unit.js";
 import "../web-audio-waveform.js";
 import "../fx/web-audio-pitch-shift.js";
 import "../fx/web-audio-time-stretch.js";
+import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
+import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
 
 /**
  * WebAudioBreakPlayer — loads a drum loop, time-stretches it to the target
@@ -47,7 +48,7 @@ import "../fx/web-audio-time-stretch.js";
  *   // In sequencer onStep — call on every step:
  *   brk.trigger(globalStep, bpm, time);
  */
-export default class WebAudioBreakPlayer {
+export default class WebAudioBreakPlayer extends WebAudioInstrumentBase {
   /**
    * @param {AudioContext} ctx
    * @param {object} [options]
@@ -59,7 +60,8 @@ export default class WebAudioBreakPlayer {
    * @param {number} [options.volume=0.8]
    */
   constructor(ctx, options = {}) {
-    this.ctx = ctx;
+    super(ctx, null); // no presets — skip applyPreset
+
     this.speedMultiplier = options.speedMultiplier ?? 1;
     this.subdivision = options.subdivision ?? 8;
     this.returnSteps = options.returnSteps ?? 4;
@@ -82,7 +84,6 @@ export default class WebAudioBreakPlayer {
     this._grainStyle = "clean"; // "clean" (512 samples) or "vintage" (2048 samples)
     this._pitchShiftNode = null;
 
-    this._out = ctx.createGain();
     this._out.gain.value = options.volume ?? 0.8;
   }
 
@@ -129,15 +130,7 @@ export default class WebAudioBreakPlayer {
     return this._buffer !== null;
   }
 
-  // ---- Routing ----
-
-  get volume() {
-    return this._out.gain.value;
-  }
-
-  set volume(v) {
-    this._out.gain.value = v;
-  }
+  // ---- Properties ----
 
   get pitchShift() {
     return this._pitchShift;
@@ -175,15 +168,6 @@ export default class WebAudioBreakPlayer {
     if (!this._pitchShiftNode) return;
     const compensation = this._stretchRatio !== 1 ? -12 * Math.log2(this._stretchRatio) : 0;
     this._pitchShiftNode.pitchShift = this._pitchShift + compensation;
-  }
-
-  get input() {
-    return this._out;
-  }
-
-  connect(node) {
-    this._out.connect(node.input ?? node);
-    return this;
   }
 
   // ---- Playback ----
@@ -345,75 +329,35 @@ const SPEED_MULTIPLIERS = [
  *   // On each sequencer tick:
  *   controls.step(globalStep, bpm, time);
  */
-export class WebAudioBreakPlayerControls extends HTMLElement {
+export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
-    { param: "randomChance", label: "Rand Chance", min: 0, max: 1, step: 0.01 },
-    { param: "reverseChance", label: "Reverse", min: 0, max: 0.25, step: 0.01 },
+    { param: "volume",        label: "Vol",        min: 0, max: 1,    step: 0.01 },
+    { param: "randomChance",  label: "Rand Chance",min: 0, max: 1,    step: 0.01, tooltip: "Probability of jumping to a random segment instead of playing in sequence." },
+    { param: "reverseChance", label: "Reverse",    min: 0, max: 0.25, step: 0.01, tooltip: "Probability of reversing a segment on each hit." },
   ];
 
   constructor() {
     super();
-    this._instrument = null;
-    this._ctx = null;
-    this._sliders = {};
     this._fileSelect = null;
     this._speedSelect = null;
     this._subdivSelect = null;
     this._returnSelect = null;
     this._tsControls = null;
-    this._fxUnit = null;
-    this._out = null;
-    this._pan = null;
-    this._panSlider = null;
     this._basePath = "";
     this._pendingSegment = -1;
     this._globalStep = 0;
   }
 
-  /**
-   * @param {WebAudioBreakPlayer} instrument
-   * @param {AudioContext} ctx
-   * @param {object} [options]
-   * @param {Array<{label:string, file:string}>} [options.files]  Break file list
-   * @param {string} [options.basePath]  URL prefix for break files
-   * @param {string} [options.color]
-   * @param {string} [options.title]
-   * @param {object} [options.fx]  FX unit options
-   */
-  bind(instrument, ctx, options = {}) {
-    this._instrument = instrument;
-    this._ctx = ctx;
+  // ---- Override points ----
+
+  _defaultColor() { return "#0cc"; }
+  _defaultTitle() { return "Break Player"; }
+  _fxTitle() { return "Break FX"; }
+
+  // ---- Build controls ----
+
+  _buildControls(controls, expanded, mkSlider, ctx, options) {
     this._basePath = options.basePath || "";
-    const color = options.color || "#0cc";
-    this.innerHTML = "";
-    injectControlsCSS();
-    this.style.setProperty("--slider-accent", color);
-    this.style.setProperty("--fx-accent", color);
-
-    const strip = createChannelStrip(this, {
-      title: options.title || "Break Player",
-      getOutGain: () => this._out,
-      initialVol: instrument.volume,
-      initialPan: 0,
-    });
-    this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted };
-    this._sliders["volume"] = strip.volSlider;
-    this._panSlider = strip.panSlider;
-
-    // Waveform — always visible (visualizer)
-    const waveform = document.createElement("web-audio-waveform");
-    this.appendChild(waveform);
-
-    // Expanded panel — hidden when collapsed
-    const expanded = document.createElement("div");
-    expanded.className = "wac-expanded";
-    this.appendChild(expanded);
-
-    // Controls wrapper inside expanded
-    const controls = document.createElement("div");
-    controls.className = "wac-controls";
-    expanded.appendChild(controls);
 
     const mkSelect = (labelText, appendTo) => {
       const wrap = document.createElement("div");
@@ -426,20 +370,7 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
       return sel;
     };
 
-    const mkSlider = (def) => {
-      const s = document.createElement("web-audio-slider");
-      s.setAttribute("param", def.param);
-      s.setAttribute("label", def.label);
-      s.setAttribute("min", def.min);
-      s.setAttribute("max", def.max);
-      s.setAttribute("step", def.step);
-      if (def.scale) s.setAttribute("scale", def.scale);
-      s.value = instrument[def.param];
-      this._sliders[def.param] = s;
-      return s;
-    };
-
-    // ---- Loop ----
+    // ---- Loop section ----
     const { el: loopEl, controls: loopCtrl } = createSection("Loop");
 
     if (options.files?.length) {
@@ -471,11 +402,11 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
       const opt = document.createElement("option");
       opt.value = value;
       opt.textContent = label;
-      if (value === instrument.speedMultiplier) opt.selected = true;
+      if (value === this._instrument.speedMultiplier) opt.selected = true;
       this._speedSelect.appendChild(opt);
     }
     this._speedSelect.addEventListener("change", () => {
-      instrument.speedMultiplier = parseFloat(this._speedSelect.value);
+      this._instrument.speedMultiplier = parseFloat(this._speedSelect.value);
       this._emitChange();
     });
 
@@ -484,11 +415,11 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
       const opt = document.createElement("option");
       opt.value = v;
       opt.textContent = `÷${v}`;
-      if (v === instrument.subdivision) opt.selected = true;
+      if (v === this._instrument.subdivision) opt.selected = true;
       this._subdivSelect.appendChild(opt);
     }
     this._subdivSelect.addEventListener("change", () => {
-      instrument.subdivision = parseInt(this._subdivSelect.value);
+      this._instrument.subdivision = parseInt(this._subdivSelect.value);
       this._emitChange();
     });
 
@@ -497,45 +428,33 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
       const opt = document.createElement("option");
       opt.value = v;
       opt.textContent = lbl;
-      if (v === instrument.returnSteps) opt.selected = true;
+      if (v === this._instrument.returnSteps) opt.selected = true;
       this._returnSelect.appendChild(opt);
     }
     this._returnSelect.addEventListener("change", () => {
-      instrument.returnSteps = parseInt(this._returnSelect.value);
+      this._instrument.returnSteps = parseInt(this._returnSelect.value);
       this._emitChange();
     });
 
     controls.appendChild(loopEl);
 
-    // ---- Mix ----
+    // ---- Mix section ----
     const { el: mixEl, controls: mixCtrl } = createSection("Mix");
     mixCtrl.appendChild(mkSlider({ param: "randomChance",  label: "Random",  min: 0, max: 1,    step: 0.01 }));
     mixCtrl.appendChild(mkSlider({ param: "reverseChance", label: "Reverse", min: 0, max: 0.25, step: 0.01 }));
     controls.appendChild(mixEl);
 
-    this.addEventListener("slider-input", (e) => {
-      if (!this._instrument) return;
-      const { param, value } = e.detail;
-      if (param === "pan") {
-        if (this._pan) this._pan.pan.value = value;
-      } else {
-        this._instrument[param] = value;
-      }
-      this._emitChange();
-    });
-
-    // Time-stretch controls (only when enabled)
+    // ---- Time-stretch controls (only when enabled) ----
     this._tsControls = null;
-    if (instrument._useTimeStretch) {
+    if (this._instrument._useTimeStretch) {
       this._tsControls = document.createElement("web-audio-time-stretch-controls");
       expanded.appendChild(this._tsControls);
-      this._tsControls.init(instrument, { color });
+      this._tsControls.init(this._instrument, { color: options.color || this._defaultColor() });
     }
 
-    // Jam buttons
+    // ---- Jam buttons ----
     const actionRow = document.createElement("div");
     actionRow.className = "wac-action-row";
-
     for (const [label, seg, key] of [
       ["K", 0, "K"],
       ["H", 1, "H"],
@@ -550,26 +469,13 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
       actionRow.appendChild(btn);
     }
     expanded.appendChild(actionRow);
+  }
 
-    // FX unit
-    this._fxUnit = document.createElement("web-audio-fx-unit");
-    expanded.appendChild(this._fxUnit);
-    this._fxUnit.init(ctx, { title: "Break FX", bpm: options.fx?.bpm ?? 120, ...options.fx });
+  // ---- Slider handling ----
 
-    // Audio routing: instrument → fxUnit → _out → _pan
-    // analyser taps from _out so waveform goes dark when muted
-    instrument.connect(this._fxUnit.input);
-    this._out = ctx.createGain();
-    this._fxUnit.connect(this._out);
-    this._pan = ctx.createStereoPanner();
-    this._out.connect(this._pan);
-    const analyser = ctx.createAnalyser();
-    this._out.connect(analyser);
-    const meterAnalyser = ctx.createAnalyser();
-    meterAnalyser.fftSize = 256;
-    this._out.connect(meterAnalyser);
-    strip.meter.setAnalyser(meterAnalyser);
-    waveform.init(analyser, color);
+  _onSliderInput(param, value) {
+    this._instrument[param] = value;
+    this._emitChange();
   }
 
   // ---- File loading ----
@@ -622,35 +528,15 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
 
   // ---- Serialization ----
 
-  _emitChange() {
-    this.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
+  _extendJSON(obj) {
+    obj.file = this._fileSelect?.value || "";
+    obj.speedMultiplier = this._instrument.speedMultiplier;
+    obj.subdivision = this._instrument.subdivision;
+    obj.returnSteps = this._instrument.returnSteps;
+    obj.ts = this._tsControls?.toJSON();
   }
 
-  toJSON() {
-    if (!this._instrument) return null;
-    const params = {};
-    for (const def of WebAudioBreakPlayerControls.SLIDER_DEFS) params[def.param] = this._instrument[def.param];
-    return {
-      params,
-      file: this._fileSelect?.value || "",
-      speedMultiplier: this._instrument.speedMultiplier,
-      subdivision: this._instrument.subdivision,
-      returnSteps: this._instrument.returnSteps,
-      ts: this._tsControls?.toJSON(),
-      fx: this._fxUnit?.toJSON(),
-      muted: this._muteHandle?.isMuted() ?? false,
-      pan: this._pan?.pan.value ?? 0,
-    };
-  }
-
-  fromJSON(obj) {
-    if (!obj || !this._instrument) return;
-    if (obj.params) {
-      for (const [key, val] of Object.entries(obj.params)) {
-        this._instrument[key] = val;
-        if (this._sliders[key]) this._sliders[key].value = val;
-      }
-    }
+  _restoreExtra(obj) {
     if (obj.speedMultiplier != null) {
       this._instrument.speedMultiplier = obj.speedMultiplier;
       if (this._speedSelect) this._speedSelect.value = obj.speedMultiplier;
@@ -673,23 +559,6 @@ export class WebAudioBreakPlayerControls extends HTMLElement {
       this._tsControls?.fromJSON(compat);
     }
     if (obj.ts) this._tsControls?.fromJSON(obj.ts);
-    if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
-    if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
-    if (obj.pan != null && this._pan) {
-      this._pan.pan.value = obj.pan;
-      if (this._panSlider) this._panSlider.value = obj.pan;
-    }
-  }
-
-  // ---- Routing ----
-
-  set bpm(v) {
-    if (this._fxUnit) this._fxUnit.bpm = v;
-  }
-
-  connect(node) {
-    (this._pan ?? this._out)?.connect(node.input ?? node);
-    return this;
   }
 }
 

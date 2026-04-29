@@ -18,7 +18,7 @@
  */
 
 import "../web-audio-slider.js";
-import { injectControlsCSS } from "../web-audio-slider.js";
+import { injectControlsCSS, createSection } from "../web-audio-slider.js";
 
 export default class WebAudioTimeStretch {
   /**
@@ -242,14 +242,8 @@ export class WebAudioTimeStretchControls extends HTMLElement {
     injectControlsCSS();
     this.style.setProperty("--slider-accent", color);
 
-    const title = document.createElement("div");
-    title.className = "wac-title";
-    title.textContent = options.title || "Pitch / Time";
-    this.appendChild(title);
-
-    const controls = document.createElement("div");
-    controls.className = "wac-controls";
-    this.appendChild(controls);
+    const { el: sectionEl, controls } = createSection(options.title || "Pitch / Time");
+    this.appendChild(sectionEl);
 
     // Pitch slider
     const pitchSlider = document.createElement("web-audio-slider");

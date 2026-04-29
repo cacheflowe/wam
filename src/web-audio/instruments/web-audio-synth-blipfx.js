@@ -1,5 +1,5 @@
-import "../web-audio-slider.js";
-import { injectControlsCSS, createSection, createChannelStrip } from "../web-audio-slider.js";
+import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
+import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
 
 /**
  * WebAudioSynthBlipFX — procedural sound effect synthesizer.
@@ -16,7 +16,7 @@ import { injectControlsCSS, createSection, createChannelStrip } from "../web-aud
  *   sfx.applyPreset("Laser");
  *   sfx.trigger(atTime);
  */
-export default class WebAudioSynthBlipFX {
+export default class WebAudioSynthBlipFX extends WebAudioInstrumentBase {
   static PRESETS = {
     Laser: {
       frequency: 700,
@@ -189,7 +189,7 @@ export default class WebAudioSynthBlipFX {
    * @param {boolean} [options.randomizeOnTrigger=false]
    */
   constructor(ctx, options = {}) {
-    this.ctx = ctx;
+    super(ctx, null); // creates ctx + _out, skips preset
     this.randomizeOnTrigger = options.randomizeOnTrigger ?? false;
     this._buffer = null;
     this._dirty = false;
@@ -214,11 +214,10 @@ export default class WebAudioSynthBlipFX {
     this._tremolo = 0;
     this._bitCrush = 0;
 
-    // Volume gain (final output)
-    this._out = ctx.createGain();
+    // Set initial volume
     this._out.gain.value = options.volume ?? 0.6;
 
-    // HPF → LPF filter chain before output
+    // HPF -> LPF filter chain before output
     this._hpf = ctx.createBiquadFilter();
     this._hpf.type = "highpass";
     this._hpf.frequency.value = options.hpfFreq ?? 80;
@@ -375,13 +374,6 @@ export default class WebAudioSynthBlipFX {
 
   // ---- Filter / output properties (no rebake needed) ----
 
-  get volume() {
-    return this._out.gain.value;
-  }
-  set volume(v) {
-    this._out.gain.value = v;
-  }
-
   get lpfFreq() {
     return this._lpf.frequency.value;
   }
@@ -403,23 +395,17 @@ export default class WebAudioSynthBlipFX {
     this._hpf.frequency.value = v;
   }
 
-  // ---- Routing ----
+  // ---- Routing (override base) ----
 
   get input() {
     return this._hpf;
   }
 
-  connect(node) {
-    this._out.connect(node.input ?? node);
-    return this;
-  }
-
-  // ---- Presets ----
+  // ---- Presets (override base — batch-set without intermediate rebakes) ----
 
   applyPreset(name) {
     const p = WebAudioSynthBlipFX.PRESETS[name];
     if (!p) return;
-    // Batch-set all params without intermediate rebakes
     for (const [key, val] of Object.entries(p)) {
       if (key === "volume") {
         this.volume = val;
@@ -606,231 +592,160 @@ export default class WebAudioSynthBlipFX {
 
 // ---- Controls companion component ----
 
-export class WebAudioSynthBlipFXControls extends HTMLElement {
+export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
-    { param: "frequency", label: "Freq", min: 20, max: 2000, step: 1, scale: "log" },
-    { param: "attack", label: "Attack", min: 0, max: 0.2, step: 0.001 },
-    { param: "decay", label: "Decay", min: 0, max: 0.5, step: 0.01 },
-    { param: "sustain", label: "Sustain", min: 0, max: 0.3, step: 0.01 },
-    { param: "sustainVolume", label: "Sus Vol", min: 0, max: 1, step: 0.01 },
-    { param: "release", label: "Release", min: 0.01, max: 1, step: 0.01 },
-    { param: "slide", label: "Slide", min: -40, max: 40, step: 0.5 },
-    { param: "deltaSlide", label: "Slide Accel", min: -30, max: 30, step: 0.5 },
-    { param: "pitchJump", label: "P.Jump", min: -36, max: 36, step: 1 },
-    { param: "pitchJumpTime", label: "Jump Time", min: 0, max: 0.3, step: 0.01 },
-    { param: "repeatTime", label: "Repeat", min: 0, max: 0.5, step: 0.01 },
-    { param: "noise", label: "Noise", min: 0, max: 1, step: 0.01 },
-    { param: "modulation", label: "FM Mod", min: 0, max: 1, step: 0.01 },
-    { param: "shapeCurve", label: "Shape Pwr", min: 0.1, max: 5, step: 0.1 },
-    { param: "tremolo", label: "Tremolo", min: 0, max: 1, step: 0.01 },
-    { param: "bitCrush", label: "BitCrush", min: 0, max: 1, step: 0.01 },
-    { param: "lpfFreq", label: "LPF", min: 80, max: 8000, step: 1, scale: "log" },
-    { param: "hpfFreq", label: "HPF", min: 20, max: 2000, step: 1, scale: "log" },
-    { param: "lpfResonance", label: "Resonance", min: 0.5, max: 15, step: 0.1 },
-    { param: "chance", label: "Chance", min: 0, max: 1, step: 0.01 },
+    { param: "volume",       label: "Vol",        min: 0,    max: 1,    step: 0.01 },
+    { param: "frequency",    label: "Freq",       min: 20,   max: 2000, step: 1,   scale: "log", tooltip: "Base oscillator frequency in Hz." },
+    { param: "attack",       label: "Attack",     min: 0,    max: 0.2,  step: 0.001,             tooltip: "Volume envelope attack time." },
+    { param: "decay",        label: "Decay",      min: 0,    max: 0.5,  step: 0.01,              tooltip: "Volume envelope decay time." },
+    { param: "sustain",      label: "Sustain",    min: 0,    max: 0.3,  step: 0.01,              tooltip: "Sustain duration (seconds after decay)." },
+    { param: "sustainVolume",label: "Sus Vol",    min: 0,    max: 1,    step: 0.01,              tooltip: "Volume level during the sustain phase." },
+    { param: "release",      label: "Release",    min: 0.01, max: 1,    step: 0.01,              tooltip: "Volume fade-out after the sustain ends." },
+    { param: "slide",        label: "Slide",      min: -40,  max: 40,   step: 0.5,               tooltip: "Pitch slide rate in semitones/second." },
+    { param: "deltaSlide",   label: "Slide Accel",min: -30,  max: 30,   step: 0.5,               tooltip: "Acceleration of the pitch slide over time." },
+    { param: "pitchJump",    label: "P.Jump",     min: -36,  max: 36,   step: 1,                 tooltip: "Sudden pitch shift in semitones at jump time." },
+    { param: "pitchJumpTime",label: "Jump Time",  min: 0,    max: 0.3,  step: 0.01,              tooltip: "When the pitch jump occurs within the sound." },
+    { param: "repeatTime",   label: "Repeat",     min: 0,    max: 0.5,  step: 0.01,              tooltip: "Time between note restarts for a fluttering effect." },
+    { param: "noise",        label: "Noise",      min: 0,    max: 1,    step: 0.01,              tooltip: "Blend of white noise into the oscillator signal." },
+    { param: "modulation",   label: "FM Mod",     min: 0,    max: 1,    step: 0.01,              tooltip: "FM modulation depth applied to the oscillator." },
+    { param: "shapeCurve",   label: "Shape Pwr",  min: 0.1,  max: 5,    step: 0.1,               tooltip: "Waveshaper curve power. Higher = more distorted waveform." },
+    { param: "tremolo",      label: "Tremolo",    min: 0,    max: 1,    step: 0.01,              tooltip: "Amplitude tremolo depth." },
+    { param: "bitCrush",     label: "BitCrush",   min: 0,    max: 1,    step: 0.01,              tooltip: "Bit reduction. Higher = more lo-fi digital crunch." },
+    { param: "lpfFreq",      label: "LPF",        min: 80,   max: 8000, step: 1,   scale: "log", tooltip: "Lowpass filter cutoff. Removes high frequencies." },
+    { param: "hpfFreq",      label: "HPF",        min: 20,   max: 2000, step: 1,   scale: "log", tooltip: "Highpass filter cutoff. Removes low frequencies." },
+    { param: "lpfResonance", label: "Resonance",  min: 0.5,  max: 15,   step: 0.1,               tooltip: "Resonance (Q) shared by both LP and HP filters." },
+    { param: "chance",       label: "Chance",     min: 0,    max: 1,    step: 0.01,              tooltip: "Probability this sound fires each step. 1 = always plays." },
   ];
 
   constructor() {
     super();
-    this._instrument = null;
-    this._ctx = null;
-    this._sliders = {};
-    this._presetSelect = null;
     this._shapeSelect = null;
-    this._fxUnit = null;
-    this._out = null;
-    this._pan = null;
-    this._panSlider = null;
     this._chance = 0.15;
     this._lastStep = -1;
   }
 
+  // ---- Identity overrides ----
+
+  _defaultColor() { return "#c0f"; }
+  _defaultTitle() { return "BlipFX Sound Effects"; }
+  _fxTitle() { return "SFX FX"; }
+
+  // ---- Bind override to capture chance from options ----
+
   bind(instrument, ctx, options = {}) {
-    this._instrument = instrument;
-    this._ctx = ctx;
     this._chance = options.chance ?? 0.15;
-    const color = options.color || "#c0f";
-    this.innerHTML = "";
-    injectControlsCSS();
-    this.style.setProperty("--slider-accent", color);
-    this.style.setProperty("--fx-accent", color);
+    super.bind(instrument, ctx, options);
+  }
 
-    const strip = createChannelStrip(this, {
-      title: options.title || "BlipFX Sound Effects",
-      getOutGain: () => this._out,
-      initialVol: instrument.volume,
-      initialPan: 0,
-    });
-    this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted };
-    this._sliders["volume"] = strip.volSlider;
-    this._panSlider = strip.panSlider;
+  // ---- Build controls (subclass hook) ----
 
-    // Waveform — always visible (visualizer)
-    const waveform = document.createElement("web-audio-waveform");
-    this.appendChild(waveform);
-
-    // Expanded panel — hidden when collapsed
-    const expanded = document.createElement("div");
-    expanded.className = "wac-expanded";
-    this.appendChild(expanded);
-
-    // Controls wrapper inside expanded
-    const controls = document.createElement("div");
-    controls.className = "wac-controls";
-    expanded.appendChild(controls);
-
-    const mkSlider = (def, val) => {
-      const s = document.createElement("web-audio-slider");
-      s.setAttribute("param", def.param);
-      s.setAttribute("label", def.label);
-      s.setAttribute("min", def.min);
-      s.setAttribute("max", def.max);
-      s.setAttribute("step", def.step);
-      if (def.scale) s.setAttribute("scale", def.scale);
-      s.value = val ?? (def.param === "chance" ? this._chance : instrument[def.param]);
-      this._sliders[def.param] = s;
-      return s;
-    };
-
+  _buildControls(controls, expanded, mkSlider, ctx, options) {
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
-    this._presetSelect = document.createElement("select");
-    this._presetSelect.className = "wac-select";
-    Object.keys(WebAudioSynthBlipFX.PRESETS).forEach((name) => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      this._presetSelect.appendChild(opt);
-    });
-    this._presetSelect.addEventListener("change", () => {
-      instrument.applyPreset(this._presetSelect.value);
-      this._syncSliders();
-      this._emitChange();
-    });
-    toneCtrl.appendChild(this._presetSelect);
+    this._makePresetDropdown(WebAudioSynthBlipFX.PRESETS, toneCtrl);
+
     this._shapeSelect = document.createElement("select");
     this._shapeSelect.className = "wac-select";
     WebAudioSynthBlipFX.SHAPES.forEach((name, i) => {
       const opt = document.createElement("option");
       opt.value = i;
       opt.textContent = name;
-      if (i === instrument.shape) opt.selected = true;
+      if (i === this._instrument.shape) opt.selected = true;
       this._shapeSelect.appendChild(opt);
     });
     this._shapeSelect.addEventListener("change", () => {
-      instrument.shape = parseInt(this._shapeSelect.value);
+      this._instrument.shape = parseInt(this._shapeSelect.value);
       this._emitChange();
     });
     toneCtrl.appendChild(this._shapeSelect);
-    toneCtrl.appendChild(mkSlider({ param: "frequency", label: "Freq",   min: 20, max: 2000, step: 1, scale: "log" }));
-    toneCtrl.appendChild(mkSlider({ param: "chance",    label: "Chance", min: 0,  max: 1,    step: 0.01 }));
+    toneCtrl.appendChild(mkSlider({ param: "frequency", label: "Freq", min: 20, max: 2000, step: 1, scale: "log" }));
+    const chanceSlider = mkSlider({ param: "chance", label: "Chance", min: 0, max: 1, step: 0.01 });
+    chanceSlider.value = this._chance;
+    toneCtrl.appendChild(chanceSlider);
     controls.appendChild(toneEl);
 
     // ---- Envelope ----
     const { el: envEl, controls: envCtrl } = createSection("Envelope");
-    envCtrl.appendChild(mkSlider({ param: "attack",        label: "Attack",  min: 0,    max: 0.2, step: 0.001 }));
-    envCtrl.appendChild(mkSlider({ param: "decay",         label: "Decay",   min: 0,    max: 0.5, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "sustain",       label: "Sustain", min: 0,    max: 0.3, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "sustainVolume", label: "Sus Vol", min: 0,    max: 1,   step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "release",       label: "Release", min: 0.01, max: 1,   step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "attack", label: "Attack", min: 0, max: 0.2, step: 0.001 }));
+    envCtrl.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0, max: 0.5, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "sustain", label: "Sustain", min: 0, max: 0.3, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "sustainVolume", label: "Sus Vol", min: 0, max: 1, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "release", label: "Release", min: 0.01, max: 1, step: 0.01 }));
     controls.appendChild(envEl);
 
     // ---- Pitch ----
     const { el: pitchEl, controls: pitchCtrl } = createSection("Pitch");
-    pitchCtrl.appendChild(mkSlider({ param: "slide",         label: "Slide",      min: -40, max: 40,  step: 0.5 }));
-    pitchCtrl.appendChild(mkSlider({ param: "deltaSlide",    label: "Slide Accel",min: -30, max: 30,  step: 0.5 }));
-    pitchCtrl.appendChild(mkSlider({ param: "pitchJump",     label: "P.Jump",     min: -36, max: 36,  step: 1 }));
-    pitchCtrl.appendChild(mkSlider({ param: "pitchJumpTime", label: "Jump Time",  min: 0,   max: 0.3, step: 0.01 }));
-    pitchCtrl.appendChild(mkSlider({ param: "repeatTime",    label: "Repeat",     min: 0,   max: 0.5, step: 0.01 }));
+    pitchCtrl.appendChild(mkSlider({ param: "slide", label: "Slide", min: -40, max: 40, step: 0.5 }));
+    pitchCtrl.appendChild(mkSlider({ param: "deltaSlide", label: "Slide Accel", min: -30, max: 30, step: 0.5 }));
+    pitchCtrl.appendChild(mkSlider({ param: "pitchJump", label: "P.Jump", min: -36, max: 36, step: 1 }));
+    pitchCtrl.appendChild(mkSlider({ param: "pitchJumpTime", label: "Jump Time", min: 0, max: 0.3, step: 0.01 }));
+    pitchCtrl.appendChild(mkSlider({ param: "repeatTime", label: "Repeat", min: 0, max: 0.5, step: 0.01 }));
     controls.appendChild(pitchEl);
 
     // ---- Character ----
     const { el: charEl, controls: charCtrl } = createSection("Character");
-    charCtrl.appendChild(mkSlider({ param: "noise",      label: "Noise",     min: 0,   max: 1, step: 0.01 }));
-    charCtrl.appendChild(mkSlider({ param: "modulation", label: "FM Mod",    min: 0,   max: 1, step: 0.01 }));
+    charCtrl.appendChild(mkSlider({ param: "noise", label: "Noise", min: 0, max: 1, step: 0.01 }));
+    charCtrl.appendChild(mkSlider({ param: "modulation", label: "FM Mod", min: 0, max: 1, step: 0.01 }));
     charCtrl.appendChild(mkSlider({ param: "shapeCurve", label: "Shape Pwr", min: 0.1, max: 5, step: 0.1 }));
-    charCtrl.appendChild(mkSlider({ param: "tremolo",    label: "Tremolo",   min: 0,   max: 1, step: 0.01 }));
-    charCtrl.appendChild(mkSlider({ param: "bitCrush",   label: "BitCrush",  min: 0,   max: 1, step: 0.01 }));
+    charCtrl.appendChild(mkSlider({ param: "tremolo", label: "Tremolo", min: 0, max: 1, step: 0.01 }));
+    charCtrl.appendChild(mkSlider({ param: "bitCrush", label: "BitCrush", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(charEl);
 
     // ---- Filter ----
     const { el: filtEl, controls: filtCtrl } = createSection("Filter");
-    filtCtrl.appendChild(mkSlider({ param: "lpfFreq",     label: "LPF",       min: 80, max: 8000, step: 1, scale: "log" }));
-    filtCtrl.appendChild(mkSlider({ param: "hpfFreq",     label: "HPF",       min: 20, max: 2000, step: 1, scale: "log" }));
-    filtCtrl.appendChild(mkSlider({ param: "lpfResonance",label: "Resonance", min: 0.5,max: 15,   step: 0.1 }));
+    filtCtrl.appendChild(mkSlider({ param: "lpfFreq", label: "LPF", min: 80, max: 8000, step: 1, scale: "log" }));
+    filtCtrl.appendChild(mkSlider({ param: "hpfFreq", label: "HPF", min: 20, max: 2000, step: 1, scale: "log" }));
+    filtCtrl.appendChild(mkSlider({ param: "lpfResonance", label: "Resonance", min: 0.5, max: 15, step: 0.1 }));
     controls.appendChild(filtEl);
 
-    this.addEventListener("slider-input", (e) => {
-      if (!this._instrument) return;
-      const { param, value } = e.detail;
-      if (param === "pan") {
-        if (this._pan) this._pan.pan.value = value;
-      } else if (param === "chance") {
-        this._chance = value;
-      } else {
-        this._instrument[param] = value;
-      }
-      this._emitChange();
-    });
-
-    // Action row
+    // ---- Action row ----
     const actionRow = document.createElement("div");
     actionRow.className = "wac-action-row";
 
     const randPresetBtn = document.createElement("button");
-    randPresetBtn.textContent = "⚄ Rand Preset";
+    randPresetBtn.textContent = "\u2684 Rand Preset";
     randPresetBtn.className = "wac-action-btn";
     randPresetBtn.addEventListener("click", () => {
       const names = Object.keys(WebAudioSynthBlipFX.PRESETS);
       const name = names[Math.floor(Math.random() * names.length)];
-      instrument.applyPreset(name);
-      if (this._presetSelect) this._presetSelect.value = name;
-      this._syncSliders();
+      this.applyPreset(name);
       this._emitChange();
     });
     actionRow.appendChild(randPresetBtn);
 
     const newBtn = document.createElement("button");
-    newBtn.textContent = "⚄ Randomize";
+    newBtn.textContent = "\u2684 Randomize";
     newBtn.className = "wac-action-btn";
     newBtn.addEventListener("click", () => {
-      instrument.randomize();
+      this._instrument.randomize();
       this._syncSliders();
+      this._syncExtraControls();
       this._emitChange();
     });
     actionRow.appendChild(newBtn);
 
     const playBtn = document.createElement("button");
-    playBtn.textContent = "▶ Play [V]";
+    playBtn.textContent = "\u25B6 Play [V]";
     playBtn.className = "wac-action-btn";
     playBtn.addEventListener("click", () => this.triggerNow());
     actionRow.appendChild(playBtn);
 
     expanded.appendChild(actionRow);
-
-    // FX unit
-    this._fxUnit = document.createElement("web-audio-fx-unit");
-    expanded.appendChild(this._fxUnit);
-    this._fxUnit.init(ctx, { title: "SFX FX", bpm: options.fx?.bpm ?? 120, ...options.fx });
-
-    // Audio routing: instrument → fxUnit → _out → _pan
-    // analyser taps from _out so waveform goes dark when muted
-    instrument.connect(this._fxUnit.input);
-    this._out = ctx.createGain();
-    this._fxUnit.connect(this._out);
-    this._pan = ctx.createStereoPanner();
-    this._out.connect(this._pan);
-    const analyser = ctx.createAnalyser();
-    this._out.connect(analyser);
-    const meterAnalyser = ctx.createAnalyser();
-    meterAnalyser.fftSize = 256;
-    this._out.connect(meterAnalyser);
-    strip.meter.setAnalyser(meterAnalyser);
-    waveform.init(analyser, color);
   }
 
-  /** Sync all slider values from the instrument's current params. */
+  // ---- Slider input override (chance is stored on controls, not instrument) ----
+
+  _onSliderInput(param, value) {
+    if (param === "chance") {
+      this._chance = value;
+    } else {
+      this._instrument[param] = value;
+    }
+    this._emitChange();
+  }
+
+  // ---- Sync overrides ----
+
   _syncSliders() {
     if (!this._instrument) return;
     for (const def of WebAudioSynthBlipFXControls.SLIDER_DEFS) {
@@ -842,7 +757,12 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
         slider.value = this._instrument[def.param];
       }
     }
-    if (this._shapeSelect) this._shapeSelect.value = this._instrument.shape;
+  }
+
+  _syncExtraControls() {
+    if (this._shapeSelect && this._instrument) {
+      this._shapeSelect.value = this._instrument.shape;
+    }
   }
 
   // ---- Sequencer integration ----
@@ -854,6 +774,7 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
     if (Math.random() < this._chance) {
       this._instrument.randomize();
       this._syncSliders();
+      this._syncExtraControls();
       this._instrument.trigger(time);
     }
   }
@@ -870,57 +791,31 @@ export class WebAudioSynthBlipFXControls extends HTMLElement {
     if (!this._instrument || !this._ctx) return;
     this._instrument.randomize();
     this._syncSliders();
+    this._syncExtraControls();
     this._instrument.trigger(this._ctx.currentTime);
   }
 
-  // ---- Serialization ----
+  // ---- Serialization overrides ----
 
-  _emitChange() {
-    this.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
-  }
-
-  toJSON() {
-    if (!this._instrument) return null;
-    const params = {};
-    for (const def of WebAudioSynthBlipFXControls.SLIDER_DEFS) {
-      params[def.param] = def.param === "chance" ? this._chance : this._instrument[def.param];
-    }
+  _extraToJSON(params) {
+    params.chance = this._chance;
     params.shape = this._instrument.shape;
-    return { params, fx: this._fxUnit?.toJSON(), muted: this._muteHandle?.isMuted() ?? false, pan: this._pan?.pan.value ?? 0 };
   }
 
-  fromJSON(obj) {
-    if (!obj || !this._instrument) return;
-    if (obj.params) {
-      for (const [key, val] of Object.entries(obj.params)) {
-        if (key === "chance") {
-          this._chance = val;
-        } else {
-          this._instrument[key] = val;
-        }
-        if (this._sliders[key]) this._sliders[key].value = val;
-      }
-      if (obj.params.shape != null && this._shapeSelect) {
-        this._shapeSelect.value = obj.params.shape;
-      }
-    }
-    if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
-    if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
-    if (obj.pan != null && this._pan) {
-      this._pan.pan.value = obj.pan;
-      if (this._panSlider) this._panSlider.value = obj.pan;
+  _restoreParam(key, val) {
+    if (key === "chance") {
+      this._chance = val;
+      if (this._sliders[key]) this._sliders[key].value = val;
+    } else {
+      this._instrument[key] = val;
+      if (this._sliders[key]) this._sliders[key].value = val;
     }
   }
 
-  // ---- Routing ----
-
-  set bpm(v) {
-    if (this._fxUnit) this._fxUnit.bpm = v;
-  }
-
-  connect(node) {
-    (this._pan ?? this._out)?.connect(node.input ?? node);
-    return this;
+  _restoreExtra(obj) {
+    if (obj.params?.shape != null && this._shapeSelect) {
+      this._shapeSelect.value = obj.params.shape;
+    }
   }
 }
 

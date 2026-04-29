@@ -1,7 +1,8 @@
 import "../web-audio-slider.js";
-import { injectControlsCSS, createSection, createChannelStrip } from "../web-audio-slider.js";
 import "../web-audio-step-seq.js";
 import { scaleNoteOptions, STEP_WEIGHTS } from "../web-audio-scales.js";
+import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
+import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
 
 /**
  * WebAudioSynth808 — pitched 808-style sub-bass synthesizer.
@@ -21,7 +22,7 @@ import { scaleNoteOptions, STEP_WEIGHTS } from "../web-audio-scales.js";
  *   bass.connect(ctx.destination);
  *   bass.trigger(36, stepDurSec, atTime); // C2
  */
-export default class WebAudioSynth808 {
+export default class WebAudioSynth808 extends WebAudioInstrumentBase {
   static PRESETS = {
     Default: {
       pitchSweepSemitones: 24,
@@ -87,18 +88,11 @@ export default class WebAudioSynth808 {
 
   /**
    * @param {AudioContext} ctx
-   * @param {object} [options]
-   * @param {number} [options.pitchSweepSemitones=24]  Semitones above target at start of sweep
-   * @param {number} [options.pitchDecay=0.1]           Seconds for pitch to reach target note
-   * @param {number} [options.decay=0.8]                Amplitude decay in seconds
-   * @param {number} [options.distortion=0]             Soft-clip amount 0–1
-   * @param {number} [options.click=0.4]                Noise transient click level 0–1
-   * @param {number} [options.subOscMix=0]              Sub oscillator (octave below) mix 0–1
-   * @param {number} [options.tone=3000]                Tone lowpass cutoff Hz
-   * @param {number} [options.volume=1.0]
+   * @param {string} [preset="Default"]
    */
   constructor(ctx, preset = "Default") {
-    this.ctx = ctx;
+    super(ctx, null); // creates ctx + _out, skips preset (extra nodes not ready yet)
+
     this._distortion = 0;
     this._distortionCurve = this._makeDistortionCurve(0);
 
@@ -106,8 +100,6 @@ export default class WebAudioSynth808 {
     this._filter = ctx.createBiquadFilter();
     this._filter.type = "lowpass";
     this._filter.Q.value = 1;
-
-    this._out = ctx.createGain();
     this._filter.connect(this._out);
 
     // Pre-bake click noise buffer (15ms, linearly enveloped) — reused on every trigger
@@ -139,47 +131,7 @@ export default class WebAudioSynth808 {
     this._filter.frequency.value = v;
   }
 
-  get volume() {
-    return this._out.gain.value;
-  }
-
-  set volume(v) {
-    this._out.gain.value = v;
-  }
-
-  // ---- Routing ----
-
-  get input() {
-    return this._out;
-  }
-
-  connect(node) {
-    this._out.connect(node.input ?? node);
-    return this;
-  }
-
-  /**
-   * Apply a named preset, updating all synth parameters in place.
-   * @param {string} name  Key of WebAudioSynth808.PRESETS
-   */
-  applyPreset(name) {
-    const p = WebAudioSynth808.PRESETS[name];
-    if (!p) return;
-    if (p.pitchSweepSemitones != null) this.pitchSweepSemitones = p.pitchSweepSemitones;
-    if (p.pitchDecay != null) this.pitchDecay = p.pitchDecay;
-    if (p.decay != null) this.decay = p.decay;
-    if (p.distortion != null) this.distortion = p.distortion;
-    if (p.click != null) this.click = p.click;
-    if (p.subOscMix != null) this.subOscMix = p.subOscMix;
-    if (p.tone != null) this.tone = p.tone;
-    if (p.volume != null) this.volume = p.volume;
-  }
-
   // ---- Helpers ----
-
-  _midiToFreq(midi) {
-    return 440 * Math.pow(2, (midi - 69) / 12);
-  }
 
   _makeDistortionCurve(amount) {
     const n = 512;
@@ -203,7 +155,7 @@ export default class WebAudioSynth808 {
    */
   trigger(midi, stepDurSec, atTime) {
     const ctx = this.ctx;
-    const targetFreq = this._midiToFreq(midi);
+    const targetFreq = WebAudioInstrumentBase._midiToFreq(midi);
     const startFreq = targetFreq * Math.pow(2, this.pitchSweepSemitones / 12);
 
     const osc = ctx.createOscillator();
@@ -271,16 +223,16 @@ export default class WebAudioSynth808 {
 
 // ---- Controls companion component ----
 
-export class WebAudioSynth808Controls extends HTMLElement {
+export class WebAudioSynth808Controls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
-    { param: "decay", label: "Decay", min: 0.1, max: 3, step: 0.01 },
-    { param: "pitchSweepSemitones", label: "Pitch Sweep", min: 0, max: 36, step: 1 },
-    { param: "pitchDecay", label: "Pitch Decay", min: 0.01, max: 1, step: 0.01 },
-    { param: "distortion", label: "Distortion", min: 0, max: 1, step: 0.01 },
-    { param: "click", label: "Click", min: 0, max: 1, step: 0.01 },
-    { param: "subOscMix", label: "Sub Mix", min: 0, max: 1, step: 0.01 },
-    { param: "tone", label: "Tone", min: 50, max: 8000, step: 1, scale: "log" },
+    { param: "volume",             label: "Vol",         min: 0,    max: 1,    step: 0.01 },
+    { param: "decay",              label: "Decay",       min: 0.1,  max: 3,    step: 0.01,  tooltip: "Amplitude decay time. Longer = sustained sub-bass thump." },
+    { param: "pitchSweepSemitones",label: "Pitch Sweep", min: 0,    max: 36,   step: 1,     tooltip: "Starting pitch above target in semitones — creates the 808 pitch drop." },
+    { param: "pitchDecay",         label: "Pitch Decay", min: 0.01, max: 1,    step: 0.01,  tooltip: "How quickly the pitch drop resolves to the target note." },
+    { param: "distortion",         label: "Distortion",  min: 0,    max: 1,    step: 0.01,  tooltip: "Adds saturation and harmonic content to the bass." },
+    { param: "click",              label: "Click",       min: 0,    max: 1,    step: 0.01,  tooltip: "Adds a transient click at note onset for extra punch." },
+    { param: "subOscMix",          label: "Sub Mix",     min: 0,    max: 1,    step: 0.01,  tooltip: "Blend of a sub-octave oscillator beneath the main tone." },
+    { param: "tone",               label: "Tone",        min: 50,   max: 8000, step: 1,     scale: "log", tooltip: "Tone filter cutoff. Lower = rounder, darker bass." },
   ];
 
   static DEFAULT_PATTERN() {
@@ -289,77 +241,29 @@ export class WebAudioSynth808Controls extends HTMLElement {
 
   constructor() {
     super();
-    this._instrument = null;
-    this._sliders = {};
-    this._presetSelect = null;
-    this._out = null;
-    this._pan = null;
-    this._panSlider = null;
     this._seq = null;
     this._rootMidi = 29;
     this._scaleName = "Minor";
   }
 
-  bind(instrument, ctx, options = {}) {
-    this._instrument = instrument;
-    const color = options.color || "#fa0";
-    this.innerHTML = "";
-    injectControlsCSS();
-    this.style.setProperty("--slider-accent", color);
+  // ---- Identity overrides ----
 
-    const strip = createChannelStrip(this, {
-      title: options.title || "808 Bass",
-      getOutGain: () => this._out,
-      initialVol: instrument.volume,
-      initialPan: 0,
-    });
-    this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted };
-    this._sliders["volume"] = strip.volSlider;
-    this._panSlider = strip.panSlider;
+  _defaultColor() { return "#fa0"; }
+  _defaultTitle() { return "808 Bass"; }
 
-    // Waveform — always visible (visualizer)
-    const waveform = document.createElement("web-audio-waveform");
-    this.appendChild(waveform);
+  // ---- No FX unit ----
 
-    // Expanded panel — hidden when collapsed
-    const expanded = document.createElement("div");
-    expanded.className = "wac-expanded";
-    this.appendChild(expanded);
+  _createFxUnit() { return null; }
 
-    // Controls wrapper inside expanded
-    const controls = document.createElement("div");
-    controls.className = "wac-controls";
-    expanded.appendChild(controls);
+  // ---- Build controls ----
 
-    const mkSlider = (def) => {
-      const s = document.createElement("web-audio-slider");
-      s.setAttribute("param", def.param);
-      s.setAttribute("label", def.label);
-      s.setAttribute("min", def.min);
-      s.setAttribute("max", def.max);
-      s.setAttribute("step", def.step);
-      if (def.scale) s.setAttribute("scale", def.scale);
-      s.value = instrument[def.param];
-      this._sliders[def.param] = s;
-      return s;
-    };
+  _buildControls(controls, expanded, mkSlider, ctx, options) {
+    const color = options.color || this._defaultColor();
 
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
-    this._presetSelect = document.createElement("select");
-    this._presetSelect.className = "wac-select";
-    Object.keys(WebAudioSynth808.PRESETS).forEach((name) => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name.replace(/_/g, " ");
-      this._presetSelect.appendChild(opt);
-    });
-    this._presetSelect.addEventListener("change", () => {
-      this.applyPreset(this._presetSelect.value);
-      this._emitChange();
-    });
-    toneCtrl.appendChild(this._presetSelect);
-    toneCtrl.appendChild(mkSlider({ param: "tone",   label: "Tone", min: 50, max: 8000, step: 1, scale: "log" }));
+    this._makePresetDropdown(WebAudioSynth808.PRESETS, toneCtrl);
+    toneCtrl.appendChild(mkSlider({ param: "tone", label: "Tone", min: 50, max: 8000, step: 1, scale: "log" }));
     controls.appendChild(toneEl);
 
     // ---- Shape ----
@@ -376,22 +280,11 @@ export class WebAudioSynth808Controls extends HTMLElement {
     charCtrl.appendChild(mkSlider({ param: "subOscMix",  label: "Sub Mix",    min: 0, max: 1, step: 0.01 }));
     controls.appendChild(charEl);
 
-    this.addEventListener("slider-input", (e) => {
-      if (!this._instrument) return;
-      const { param, value } = e.detail;
-      if (param === "pan") {
-        if (this._pan) this._pan.pan.value = value;
-      } else {
-        this._instrument[param] = value;
-      }
-      this._emitChange();
-    });
-
     // Randomize button
     const actionRow = document.createElement("div");
     actionRow.className = "wac-action-row";
     const randBtn = document.createElement("button");
-    randBtn.textContent = "⚄ Randomize";
+    randBtn.textContent = "\u2684 Randomize";
     randBtn.className = "wac-action-btn";
     randBtn.addEventListener("click", () => this.randomize());
     actionRow.appendChild(randBtn);
@@ -407,20 +300,6 @@ export class WebAudioSynth808Controls extends HTMLElement {
     });
     expanded.appendChild(this._seq);
     this._seq.addEventListener("step-change", () => this._emitChange());
-
-    // Audio routing: instrument → _out → _pan
-    // analyser taps from _out so waveform goes dark when muted
-    this._out = ctx.createGain();
-    instrument.connect(this._out);
-    this._pan = ctx.createStereoPanner();
-    this._out.connect(this._pan);
-    const analyser = ctx.createAnalyser();
-    this._out.connect(analyser);
-    const meterAnalyser = ctx.createAnalyser();
-    meterAnalyser.fftSize = 256;
-    this._out.connect(meterAnalyser);
-    strip.meter.setAnalyser(meterAnalyser);
-    waveform.init(analyser, color);
   }
 
   // ---- Sequencer integration ----
@@ -464,57 +343,14 @@ export class WebAudioSynth808Controls extends HTMLElement {
     this._emitChange();
   }
 
-  // ---- Serialization ----
+  // ---- Serialization hooks ----
 
-  _emitChange() {
-    this.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
+  _extendJSON(obj) {
+    obj.steps = this._seq?.steps ?? [];
   }
 
-  toJSON() {
-    if (!this._instrument) return null;
-    const params = {};
-    for (const def of WebAudioSynth808Controls.SLIDER_DEFS) params[def.param] = this._instrument[def.param];
-    return {
-      params,
-      steps: this._seq?.steps ?? [],
-      muted: this._muteHandle?.isMuted() ?? false,
-      pan: this._pan?.pan.value ?? 0,
-    };
-  }
-
-  fromJSON(obj) {
-    if (!obj || !this._instrument) return;
-    if (obj.params) {
-      for (const [key, val] of Object.entries(obj.params)) {
-        this._instrument[key] = val;
-        if (this._sliders[key]) this._sliders[key].value = val;
-      }
-    }
+  _restoreExtra(obj) {
     if (obj.steps && this._seq) this._seq.steps = obj.steps;
-    if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
-    if (obj.pan != null && this._pan) {
-      this._pan.pan.value = obj.pan;
-      if (this._panSlider) this._panSlider.value = obj.pan;
-    }
-  }
-
-  // ---- Preset / routing ----
-
-  applyPreset(name) {
-    if (!this._instrument) return;
-    this._instrument.applyPreset(name);
-    for (const def of WebAudioSynth808Controls.SLIDER_DEFS) {
-      const slider = this._sliders[def.param];
-      if (slider) slider.value = this._instrument[def.param];
-    }
-    if (this._presetSelect) this._presetSelect.value = name;
-  }
-
-  set bpm(_) { /* 808 has no FX unit to sync */ }
-
-  connect(node) {
-    (this._pan ?? this._out)?.connect(node.input ?? node);
-    return this;
   }
 }
 

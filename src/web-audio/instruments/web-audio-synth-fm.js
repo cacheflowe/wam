@@ -1,7 +1,8 @@
 import "../web-audio-slider.js";
-import { injectControlsCSS, createSection, createChannelStrip } from "../web-audio-slider.js";
 import "../web-audio-step-seq.js";
 import { buildChordFromScale, scaleNotesInRange, scaleNoteOptions } from "../web-audio-scales.js";
+import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
+import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
 
 /**
  * WebAudioSynthFM — polyphonic 2-operator FM synthesizer.
@@ -30,7 +31,7 @@ import { buildChordFromScale, scaleNotesInRange, scaleNoteOptions } from "../web
  *   fm.applyPreset("Bell");
  *   // or: new WebAudioSynthFM(ctx, WebAudioSynthFM.PRESETS["Bell"]);
  */
-export default class WebAudioSynthFM {
+export default class WebAudioSynthFM extends WebAudioInstrumentBase {
   /** Maps unprefixed preset keys to "fm"-prefixed param names used in demo UIs. */
   static PARAM_KEY_MAP = {
     carrierRatio: "fmCarrierRatio",
@@ -303,29 +304,15 @@ export default class WebAudioSynthFM {
 
   /**
    * @param {AudioContext} ctx
-   * @param {object}  [options]
-   * @param {number}  [options.carrierRatio=1]    Carrier freq ratio relative to note
-   * @param {number}  [options.modRatio=2]        Modulator freq ratio (2 = octave above)
-   * @param {number}  [options.modIndex=2]        FM depth: deviation = carrierFreq × modIndex
-   * @param {number}  [options.modAttack=0.002]   Mod envelope attack (timbre brightness rise)
-   * @param {number}  [options.modDecay=0.25]     Mod envelope decay (timbre brightness fall)
-   * @param {number}  [options.attack=0.02]       Carrier amplitude attack
-   * @param {number}  [options.decay=0.4]         Carrier amplitude decay
-   * @param {number}  [options.sustain=0.3]       Carrier sustain level 0–1
-   * @param {number}  [options.release=0.6]       Carrier release
-   * @param {number}  [options.filterFreq=5000]   Output lowpass cutoff Hz
-   * @param {number}  [options.filterQ=1]         Output filter resonance
-   * @param {number}  [options.detune=0]          Carrier detune in cents (thickens stacked voices)
-   * @param {number}  [options.volume=0.4]
+   * @param {string}  [preset="E_Piano"]
    */
   constructor(ctx, preset = "E_Piano") {
-    this.ctx = ctx;
+    super(ctx, null); // creates ctx + _out but skips preset (extra nodes not ready)
+
     this.modAttack = 0.002; // default — not in presets, but used by _voice
 
     this._filter = ctx.createBiquadFilter();
     this._filter.type = "lowpass";
-
-    this._out = ctx.createGain();
     this._filter.connect(this._out);
 
     // Filter LFO — continuous oscillator modulating filter cutoff
@@ -347,13 +334,6 @@ export default class WebAudioSynthFM {
   }
 
   // ---- Properties ----
-
-  get volume() {
-    return this._out.gain.value;
-  }
-  set volume(v) {
-    this._out.gain.value = v;
-  }
 
   get filterFreq() {
     return this._filter.frequency.value;
@@ -403,48 +383,6 @@ export default class WebAudioSynthFM {
     this._lfo.frequency.value = this._lfoInterval > 0 ? this._bpm / 60 / this._lfoInterval : 0;
   }
 
-  // ---- Routing ----
-
-  get input() {
-    return this._out;
-  }
-
-  connect(node) {
-    this._out.connect(node.input ?? node);
-    return this;
-  }
-
-  /**
-   * Apply a named preset, updating all synth parameters in place.
-   * @param {string} name  Key of WebAudioSynthFM.PRESETS
-   */
-  applyPreset(name) {
-    const p = WebAudioSynthFM.PRESETS[name];
-    if (!p) return;
-    if (p.carrierRatio != null) this.carrierRatio = p.carrierRatio;
-    if (p.modRatio != null) this.modRatio = p.modRatio;
-    if (p.modIndex != null) this.modIndex = p.modIndex;
-    if (p.modAttack != null) this.modAttack = p.modAttack;
-    if (p.modDecay != null) this.modDecay = p.modDecay;
-    if (p.attack != null) this.attack = p.attack;
-    if (p.decay != null) this.decay = p.decay;
-    if (p.sustain != null) this.sustain = p.sustain;
-    if (p.release != null) this.release = p.release;
-    if (p.filterFreq != null) this.filterFreq = p.filterFreq;
-    if (p.filterQ != null) this.filterQ = p.filterQ;
-    if (p.detune != null) this.detune = p.detune;
-    if (p.volume != null) this.volume = p.volume;
-    if (p.lfoInterval != null) this.lfoInterval = p.lfoInterval;
-    if (p.lfoDepth != null) this.lfoDepth = p.lfoDepth;
-    if (p.lfoShape != null) this.lfoShape = p.lfoShape;
-  }
-
-  // ---- Helpers ----
-
-  _midiToFreq(midi) {
-    return 440 * Math.pow(2, (midi - 69) / 12);
-  }
-
   // ---- Playback ----
 
   /**
@@ -463,7 +401,7 @@ export default class WebAudioSynthFM {
 
   _voice(midi, dur, atTime, gainScale = 1) {
     const ctx = this.ctx;
-    const baseFreq = this._midiToFreq(midi);
+    const baseFreq = WebAudioInstrumentBase._midiToFreq(midi);
     const carrierFreq = baseFreq * this.carrierRatio;
     const modFreq = baseFreq * this.modRatio;
     const modDepth = carrierFreq * this.modIndex; // Hz deviation at peak
@@ -517,23 +455,23 @@ export default class WebAudioSynthFM {
 
 // ---- Controls companion component ----
 
-export class WebAudioSynthFMControls extends HTMLElement {
+export class WebAudioSynthFMControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
     { param: "volume",         label: "Vol",       min: 0,    max: 1,     step: 0.01 },
-    { param: "octaveOffset",   label: "Octave",    min: -2,   max: 2,     step: 1 },
-    { param: "octaveJumpProb", label: "Oct Jump",  min: 0,    max: 1,     step: 0.01 },
-    { param: "carrierRatio",   label: "Carrier",   min: 0.5,  max: 4,     step: 0.01 },
-    { param: "modRatio",       label: "Mod Ratio", min: 0.5,  max: 8,     step: 0.01 },
-    { param: "modIndex",       label: "Mod Index", min: 0,    max: 10,    step: 0.1 },
-    { param: "modDecay",       label: "Mod Decay", min: 0.01, max: 2,     step: 0.01 },
-    { param: "attack",         label: "Attack",    min: 0.001,max: 1,     step: 0.001 },
-    { param: "decay",          label: "Decay",     min: 0.01, max: 2,     step: 0.01 },
-    { param: "sustain",        label: "Sustain",   min: 0,    max: 1,     step: 0.01 },
-    { param: "release",        label: "Release",   min: 0.01, max: 3,     step: 0.01 },
-    { param: "filterFreq",     label: "Filter",    min: 100,  max: 12000, step: 1,  scale: "log" },
-    { param: "filterQ",        label: "Filter Q",  min: 0.5,  max: 20,    step: 0.1 },
-    { param: "detune",         label: "Detune",    min: -50,  max: 50,    step: 1 },
-    { param: "lfoDepth",       label: "LFO Depth", min: 0,    max: 3000,  step: 10 },
+    { param: "octaveOffset",   label: "Octave",    min: -2,   max: 2,     step: 1,     tooltip: "Shift all notes up or down by octaves." },
+    { param: "octaveJumpProb", label: "Oct Jump",  min: 0,    max: 1,     step: 0.01,  tooltip: "Probability of randomly jumping an octave each step." },
+    { param: "carrierRatio",   label: "Carrier",   min: 0.5,  max: 4,     step: 0.01,  tooltip: "Carrier frequency as a ratio to the note pitch. Affects tuning character." },
+    { param: "modRatio",       label: "Mod Ratio", min: 0.5,  max: 8,     step: 0.01,  tooltip: "Modulator frequency ratio. Shapes the harmonic timbre." },
+    { param: "modIndex",       label: "Mod Index", min: 0,    max: 10,    step: 0.1,   tooltip: "FM modulation depth. Higher = more harmonics and brightness." },
+    { param: "modDecay",       label: "Mod Decay", min: 0.01, max: 2,     step: 0.01,  tooltip: "How quickly the FM modulation fades. Short = percussive attack." },
+    { param: "attack",         label: "Attack",    min: 0.001,max: 1,     step: 0.001, tooltip: "Amplitude envelope attack time." },
+    { param: "decay",          label: "Decay",     min: 0.01, max: 2,     step: 0.01,  tooltip: "Amplitude envelope decay time." },
+    { param: "sustain",        label: "Sustain",   min: 0,    max: 1,     step: 0.01,  tooltip: "Amplitude sustain level (0–1) during held notes." },
+    { param: "release",        label: "Release",   min: 0.01, max: 3,     step: 0.01,  tooltip: "Amplitude envelope release time after note off." },
+    { param: "filterFreq",     label: "Filter",    min: 100,  max: 12000, step: 1,  scale: "log", tooltip: "Lowpass filter cutoff frequency." },
+    { param: "filterQ",        label: "Filter Q",  min: 0.5,  max: 20,    step: 0.1,   tooltip: "Filter resonance. Emphasizes the cutoff frequency." },
+    { param: "detune",         label: "Detune",    min: -50,  max: 50,    step: 1,     tooltip: "Global pitch detune in cents." },
+    { param: "lfoDepth",       label: "LFO Depth", min: 0,    max: 3000,  step: 10,    tooltip: "LFO vibrato depth in cents. 0 = no vibrato." },
   ];
 
   static DEFAULT_PATTERN() {
@@ -543,71 +481,34 @@ export class WebAudioSynthFMControls extends HTMLElement {
 
   constructor() {
     super();
-    this._instrument = null;
-    this._ctx = null;
-    this._sliders = {};
-    this._presetSelect = null;
     this._chordSizeSelect = null;
     this._lfoShapeSelect = null;
     this._lfoIntervalSelect = null;
-    this._fxUnit = null;
-    this._out = null;
-    this._pan = null;
-    this._panSlider = null;
     this._seq = null;
     this._rootMidi = 29;
     this._scaleName = "Minor";
     this._chordSize = 3;
   }
 
+  // ---- Identity overrides ----
+
+  _defaultColor() { return "#4af"; }
+  _defaultTitle() { return "FM Chord Synth"; }
+  _fxTitle() { return "FM FX"; }
+
+  // ---- Bind override to set BPM on instrument ----
+
   bind(instrument, ctx, options = {}) {
-    this._instrument = instrument;
-    this._ctx = ctx;
     this._chordSize = options.chordSize ?? 3;
-    const color = options.color || "#4af";
     // Set BPM on instrument so LFO interval computes correctly
     if (options.fx?.bpm) instrument.bpm = options.fx.bpm;
-    this.innerHTML = "";
-    injectControlsCSS();
-    this.style.setProperty("--slider-accent", color);
-    this.style.setProperty("--fx-accent", color);
+    super.bind(instrument, ctx, options);
+  }
 
-    const strip = createChannelStrip(this, {
-      title: options.title || "FM Chord Synth",
-      getOutGain: () => this._out,
-      initialVol: instrument.volume,
-      initialPan: 0,
-    });
-    this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted };
-    this._sliders["volume"] = strip.volSlider;
-    this._panSlider = strip.panSlider;
+  // ---- Build controls (subclass hook) ----
 
-    // Waveform — always visible (visualizer)
-    const waveform = document.createElement("web-audio-waveform");
-    this.appendChild(waveform);
-
-    // Expanded panel — hidden when collapsed
-    const expanded = document.createElement("div");
-    expanded.className = "wac-expanded";
-    this.appendChild(expanded);
-
-    // Controls wrapper inside expanded
-    const controls = document.createElement("div");
-    controls.className = "wac-controls";
-    expanded.appendChild(controls);
-
-    const mkSlider = (def) => {
-      const s = document.createElement("web-audio-slider");
-      s.setAttribute("param", def.param);
-      s.setAttribute("label", def.label);
-      s.setAttribute("min", def.min);
-      s.setAttribute("max", def.max);
-      s.setAttribute("step", def.step);
-      if (def.scale) s.setAttribute("scale", def.scale);
-      s.value = instrument[def.param];
-      this._sliders[def.param] = s;
-      return s;
-    };
+  _buildControls(controls, expanded, mkSlider, ctx, options) {
+    const color = options.color || this._defaultColor();
 
     const mkSelect = (labelText, appendTo) => {
       const wrap = document.createElement("div");
@@ -622,19 +523,7 @@ export class WebAudioSynthFMControls extends HTMLElement {
 
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
-    this._presetSelect = document.createElement("select");
-    this._presetSelect.className = "wac-select";
-    Object.keys(WebAudioSynthFM.PRESETS).forEach((name) => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name.replace(/_/g, " ");
-      this._presetSelect.appendChild(opt);
-    });
-    this._presetSelect.addEventListener("change", () => {
-      this.applyPreset(this._presetSelect.value);
-      this._emitChange();
-    });
-    toneCtrl.appendChild(this._presetSelect);
+    this._makePresetDropdown(WebAudioSynthFM.PRESETS, toneCtrl);
     controls.appendChild(toneEl);
 
     // ---- FM ----
@@ -667,7 +556,7 @@ export class WebAudioSynthFMControls extends HTMLElement {
       const opt = document.createElement("option");
       opt.value = beats;
       opt.textContent = label;
-      if (beats === instrument.lfoInterval) opt.selected = true;
+      if (beats === this._instrument.lfoInterval) opt.selected = true;
       this._lfoIntervalSelect.appendChild(opt);
     }
     this._lfoIntervalSelect.addEventListener("change", () => {
@@ -679,7 +568,7 @@ export class WebAudioSynthFMControls extends HTMLElement {
       const opt = document.createElement("option");
       opt.value = shape;
       opt.textContent = shape;
-      if (shape === instrument.lfoShape) opt.selected = true;
+      if (shape === this._instrument.lfoShape) opt.selected = true;
       this._lfoShapeSelect.appendChild(opt);
     }
     this._lfoShapeSelect.addEventListener("change", () => {
@@ -694,17 +583,6 @@ export class WebAudioSynthFMControls extends HTMLElement {
     octCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Offset",    min: -2, max: 2, step: 1 }));
     octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0,  max: 1, step: 0.01 }));
     controls.appendChild(octEl);
-
-    this.addEventListener("slider-input", (e) => {
-      if (!this._instrument) return;
-      const { param, value } = e.detail;
-      if (param === "pan") {
-        if (this._pan) this._pan.pan.value = value;
-      } else {
-        this._instrument[param] = value;
-      }
-      this._emitChange();
-    });
 
     // Action row
     const actionRow = document.createElement("div");
@@ -760,26 +638,61 @@ export class WebAudioSynthFMControls extends HTMLElement {
     });
     expanded.appendChild(this._seq);
     this._seq.addEventListener("step-change", () => this._emitChange());
+  }
 
-    // FX unit
-    this._fxUnit = document.createElement("web-audio-fx-unit");
-    expanded.appendChild(this._fxUnit);
-    this._fxUnit.init(ctx, { title: "FM FX", bpm: options.fx?.bpm ?? 120, ...options.fx });
+  // ---- Slider input override (emit change after set) ----
 
-    // Audio routing: instrument → fxUnit → _out → _pan
-    // analyser taps from _out so waveform goes dark when muted
-    instrument.connect(this._fxUnit.input);
-    this._out = ctx.createGain();
-    this._fxUnit.connect(this._out);
-    this._pan = ctx.createStereoPanner();
-    this._out.connect(this._pan);
-    const analyser = ctx.createAnalyser();
-    this._out.connect(analyser);
-    const meterAnalyser = ctx.createAnalyser();
-    meterAnalyser.fftSize = 256;
-    this._out.connect(meterAnalyser);
-    strip.meter.setAnalyser(meterAnalyser);
-    waveform.init(analyser, color);
+  _onSliderInput(param, value) {
+    this._instrument[param] = value;
+    this._emitChange();
+  }
+
+  // ---- BPM override (also sets instrument BPM for LFO) ----
+
+  set bpm(v) {
+    if (this._fxUnit) this._fxUnit.bpm = v;
+    if (this._instrument) this._instrument.bpm = v;
+  }
+
+  // ---- Sync extra controls after preset ----
+
+  _syncExtraControls() {
+    if (this._lfoShapeSelect) this._lfoShapeSelect.value = this._instrument.lfoShape;
+    if (this._lfoIntervalSelect) this._lfoIntervalSelect.value = this._instrument.lfoInterval;
+  }
+
+  // ---- Serialization hooks ----
+
+  _extraToJSON(params) {
+    params.lfoInterval = this._instrument.lfoInterval;
+    params.lfoShape = this._instrument.lfoShape;
+  }
+
+  _extendJSON(obj) {
+    obj.steps = this._seq?.steps ?? [];
+    obj.chordSize = this._chordSize;
+  }
+
+  _restoreParam(key, val) {
+    if (key === "lfoShape") {
+      this._instrument.lfoShape = val;
+      if (this._lfoShapeSelect) this._lfoShapeSelect.value = val;
+    } else if (key === "lfoInterval") {
+      this._instrument.lfoInterval = val;
+      if (this._lfoIntervalSelect) this._lfoIntervalSelect.value = val;
+    } else if (key === "lfoRate") {
+      // back-compat: old saves used Hz-based lfoRate — ignore, default interval is fine
+    } else {
+      super._restoreParam(key, val);
+    }
+  }
+
+  _restoreExtra(obj) {
+    if (obj.chordSize != null) {
+      this._chordSize = obj.chordSize;
+      if (this._chordSizeSelect) this._chordSizeSelect.value = obj.chordSize;
+    }
+    if (obj.steps && this._seq) this._seq.steps = obj.steps;
   }
 
   // ---- Sequencer integration ----
@@ -821,83 +734,6 @@ export class WebAudioSynthFMControls extends HTMLElement {
     }));
     if (this._seq) this._seq.steps = newSteps;
     this._emitChange();
-  }
-
-  // ---- Serialization ----
-
-  _emitChange() {
-    this.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
-  }
-
-  toJSON() {
-    if (!this._instrument) return null;
-    const params = {};
-    for (const def of WebAudioSynthFMControls.SLIDER_DEFS) params[def.param] = this._instrument[def.param];
-    params.lfoInterval = this._instrument.lfoInterval;
-    params.lfoShape = this._instrument.lfoShape;
-    return {
-      params,
-      steps: this._seq?.steps ?? [],
-      chordSize: this._chordSize,
-      fx: this._fxUnit?.toJSON(),
-      muted: this._muteHandle?.isMuted() ?? false,
-      pan: this._pan?.pan.value ?? 0,
-    };
-  }
-
-  fromJSON(obj) {
-    if (!obj || !this._instrument) return;
-    if (obj.params) {
-      for (const [key, val] of Object.entries(obj.params)) {
-        if (key === "lfoShape") {
-          this._instrument.lfoShape = val;
-          if (this._lfoShapeSelect) this._lfoShapeSelect.value = val;
-        } else if (key === "lfoInterval") {
-          this._instrument.lfoInterval = val;
-          if (this._lfoIntervalSelect) this._lfoIntervalSelect.value = val;
-        } else if (key === "lfoRate") {
-          // back-compat: old saves used Hz-based lfoRate — ignore, default interval is fine
-        } else {
-          this._instrument[key] = val;
-          if (this._sliders[key]) this._sliders[key].value = val;
-        }
-      }
-    }
-    if (obj.chordSize != null) {
-      this._chordSize = obj.chordSize;
-      if (this._chordSizeSelect) this._chordSizeSelect.value = obj.chordSize;
-    }
-    if (obj.steps && this._seq) this._seq.steps = obj.steps;
-    if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
-    if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
-    if (obj.pan != null && this._pan) {
-      this._pan.pan.value = obj.pan;
-      if (this._panSlider) this._panSlider.value = obj.pan;
-    }
-  }
-
-  // ---- Preset / routing ----
-
-  applyPreset(name) {
-    if (!this._instrument) return;
-    this._instrument.applyPreset(name);
-    for (const def of WebAudioSynthFMControls.SLIDER_DEFS) {
-      const slider = this._sliders[def.param];
-      if (slider) slider.value = this._instrument[def.param];
-    }
-    if (this._presetSelect) this._presetSelect.value = name;
-    if (this._lfoShapeSelect) this._lfoShapeSelect.value = this._instrument.lfoShape;
-    if (this._lfoIntervalSelect) this._lfoIntervalSelect.value = this._instrument.lfoInterval;
-  }
-
-  set bpm(v) {
-    if (this._fxUnit) this._fxUnit.bpm = v;
-    if (this._instrument) this._instrument.bpm = v;
-  }
-
-  connect(node) {
-    (this._pan ?? this._out)?.connect(node.input ?? node);
-    return this;
   }
 }
 

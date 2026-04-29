@@ -21,14 +21,26 @@ Each instrument file exports both the audio class and a Controls Web Component. 
 Internal signal chain after `bind()`:
 
 ```
-instrument → AnalyserNode → FxUnit.input → FxUnit._out → controls._out
-                   │
-             WaveformDisplay
+instrument → FxUnit.input → FxUnit._out → controls._out → StereoPannerNode → masterGain
+                                                 │
+                                          AnalyserNode → WaveformDisplay
+                                          AnalyserNode → VU Meter
 ```
 
 `controls.connect(masterGain)` routes the final output to the app's master bus.
 
 Full details: [design-docs/controls-companion-pattern.md](design-docs/controls-companion-pattern.md)
+
+## Channel Strip
+
+Every Controls component includes a permanent channel strip (always visible, not inside the collapsed panel):
+
+- **Volume** — output gain via `_out` GainNode
+- **Pan** — stereo position via `StereoPannerNode` (`_pan`)
+- **Mute** — toggles `_out.gain` to 0 / restores pre-mute volume
+- **VU meter** — peak level via a dedicated `AnalyserNode`
+
+The strip is created by `createChannelStrip()` (exported from `web-audio-slider.js`).
 
 ## CSS Architecture
 
@@ -76,6 +88,7 @@ The app shell uses [PicoCSS](https://picocss.com/) for base typography, forms, a
 | `step` | number | Increment |
 | `scale` | `"log"` or omit | Logarithmic mapping for frequency controls |
 | `value` | number | Initial value |
+| `data-tooltip` | string | PicoCSS tooltip shown on hover of the label text only |
 
 The slider fires a `slider-input` CustomEvent with `detail: { param, value }`. Controls components catch this via a delegated listener:
 
@@ -84,6 +97,45 @@ this.addEventListener("slider-input", (e) => {
   this._instrument[e.detail.param] = e.detail.value;
 });
 ```
+
+### Tooltips
+
+Set `tooltip` on a `SLIDER_DEFS` entry. `mkSlider()` in `WebAudioControlsBase` reads it and sets `data-tooltip` on the outer `<web-audio-slider>` element. `WebAudioSlider._build()` then moves the attribute from the outer element to the inner `.was-label-text` span, so the PicoCSS tooltip triggers only on the label text — not the range input.
+
+```js
+static SLIDER_DEFS = [
+  { param: "cutoff", label: "Cutoff", ..., tooltip: "Base filter cutoff frequency." },
+];
+```
+
+## Controls Layout: `createSection()`
+
+All instrument-specific parameter groups use `createSection(label)` from `web-audio-slider.js`:
+
+```js
+const { el, controls } = createSection("Envelope");
+controls.appendChild(mkSlider({ param: "attack", ... }));
+controls.appendChild(mkSlider({ param: "decay", ... }));
+expanded.appendChild(el);
+```
+
+This produces:
+
+```html
+<div class="wac-section">
+  <div class="wac-title">Envelope</div>
+  <div class="wac-section-controls">...</div>
+</div>
+```
+
+Key CSS classes:
+- `.wac-section` — groups a title and controls row
+- `.wac-title` — section label (also used for channel strip title)
+- `.wac-section-controls` — flex row for sliders, selects, and buttons
+- `.wac-ctrl` — wrapper for a label + select pair (e.g. Time stretch ratio)
+- `.wac-select` — styled `<select>` (max-width: 160px for instrument controls; 120px inside FX unit)
+
+Do not use `.wac-controls` as a section container — use `createSection()` instead.
 
 ## Step Sequencer UI
 

@@ -48,14 +48,15 @@ Build a library of browser-based instruments that are:
 | **Rename & shorten prefix** | High | `web-audio-` prefix is too verbose; see **Renaming** section below |
 | Fix FM synth presets | High | Several presets produce dead/silent sounds; audit and retune all |
 | Master volume control | Medium | Per-app gain knob in acid-breaks and generative-music apps |
-| **Per-instrument channel strip** | Medium | Volume, pan, mute per instrument; see **Channel Strip** section below |
+| ~~Per-instrument channel strip~~ | ~~Medium~~ | **Done** — volume, pan, mute, VU meter on every instrument |
 | **Master transport panel** | Medium | Transport as a styled instrument-like panel with master FX and waveform; see **Transport Panel** section below |
 | Responsive volume / overload protection | Medium | See **Responsive Volume** section below |
-| Inline parameter tooltips | Medium | Explain each slider's purpose; see **UI Tooltips** section below |
+| ~~Inline parameter tooltips~~ | ~~Medium~~ | **Done** — PicoCSS `data-tooltip` on all slider labels |
 | Acid-breaks UI grid layout | Medium | Container queries for responsive panel grid; see **Layout** section below |
 | Pattern evolution tools | Medium | Slow morph / mutation of sequences over time; see **Pattern Evolution** section below |
 | Per-instrument product specs | Medium | Fill out individual spec files in [product-specs/](../product-specs/) |
 | MIDI learn | Medium | See **MIDI** section below |
+| **MediaRecorder WAV recording** | Medium | Record and render WAV files on the fly; see **MediaRecorder Recording** section below |
 | Refine existing instruments & effects | Ongoing | Tuning, preset quality, edge cases |
 | Add new instruments & effects | Ongoing | See **Possible Future Instruments** section below |
 | npm package publication | Low | Export each instrument as a named module; publish to npm |
@@ -139,6 +140,10 @@ src/web-audio/
     web-audio-fx-filter.js
     web-audio-fx-distortion.js
     web-audio-fx-unit.js
+    web-audio-pitch-shift.js
+    web-audio-pitch-shift.worklet.js
+    web-audio-time-stretch.js
+    web-audio-time-stretch.worklet.js
   ui/
     web-audio-slider.js
     web-audio-step-seq.js
@@ -146,31 +151,22 @@ src/web-audio/
   global/
     web-audio-sequencer.js
     web-audio-scales.js
-    web-audio-pitch-shift.js
-    web-audio-pitch-shift.worklet.js
-    web-audio-time-stretch.js
-    web-audio-time-stretch.worklet.js
 ```
 
 **Notes**: Update all import paths in instrument files and any app entry points. Worklet `addModule()` paths must also be updated — use `new URL('./file.worklet.js', import.meta.url).href` so Vite resolves them correctly after the move.
 
-## Channel Strip
+## Channel Strip ✓ Done
 
-Goal: every instrument panel gets a small "channel strip" section (volume, pan, mute) that mirrors the mental model of a mixing board. Currently mute lives in the title row and pan doesn't exist.
+Every instrument panel has a permanent channel strip (always visible, above the collapsible panel):
 
-**Controls** (proposed, per instrument):
-- **Volume** — output gain, 0–1, replaces the per-instrument `vol` slider where it exists
-- **Pan** — stereo position, −1 (L) to +1 (R), default 0; implemented via `StereoPannerNode`
-- **Mute** — existing mute toggle, moved into this section for consistency
-- **Solo** (optional, later) — cuts all other instruments; requires a shared solo bus
+- **Volume** — output gain via `_out` GainNode, 0–1
+- **Pan** — stereo position via `StereoPannerNode`, −1 to +1
+- **Mute** — toggles `_out.gain` to 0 / restores pre-mute volume
+- **VU meter** — live peak level display
 
-**Audio change**: each instrument's output chain gains a `StereoPannerNode` inserted between the instrument output gain and the master gain. The controls component owns this node via a `_pan` property.
+Built by `createChannelStrip()` in `web-audio-slider.js`. Serialized as `pan`, `volume`, `muted` in every controls `toJSON()`. **Solo** remains a future addition (requires a shared solo bus).
 
-**UI**: a dedicated `Channel` section at the top of every controls panel, rendered before instrument-specific sections. Visually consistent with `.wac-section` / `.wac-section-label` pattern. The mute button moves here from the title row.
-
-**Serialization**: `pan` and `volume` added to every controls component's `toJSON()` / `fromJSON()`. Old saves without `pan` default to 0.
-
-**Scope**: `WebAudioSynthAcid`, `WebAudioSynth808`, `WebAudioSynthFM`, `WebAudioSynthBlipFX`, `WebAudioBreakPlayer`, and any future instruments. The channel strip logic can be extracted into a shared helper (e.g. `createChannelStrip(controls, instrument)`) to avoid duplication.
+**Pending**: solo bus.
 
 ## Transport Panel
 
@@ -210,22 +206,9 @@ Options to evaluate:
 
 Recommended approach: add a `DynamicsCompressorNode` between the master gain and `ctx.destination` as a first pass. Expose threshold/ratio/makeup-gain in the app UI. Each app (acid-breaks, generative-music) should have its own master gain slider.
 
-## UI Tooltips
+## UI Tooltips ✓ Done
 
-Goal: give users in-context explanations of what each slider does without cluttering the UI.
-
-Approach: use [PicoCSS tooltips](https://picocss.com/docs/tooltip) (`data-tooltip` attribute). Add a short tooltip string to each entry in `SLIDER_DEFS`:
-
-```js
-static SLIDER_DEFS = [
-  { param: "cutoff", label: "Cutoff", ..., tooltip: "Base filter frequency. Lower = darker tone." },
-  { param: "resonance", label: "Reso", ..., tooltip: "Filter resonance. High values = pronounced peak at cutoff." },
-];
-```
-
-The Controls `bind()` method sets `data-tooltip` on the slider wrapper element. PicoCSS renders the tooltip on hover/focus with no JS.
-
-**Fallback**: if PicoCSS tooltip styling conflicts with the `.wac-*` CSS, a `title` attribute provides a native browser tooltip at zero cost.
+PicoCSS `data-tooltip` tooltips on all slider labels. Set `tooltip` in `SLIDER_DEFS`; `mkSlider()` picks it up and `WebAudioSlider._build()` moves it to the `.was-label-text` span so the tooltip only triggers on the label, not the range input. CSS overrides enable multi-line text (`white-space: normal; max-width: 180px`) with a dark background for contrast.
 
 ## Acid-Breaks Layout
 
@@ -266,6 +249,46 @@ These would live as utility functions in `web-audio-scales.js` or a new `web-aud
 | MIDI clock sync | Sync `WebAudioSequencer` BPM to incoming MIDI clock (24 ppq). |
 
 MIDI features should be optional and additive — instruments must work without MIDI.
+
+## New Effects
+
+### Tuna.js Review
+Study [tuna.js](https://github.com/Theodeus/tuna/blob/master/tuna.js) to see if any of its effect implementations are more robust than ours (especially Chorus, Phaser, Compressor, Wahwah). Where improvements are found, reimplement in our style (ES class, no dependencies, `connect()` / `input` getter pattern).
+
+### Effects to Implement
+
+| Effect | Notes |
+|---|---|
+| **Phaser** | Multi-stage all-pass filter sweep; LFO-modulated; stereo; wet/dry |
+| **Compressor** | Thin wrapper + UI around `DynamicsCompressorNode`; threshold/ratio/attack/release/knee |
+| **Ping-Pong Delay** | Add `stereo: "pingpong"` mode to existing `WebAudioFxDelay`; alternates echoes L→R→L |
+| **Tremolo** | LFO-modulated amplitude; rate/depth/shape (sine/square); wet/dry |
+| **Wah-Wah** | Bandpass filter with LFO + envelope-follower mode; auto-wah and manual sweep |
+
+All effects follow the same pattern as existing FX: standalone audio class + Controls section in `WebAudioFxUnit`.
+
+### Filter Sweep in Delay
+Add LP/HP sweep control to the delay's feedback filter (currently LP-only). Completed ✓
+
+## MediaRecorder Recording
+
+Goal: let users record the master output as a WAV file directly in the browser, with a simple record/stop UI.
+
+**Approach**: use the [MediaRecorder API](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder) with `MediaStreamDestination`:
+
+1. Create a `MediaStreamAudioDestinationNode` connected to the master bus (in parallel with `ctx.destination`)
+2. Feed its `.stream` into a `MediaRecorder` instance
+3. On stop, collect the recorded `Blob` chunks and convert to WAV
+4. Offer a download link or in-page playback
+
+**WAV conversion**: `MediaRecorder` typically outputs WebM/Opus. To produce WAV:
+- Option A: use an `AudioWorklet` to capture raw PCM samples, then encode WAV manually (header + interleaved float32/int16)
+- Option B: record as WebM, then decode the blob via `decodeAudioData()` and re-encode to WAV
+- Option A is preferred — lower latency, no re-decode step, and produces lossless output
+
+**UI**: a Record / Stop button in the transport panel. While recording, show elapsed time and a pulsing indicator. On stop, present a download link.
+
+**Scope**: master bus only initially. Per-instrument stem recording is a future extension.
 
 ## Possible Future Instruments
 

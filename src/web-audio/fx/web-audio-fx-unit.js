@@ -58,7 +58,7 @@ export default class WebAudioFxUnit extends HTMLElement {
    * @param {number}  [options.delayInterval=0.75]   beat multiplier
    * @param {number}  [options.delayFeedback=0.35]
    * @param {number}  [options.delayMix=0]
-   * @param {number}  [options.delayFilterFreq=12000]
+   * @param {number}  [options.delayFilterSweep=0]    Bipolar -1..+1 (LP←0→HP) for feedback filter
    * @param {number}  [options.chorusVoices=3]
    * @param {number}  [options.chorusRate=0.8]
    * @param {number}  [options.chorusDepth=0.5]
@@ -87,7 +87,7 @@ export default class WebAudioFxUnit extends HTMLElement {
       bpm: options.bpm ?? 120,
       feedback: options.delayFeedback ?? 0.35,
       wet: options.delayMix ?? 0,
-      filterFreq: options.delayFilterFreq ?? 12000,
+      filterSweep: options.delayFilterSweep ?? 0,
       modulation: 0,
     });
 
@@ -149,7 +149,7 @@ export default class WebAudioFxUnit extends HTMLElement {
       delayInterval: this._delay?.interval ?? 0.75,
       delayFeedback: this._delay?.feedback ?? 0.35,
       delayMix: this._delay?.wet ?? 0,
-      delayFilterFreq: this._delay?.filterFreq ?? 12000,
+      delayFilterSweep: this._delay?.filterSweep ?? 0,
       delayModulation: this._delay?.modulation ?? 0,
       chorusVoices: this._chorus?.voices ?? 3,
       chorusRate: this._chorus?.rate ?? 0.8,
@@ -201,10 +201,13 @@ export default class WebAudioFxUnit extends HTMLElement {
       const s = this.querySelector('web-audio-slider[param="delayMix"]');
       if (s) s.value = obj.delayMix;
     }
-    if (obj.delayFilterFreq != null && this._delay) {
+    if (obj.delayFilterSweep != null && this._delay) {
+      this._delay.filterSweep = obj.delayFilterSweep;
+      const s = this.querySelector('web-audio-filter-sweep[param="delayFilterSweep"]');
+      if (s) s.value = obj.delayFilterSweep;
+    } else if (obj.delayFilterFreq != null && this._delay) {
+      // backwards-compat: old saves stored raw LP frequency — map to a negative sweep
       this._delay.filterFreq = obj.delayFilterFreq;
-      const s = this.querySelector('web-audio-slider[param="delayFilterFreq"]');
-      if (s) s.value = obj.delayFilterFreq;
     }
     if (obj.delayModulation != null && this._delay) {
       this._delay.modulation = obj.delayModulation;
@@ -253,7 +256,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     }
     if (obj.filterSweep != null && this._filter) {
       this._filter.sweep = obj.filterSweep;
-      const s = this.querySelector('web-audio-filter-sweep');
+      const s = this.querySelector("web-audio-filter-sweep");
       if (s) s.value = obj.filterSweep;
     } else {
       // backwards-compat: old saves had separate lpFreq/hpFreq
@@ -310,6 +313,7 @@ export default class WebAudioFxUnit extends HTMLElement {
 
     // ---- Delay ----
     const { el: delEl, controls: delCtrl } = createSection("Delay");
+    delCtrl.appendChild(this._addSlider("delayMix", "Mix", 0, 1, 0.01, options.delayMix ?? 0));
     const intervalSelect = mkSelect("Interval", delCtrl);
     WebAudioFxDelay.INTERVALS.forEach(({ label, beats }) => {
       const opt = document.createElement("option");
@@ -321,14 +325,18 @@ export default class WebAudioFxUnit extends HTMLElement {
     intervalSelect.addEventListener("change", () => {
       if (this._delay) this._delay.interval = parseFloat(intervalSelect.value);
     });
-    delCtrl.appendChild(this._addSlider("delayFeedback",   "Feedbk", 0,   0.9,   0.01, options.delayFeedback   ?? 0.35));
-    delCtrl.appendChild(this._addSlider("delayMix",        "Mix",    0,   1,     0.01, options.delayMix        ?? 0));
-    delCtrl.appendChild(this._addSlider("delayFilterFreq", "Dub",    200, 12000, 1,    options.delayFilterFreq ?? 12000, { scale: "log" }));
-    delCtrl.appendChild(this._addSlider("delayModulation", "Mod",    0,   1,     0.01, 0));
+    delCtrl.appendChild(this._addSlider("delayFeedback", "Feedbk", 0, 0.9, 0.01, options.delayFeedback ?? 0.35));
+    const delayFilterSweep = document.createElement("web-audio-filter-sweep");
+    delayFilterSweep.setAttribute("param", "delayFilterSweep");
+    delayFilterSweep.setAttribute("label", "Dub Filt");
+    delayFilterSweep.value = options.delayFilterSweep ?? 0;
+    delCtrl.appendChild(delayFilterSweep);
+    delCtrl.appendChild(this._addSlider("delayModulation", "Mod", 0, 1, 0.01, 0));
     this.appendChild(delEl);
 
     // ---- Chorus ----
     const { el: chorEl, controls: chorCtrl } = createSection("Chorus");
+    chorCtrl.appendChild(this._addSlider("chorusWet", "Wet", 0, 1, 0.01, options.chorusWet ?? 0));
     const voicesSelect = mkSelect("Voices", chorCtrl);
     voicesSelect.dataset.param = "chorusVoices";
     for (let v = 1; v <= 6; v++) {
@@ -353,20 +361,25 @@ export default class WebAudioFxUnit extends HTMLElement {
     shapeSelect.addEventListener("change", () => {
       if (this._chorus) this._chorus.shape = shapeSelect.value;
     });
-    chorCtrl.appendChild(this._addSlider("chorusRate",     "Rate",   0.05, 10,  0.01, options.chorusRate     ?? 0.8, { scale: "log" }));
-    chorCtrl.appendChild(this._addSlider("chorusDepth",    "Depth",  0,    1,   0.01, options.chorusDepth    ?? 0.5));
-    chorCtrl.appendChild(this._addSlider("chorusDelay",    "Delay",  1,    50,  0.1,  options.chorusDelay    ?? 10));
-    chorCtrl.appendChild(this._addSlider("chorusFeedback", "Feedbk", 0,    0.9, 0.01, options.chorusFeedback ?? 0));
-    chorCtrl.appendChild(this._addSlider("chorusSpread",   "Spread", 0,    1,   0.01, options.chorusSpread   ?? 1));
-    chorCtrl.appendChild(this._addSlider("chorusWet",      "Wet",    0,    1,   0.01, options.chorusWet      ?? 0));
+    chorCtrl.appendChild(
+      this._addSlider("chorusRate", "Rate", 0.05, 10, 0.01, options.chorusRate ?? 0.8, { scale: "log" }),
+    );
+    chorCtrl.appendChild(this._addSlider("chorusDepth", "Depth", 0, 1, 0.01, options.chorusDepth ?? 0.5));
+    chorCtrl.appendChild(this._addSlider("chorusDelay", "Delay", 1, 50, 0.1, options.chorusDelay ?? 10));
+    chorCtrl.appendChild(this._addSlider("chorusFeedback", "Feedbk", 0, 0.9, 0.01, options.chorusFeedback ?? 0));
+    chorCtrl.appendChild(this._addSlider("chorusSpread", "Spread", 0, 1, 0.01, options.chorusSpread ?? 1));
     this.appendChild(chorEl);
 
     // ---- Reverb ----
     const { el: revEl, controls: revCtrl } = createSection("Reverb");
-    revCtrl.appendChild(this._addSlider("reverbWet",      "Wet",      0,   1,     0.01, options.reverbWet      ?? 0));
-    revCtrl.appendChild(this._addSlider("reverbPreDelay", "Pre-dly",  0,   80,    1,    options.reverbPreDelay ?? 0));
-    revCtrl.appendChild(this._addSlider("reverbHpFreq",   "HP",       20,  800,   1,    options.reverbHpFreq   ?? 80,   { scale: "log" }));
-    revCtrl.appendChild(this._addSlider("reverbLpFreq",   "Damp",     2000, 20000, 1,   options.reverbLpFreq   ?? 8000, { scale: "log" }));
+    revCtrl.appendChild(this._addSlider("reverbWet", "Wet", 0, 1, 0.01, options.reverbWet ?? 0));
+    revCtrl.appendChild(this._addSlider("reverbPreDelay", "Pre-dly", 0, 80, 1, options.reverbPreDelay ?? 0));
+    revCtrl.appendChild(
+      this._addSlider("reverbHpFreq", "HP", 20, 800, 1, options.reverbHpFreq ?? 80, { scale: "log" }),
+    );
+    revCtrl.appendChild(
+      this._addSlider("reverbLpFreq", "Damp", 2000, 20000, 1, options.reverbLpFreq ?? 8000, { scale: "log" }),
+    );
     this.appendChild(revEl);
 
     // Delegated listener for all sliders
@@ -391,8 +404,8 @@ export default class WebAudioFxUnit extends HTMLElement {
         case "delayMix":
           if (this._delay) this._delay.wet = value;
           break;
-        case "delayFilterFreq":
-          if (this._delay) this._delay.filterFreq = value;
+        case "delayFilterSweep":
+          if (this._delay) this._delay.filterSweep = value;
           break;
         case "delayModulation":
           if (this._delay) this._delay.modulation = value;
@@ -452,6 +465,7 @@ export default class WebAudioFxUnit extends HTMLElement {
         padding: 6px 14px 10px;
         background: #0d0d0d;
         border-top: 1px solid #1e1e1e;
+        border-radius: 0 0 5px 5px;
         font-family: monospace;
         --slider-accent: var(--fx-accent, #0f0);
       }
@@ -468,7 +482,7 @@ export default class WebAudioFxUnit extends HTMLElement {
         user-select: none;
       }
       .fx-unit-chevron {
-        font-size: 0.9em;
+        font-size: 2em;
         color: #555;
         transition: transform 0.15s ease;
         line-height: 1;
@@ -496,6 +510,7 @@ export default class WebAudioFxUnit extends HTMLElement {
         border-radius: 3px;
         padding: 4px 5px;
         cursor: pointer;
+        max-width: 120px;
       }
     `;
     document.head.appendChild(style);
