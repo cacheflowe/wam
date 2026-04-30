@@ -18,7 +18,7 @@
  */
 
 import "../web-audio-slider.js";
-import { injectControlsCSS, createSection } from "../web-audio-slider.js";
+import { injectControlsCSS, createSection, createCtrl } from "../web-audio-slider.js";
 
 export default class WebAudioTimeStretch {
   /**
@@ -258,45 +258,39 @@ export class WebAudioTimeStretchControls extends HTMLElement {
     this._pitchSlider = pitchSlider;
 
     // Time stretch ratio select
-    const stretchWrap = document.createElement("div");
-    stretchWrap.className = "wac-ctrl";
-    stretchWrap.appendChild(Object.assign(document.createElement("label"), { textContent: "Time" }));
-    const stretchSelect = document.createElement("select");
-    stretchSelect.className = "wac-select";
-    this._stretchSelect = stretchSelect;
+    const stretchWrap = createCtrl("Time");
+    this._stretchSelect = document.createElement("select");
+    this._stretchSelect.className = "wac-select";
     for (const { label, value } of STRETCH_RATIOS) {
       const opt = document.createElement("option");
       opt.value = value;
       opt.textContent = label;
       if (value === (target.stretchRatio ?? 1)) opt.selected = true;
-      stretchSelect.appendChild(opt);
+      this._stretchSelect.appendChild(opt);
     }
-    stretchSelect.addEventListener("change", () => {
-      this._target.stretchRatio = parseFloat(stretchSelect.value);
+    this._stretchSelect.addEventListener("change", () => {
+      this._target.stretchRatio = parseFloat(this._stretchSelect.value);
       this._emitChange();
     });
-    stretchWrap.appendChild(stretchSelect);
+    stretchWrap.appendChild(this._stretchSelect);
     controls.appendChild(stretchWrap);
 
     // Grain style select (clean vs vintage)
-    const styleWrap = document.createElement("div");
-    styleWrap.className = "wac-ctrl";
-    styleWrap.appendChild(Object.assign(document.createElement("label"), { textContent: "Style" }));
-    const styleSelect = document.createElement("select");
-    styleSelect.className = "wac-select";
-    this._styleSelect = styleSelect;
+    const styleWrap = createCtrl("Style");
+    this._styleSelect = document.createElement("select");
+    this._styleSelect.className = "wac-select";
     for (const { label, value } of GRAIN_STYLES) {
       const opt = document.createElement("option");
       opt.value = value;
       opt.textContent = label;
       if (value === (target.grainStyle ?? "clean")) opt.selected = true;
-      styleSelect.appendChild(opt);
+      this._styleSelect.appendChild(opt);
     }
-    styleSelect.addEventListener("change", () => {
-      this._target.grainStyle = styleSelect.value;
+    this._styleSelect.addEventListener("change", () => {
+      this._target.grainStyle = this._styleSelect.value;
       this._emitChange();
     });
-    styleWrap.appendChild(styleSelect);
+    styleWrap.appendChild(this._styleSelect);
     controls.appendChild(styleWrap);
 
     // Slider event delegation

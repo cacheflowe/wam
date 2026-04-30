@@ -4,10 +4,7 @@ import WebAudioSynth808 from "../web-audio/instruments/web-audio-synth-808.js";
 import WebAudioSynthBlipFX from "../web-audio/instruments/web-audio-synth-blipfx.js";
 import WebAudioBreakPlayer from "../web-audio/instruments/web-audio-break-player.js";
 import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
-import "../web-audio/web-audio-slider.js";
-import "../web-audio/web-audio-waveform.js";
-import "../web-audio/fx/web-audio-fx-unit.js";
-import { SCALES, NOTE_NAMES } from "../web-audio/web-audio-scales.js";
+import "../web-audio/web-audio-transport.js";
 
 const BASE_PATH = "/audio/breaks/";
 const BREAK_FILES = [
@@ -22,9 +19,7 @@ class WebAudioAcid extends HTMLElement {
 
   connectedCallback() {
     this._ctx = null;
-    this._masterGain = null;
-    this._masterFxUnit = null;
-    this._masterAnalyser = null;
+    this._transport = null;
     this._acid = null;
     this._808 = null;
     this._break = null;
@@ -32,22 +27,18 @@ class WebAudioAcid extends HTMLElement {
     this._fmSynth = null;
     this._seq = null;
     this._globalStep = 0;
-    this._playing = false;
     this._saveTimer = null;
 
-    // Controls components
+    // Controls components (created in buildUI, bound in _initAudio)
     this._acidControls = null;
     this._808Controls = null;
     this._fmControls = null;
     this._blipfxControls = null;
     this._breakControls = null;
 
-    this._p = { bpm: 128, masterVolume: 1.0 };
-    this._volSlider = null;
-
     this.buildUI();
     this.addCSS();
-    this._initAudio(); // eager init — AudioContext starts suspended, controls are visible immediately
+    this._initAudio();
     this._setupKeyboardJam();
   }
 
@@ -57,33 +48,47 @@ class WebAudioAcid extends HTMLElement {
     if (this._ctx) return;
     this._ctx = new AudioContext();
 
-    this._masterGain = this._ctx.createGain();
-    this._masterGain.gain.value = this._p.masterVolume;
+    // Sequencer must exist before transport init so it can be passed in
+    this._seq = new WebAudioSequencer(this._ctx, {
+      bpm: 128,
+      steps: 16,
+      subdivision: 16,
+    });
 
-    this._masterFxUnit = this.querySelector("web-audio-fx-unit.master-fx");
-    this._masterFxUnit.init(this._ctx, { bpm: this._p.bpm, title: "Master FX" });
+    this._transport.init(this._ctx, {
+      bpm: 128,
+      seq: this._seq,
+      color: "#fff",
+      showScales: true,
+    });
+    this._transport.connect(this._ctx.destination);
 
-    this._masterAnalyser = this._ctx.createAnalyser();
-    this._masterAnalyser.fftSize = 2048;
-
-    this._masterGain.connect(this._masterFxUnit.input);
-    this._masterFxUnit.connect(this._masterAnalyser);
-    this._masterAnalyser.connect(this._ctx.destination);
-
-    const masterWaveform = this.querySelector("web-audio-waveform.master-waveform");
-    if (masterWaveform) masterWaveform.init(this._masterAnalyser, "#fff");
+    // Transport events — resume AudioContext on play, clean up on stop
+    this._transport.addEventListener("transport-play", () => {
+      if (this._ctx.state === "suspended") this._ctx.resume();
+      this._globalStep = 0;
+      this._acid.reset();
+    });
+    this._transport.addEventListener("transport-stop", () => {
+      this._break?.stop();
+      this._acidControls?.setActiveStep(-1);
+      this._808Controls?.setActiveStep(-1);
+      this._fmControls?.setActiveStep(-1);
+      this._blipfxControls?.setActiveStep(-1);
+      this._breakControls?.setActiveStep(-1);
+    });
 
     // TB-303 acid
     this._acid = new WebAudioSynthAcid(this._ctx);
     this._acidControls.bind(this._acid, this._ctx, {
-      fx: { bpm: this._p.bpm, reverbWet: 0.15, delayInterval: 0.75, delayFeedback: 0.35, delayMix: 0 },
+      fx: { bpm: 128, reverbWet: 0.15, delayInterval: 0.75, delayFeedback: 0.35, delayMix: 0 },
     });
-    this._acidControls.connect(this._masterGain);
+    this._acidControls.connect(this._transport.masterGain);
 
     // 808 bass
     this._808 = new WebAudioSynth808(this._ctx);
-    this._808Controls.bind(this._808, this._ctx, { fx: { bpm: this._p.bpm } });
-    this._808Controls.connect(this._masterGain);
+    this._808Controls.bind(this._808, this._ctx, { fx: { bpm: 128 } });
+    this._808Controls.connect(this._transport.masterGain);
 
     // Break player
     this._break = new WebAudioBreakPlayer(this._ctx, {
@@ -98,24 +103,31 @@ class WebAudioAcid extends HTMLElement {
     this._breakControls.bind(this._break, this._ctx, {
       files: BREAK_FILES,
       basePath: BASE_PATH,
-      fx: { bpm: this._p.bpm },
+      fx: { bpm: 128 },
     });
-    this._breakControls.connect(this._masterGain);
+    this._breakControls.connect(this._transport.masterGain);
 
     // BlipFX
     this._blipfx = new WebAudioSynthBlipFX(this._ctx, { volume: 0.5 });
-    this._blipfxControls.bind(this._blipfx, this._ctx, { fx: { bpm: this._p.bpm } });
-    this._blipfxControls.connect(this._masterGain);
+    this._blipfxControls.bind(this._blipfx, this._ctx, { fx: { bpm: 128 } });
+    this._blipfxControls.connect(this._transport.masterGain);
 
     // FM Chord Synth
     this._fmSynth = new WebAudioSynthFM(this._ctx);
     this._fmControls.bind(this._fmSynth, this._ctx, {
-      fx: { bpm: this._p.bpm, reverbWet: 0.2, delayInterval: 0.5, delayFeedback: 0.4, delayMix: 0.1 },
+      fx: { bpm: 128, reverbWet: 0.2, delayInterval: 0.5, delayFeedback: 0.4, delayMix: 0.1 },
     });
-    this._fmControls.connect(this._masterGain);
+    this._fmControls.connect(this._transport.masterGain);
 
-    // Set initial scale on all controls
-    this._updateScale();
+    // Register instruments for BPM + scale broadcast
+    this._transport.registerInstrument(this._acidControls);
+    this._transport.registerInstrument(this._808Controls);
+    this._transport.registerInstrument(this._fmControls);
+    this._transport.registerInstrument(this._blipfxControls);
+    this._transport.registerInstrument(this._breakControls);
+
+    // Push initial scale to all instruments
+    this._transport.broadcastScale();
 
     // Load saved state (URL hash takes priority over localStorage)
     const pendingState = this._loadFromURL() || this._loadFromLocalStorage();
@@ -124,23 +136,15 @@ class WebAudioAcid extends HTMLElement {
     // Auto-save on any controls change (debounced)
     this.addEventListener("controls-change", () => this._debouncedSave());
 
-    // Sequencer
-    this._seq = new WebAudioSequencer(this._ctx, {
-      bpm: this._p.bpm,
-      steps: 16,
-      subdivision: 16,
-    });
+    // Sequencer step callback
     this._seq.onStep((step, time) => {
       const dur = this._seq.stepDurationSec();
-
-      // Each controls component owns its own step pattern / trigger logic
       this._acidControls.step(step, time, dur);
       this._808Controls.step(step, time, dur);
       this._fmControls.step(step, time, dur);
       this._blipfxControls.step(step, time);
-      this._breakControls.step(this._globalStep, this._p.bpm, time);
+      this._breakControls.step(this._globalStep, this._transport.bpm, time);
 
-      // UI step highlight
       const uiDelay = Math.max(0, (time - this._ctx.currentTime) * 1000);
       setTimeout(() => {
         this._acidControls.setActiveStep(step);
@@ -152,37 +156,6 @@ class WebAudioAcid extends HTMLElement {
     });
   }
 
-  _play() {
-    if (this._ctx.state === "suspended") this._ctx.resume();
-    this._playing = true;
-    this._globalStep = 0;
-    this._acid.reset();
-    this._seq.bpm = this._p.bpm;
-    this._seq.start();
-    this._playBtn.textContent = "◼ Stop";
-  }
-
-  _stop() {
-    this._playing = false;
-    this._seq?.stop();
-    this._break?.stop();
-    this._acidControls?.setActiveStep(-1);
-    this._808Controls?.setActiveStep(-1);
-    this._fmControls?.setActiveStep(-1);
-    this._blipfxControls?.setActiveStep(-1);
-    this._breakControls?.setActiveStep(-1);
-    this._playBtn.textContent = "▶ Play";
-  }
-
-  _updateScale() {
-    const root = parseInt(this._rootSelect.value);
-    const scale = this._scaleSelect.value;
-    this._acidControls?.setScale(root, scale);
-    this._808Controls?.setScale(root, scale);
-    this._fmControls?.setScale(root, scale);
-    this._blipfxControls?.setScale(root, scale);
-  }
-
   _setupKeyboardJam() {
     document.addEventListener("keydown", (e) => {
       if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
@@ -190,7 +163,7 @@ class WebAudioAcid extends HTMLElement {
       switch (key) {
         case " ":
           e.preventDefault();
-          this._playing ? this._stop() : this._play();
+          this._transport.playing ? this._transport.stop() : this._transport.play();
           break;
         case "k":
           this._breakControls?.jumpToSegment(0);
@@ -219,47 +192,37 @@ class WebAudioAcid extends HTMLElement {
   // ---- Persistence ----
 
   _getState() {
+    const t = this._transport?.toJSON();
     return {
       v: 1,
-      bpm: this._p.bpm,
-      masterVolume: this._p.masterVolume,
-      root: parseInt(this._rootSelect.value),
-      scale: this._scaleSelect.value,
+      bpm: t?.bpm ?? 128,
+      masterVolume: t?.masterVolume ?? 1,
+      root: t?.root ?? null,
+      scale: t?.scale ?? null,
       acid: this._acidControls?.toJSON(),
       bass808: this._808Controls?.toJSON(),
       fm: this._fmControls?.toJSON(),
       blipfx: this._blipfxControls?.toJSON(),
       break: this._breakControls?.toJSON(),
-      masterFx: this._masterFxUnit?.toJSON(),
+      masterFx: t?.fx,
     };
   }
 
   _loadState(state) {
     if (!state || state.v !== 1) return;
-    if (state.bpm != null) {
-      this._p.bpm = state.bpm;
-      if (this._seq) this._seq.bpm = state.bpm;
-      if (this._bpmSlider) this._bpmSlider.value = state.bpm;
-      [this._acidControls, this._808Controls, this._fmControls, this._blipfxControls, this._breakControls].forEach(
-        (c) => {
-          if (c) c.bpm = state.bpm;
-        },
-      );
-    }
-    if (state.masterVolume != null) {
-      this._p.masterVolume = state.masterVolume;
-      if (this._masterGain) this._masterGain.gain.value = state.masterVolume;
-      if (this._volSlider) this._volSlider.value = state.masterVolume;
-    }
-    if (state.root != null && this._rootSelect) this._rootSelect.value = state.root;
-    if (state.scale != null && this._scaleSelect) this._scaleSelect.value = state.scale;
-    if (state.root != null || state.scale != null) this._updateScale();
+    this._transport?.fromJSON({
+      bpm: state.bpm,
+      masterVolume: state.masterVolume,
+      muted: state.muted ?? false,
+      root: state.root,
+      scale: state.scale,
+      fx: state.masterFx,
+    });
     if (state.acid) this._acidControls?.fromJSON(state.acid);
     if (state.bass808) this._808Controls?.fromJSON(state.bass808);
     if (state.fm) this._fmControls?.fromJSON(state.fm);
     if (state.blipfx || state.zzfx) this._blipfxControls?.fromJSON(state.blipfx ?? state.zzfx);
     if (state.break) this._breakControls?.fromJSON(state.break);
-    if (state.masterFx) this._masterFxUnit?.fromJSON(state.masterFx);
   }
 
   _debouncedSave() {
@@ -302,182 +265,82 @@ class WebAudioAcid extends HTMLElement {
     navigator.clipboard?.writeText(url).then(
       () => {
         this._shareBtn.textContent = "Copied!";
-        setTimeout(() => {
-          this._shareBtn.textContent = "Share URL";
-        }, 1500);
+        setTimeout(() => { this._shareBtn.textContent = "Share URL"; }, 1500);
       },
-      () => {
-        prompt("Copy this URL:", url);
-      },
+      () => { prompt("Copy this URL:", url); },
     );
   }
 
   // ---- UI ----
 
-  injectCSS(cssString) {
-    const styleEl = document.createElement("style");
-    styleEl.textContent = cssString;
-    document.head.append(styleEl);
-    return styleEl;
-  }
-
-  injectHTML(html) {
-    let doc = new DOMParser().parseFromString(html, "text/html");
-    const newEl = doc.body.firstElementChild;
-    this.appendChild(newEl);
-    return newEl;
-  }
-
   buildUI() {
-    // ---- Transport panel (instrument-group style) ----
-    const transportGroup = this.injectHTML(`<div class="instrument-group transport-group"></div>`);
+    // ---- Transport panel ----
+    const transportGroup = document.createElement("div");
+    transportGroup.className = "instrument-group transport-group";
+    this.appendChild(transportGroup);
 
-    const transport = document.createElement("div");
-    transport.className = "acid-transport";
-    transportGroup.appendChild(transport);
-    this._playBtn = document.createElement("button");
-    this._playBtn.textContent = "▶ Play";
-    this._playBtn.className = "acid-play";
-    this._playBtn.addEventListener("click", () => (this._playing ? this._stop() : this._play()));
-    transport.appendChild(this._playBtn);
+    this._transport = document.createElement("web-audio-transport");
+    transportGroup.appendChild(this._transport);
 
-    const bpmSlider = document.createElement("web-audio-slider");
-    bpmSlider.setAttribute("param", "bpm");
-    bpmSlider.setAttribute("label", "BPM");
-    bpmSlider.setAttribute("min", 60);
-    bpmSlider.setAttribute("max", 200);
-    bpmSlider.setAttribute("step", 1);
-    bpmSlider.value = this._p.bpm;
-    this._bpmSlider = bpmSlider;
-    bpmSlider.addEventListener("slider-input", (e) => {
-      const v = e.detail.value;
-      this._p.bpm = v;
-      if (this._seq) this._seq.bpm = v;
-      if (this._masterFxUnit) this._masterFxUnit.bpm = v;
-      if (this._acidControls) this._acidControls.bpm = v;
-      if (this._808Controls) this._808Controls.bpm = v;
-      if (this._fmControls) this._fmControls.bpm = v;
-      if (this._blipfxControls) this._blipfxControls.bpm = v;
-      if (this._breakControls) this._breakControls.bpm = v;
-      this._debouncedSave();
-    });
-    transport.appendChild(bpmSlider);
-
-    const volSlider = document.createElement("web-audio-slider");
-    volSlider.setAttribute("param", "masterVolume");
-    volSlider.setAttribute("label", "Vol");
-    volSlider.setAttribute("min", 0);
-    volSlider.setAttribute("max", 1);
-    volSlider.setAttribute("step", 0.01);
-    volSlider.value = this._p.masterVolume;
-    this._volSlider = volSlider;
-    volSlider.addEventListener("slider-input", (e) => {
-      this._p.masterVolume = e.detail.value;
-      if (this._masterGain) this._masterGain.gain.value = e.detail.value;
-      this._debouncedSave();
-    });
-    transport.appendChild(volSlider);
-
-    // Global scale selects
-    this._rootSelect = document.createElement("select");
-    this._rootSelect.className = "acid-select";
-    for (let midi = 24; midi <= 35; midi++) {
-      const opt = document.createElement("option");
-      opt.value = midi;
-      opt.textContent = NOTE_NAMES[midi % 12];
-      if (midi === 29) opt.selected = true;
-      this._rootSelect.appendChild(opt);
-    }
-    this._scaleSelect = document.createElement("select");
-    this._scaleSelect.className = "acid-select";
-    Object.keys(SCALES).forEach((name) => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      this._scaleSelect.appendChild(opt);
-    });
-    this._rootSelect.addEventListener("change", () => {
-      this._updateScale();
-      this._debouncedSave();
-    });
-    this._scaleSelect.addEventListener("change", () => {
-      this._updateScale();
-      this._debouncedSave();
-    });
-    const scaleLabel = Object.assign(document.createElement("div"), {
-      className: "transport-scale-label",
-      textContent: "Key / Scale",
-    });
-    const scaleWrap = document.createElement("div");
-    scaleWrap.className = "transport-scale-wrap";
-    scaleWrap.appendChild(scaleLabel);
-    const scaleSelects = document.createElement("div");
-    scaleSelects.className = "transport-scale-selects";
-    scaleSelects.appendChild(this._rootSelect);
-    scaleSelects.appendChild(this._scaleSelect);
-    scaleWrap.appendChild(scaleSelects);
-    transport.appendChild(scaleWrap);
-
-    // Share button
+    const shareRow = document.createElement("div");
+    shareRow.className = "transport-share-row";
     this._shareBtn = document.createElement("button");
     this._shareBtn.textContent = "Share URL";
     this._shareBtn.className = "acid-share";
     this._shareBtn.addEventListener("click", () => this._shareURL());
-    transport.appendChild(this._shareBtn);
-
-    // Master waveform + FX on the transport panel
-    const masterWaveform = document.createElement("web-audio-waveform");
-    masterWaveform.className = "master-waveform";
-    transportGroup.appendChild(masterWaveform);
-
-    const masterFxUnit = document.createElement("web-audio-fx-unit");
-    masterFxUnit.className = "master-fx";
-    transportGroup.appendChild(masterFxUnit);
+    shareRow.appendChild(this._shareBtn);
+    transportGroup.appendChild(shareRow);
 
     // ---- Break group ----
-    const breakGroup = this.injectHTML(`<div class="instrument-group break-group"></div>`);
+    const breakGroup = document.createElement("div");
+    breakGroup.className = "instrument-group break-group";
+    this.appendChild(breakGroup);
     this._breakControls = document.createElement("web-audio-break-player-controls");
     breakGroup.appendChild(this._breakControls);
 
     // ---- 808 group ----
-    const g808 = this.injectHTML(`<div class="instrument-group bass808-group"></div>`);
+    const g808 = document.createElement("div");
+    g808.className = "instrument-group bass808-group";
+    this.appendChild(g808);
     this._808Controls = document.createElement("web-audio-synth-808-controls");
     g808.appendChild(this._808Controls);
 
     // ---- FM Chord group ----
-    const fmGroup = this.injectHTML(`<div class="instrument-group chord-fm-group"></div>`);
+    const fmGroup = document.createElement("div");
+    fmGroup.className = "instrument-group chord-fm-group";
+    this.appendChild(fmGroup);
     this._fmControls = document.createElement("web-audio-synth-fm-controls");
     fmGroup.appendChild(this._fmControls);
 
     // ---- BlipFX group ----
-    const blipfxGroup = this.injectHTML(`<div class="instrument-group blipfx-group"></div>`);
+    const blipfxGroup = document.createElement("div");
+    blipfxGroup.className = "instrument-group blipfx-group";
+    this.appendChild(blipfxGroup);
     this._blipfxControls = document.createElement("web-audio-synth-blipfx-controls");
     blipfxGroup.appendChild(this._blipfxControls);
 
     // ---- Acid / TB-303 group ----
-    const acidGroup = this.injectHTML(`<div class="instrument-group acid-group"></div>`);
+    const acidGroup = document.createElement("div");
+    acidGroup.className = "instrument-group acid-group";
+    this.appendChild(acidGroup);
     this._acidControls = document.createElement("web-audio-synth-acid-controls");
     acidGroup.appendChild(this._acidControls);
   }
 
   addCSS() {
-    this.injectCSS(/* css */ `
-      /* Prevent double-tap zoom on touch devices */
-      * {
-        touch-action: manipulation;
-      }
+    const styleEl = document.createElement("style");
+    styleEl.textContent = /* css */ `
+      * { touch-action: manipulation; }
 
       acid-breaks {
         display: block;
         font-family: monospace;
         background: #111;
         color: #ccc;
-        padding: 16px;
-        border-radius: 6px;
         padding: 1rem;
+        border-radius: 6px;
       }
 
-      /* ---- Instrument groups ---- */
       .instrument-group {
         border: 1px solid #222;
         border-radius: 6px;
@@ -486,93 +349,52 @@ class WebAudioAcid extends HTMLElement {
       }
 
       /* Per-instrument accent colors */
-      .break-group   { --fx-accent: #0cc; }
-      .bass808-group { --fx-accent: #fa0; }
+      .break-group    { --fx-accent: #0cc; }
+      .bass808-group  { --fx-accent: #fa0; }
       .chord-fm-group { --fx-accent: #4af; }
-      .blipfx-group    { --fx-accent: #c0f; }
-      .acid-group    { --fx-accent: #0f0; }
-      .transport-group { --fx-accent: #aaa; }
+      .blipfx-group   { --fx-accent: #c0f; }
+      .acid-group     { --fx-accent: #0f0; }
+      .transport-group { --fx-accent: #aaa; --slider-accent: #aaa; }
 
-      /* ---- Transport ---- */
-      .acid-transport {
+      /* Share URL row at bottom of transport panel */
+      .transport-share-row {
         display: flex;
-        align-items: center;
-        gap: 16px;
-        margin-bottom: 12px;
-        --slider-accent: #0f0;
+        justify-content: flex-end;
+        padding: 4px 8px;
+        border-top: 1px solid #1a1a1a;
+        background: #0a0a0a;
       }
-      .acid-play {
-        padding: 8px 20px;
-        font-family: monospace;
-        font-size: 1em;
-        background: #0a1a0a;
-        color: #0f0;
-        border: 2px solid #0f0;
-        border-radius: 4px;
-        cursor: pointer;
-        white-space: nowrap;
-      }
-      .acid-play:hover { background: #0f0; color: #000; }
       .acid-share {
-        padding: 8px 14px;
+        padding: 4px 12px;
+        height: 22px;
+        box-sizing: border-box;
         font-family: monospace;
-        font-size: 0.85em;
+        font-size: 0.8em;
         background: #0a0a1a;
         color: #4af;
         border: 1px solid #4af;
-        border-radius: 4px;
+        border-radius: 3px;
         cursor: pointer;
         white-space: nowrap;
       }
       .acid-share:hover { background: #4af; color: #000; }
 
-      /* ---- Transport scale wrap ---- */
-      .transport-scale-wrap {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-      .transport-scale-label {
-        font-size: 0.65em;
-        color: #555;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-      .transport-scale-selects {
-        display: flex;
-        gap: 6px;
-      }
-
-      /* ---- Shared selects (transport) ---- */
-      .acid-select {
-        font-family: monospace;
-        font-size: 0.85em;
-        background: #222;
-        color: #ccc;
-        border: 1px solid #444;
-        border-radius: 3px;
-        padding: 5px 6px;
-        cursor: pointer;
-        margin: 0;
-      }
-
-      /* ---- Waveform displays ---- */
       web-audio-waveform {
         height: 44px;
         background: #060606;
         border-top: 1px solid #151515;
       }
-      .break-group web-audio-waveform { border-color: #002020; }
-      .bass808-group web-audio-waveform { border-color: #1a0f00; }
+      .break-group    web-audio-waveform { border-color: #002020; }
+      .bass808-group  web-audio-waveform { border-color: #1a0f00; }
       .chord-fm-group web-audio-waveform { border-color: #001a2a; }
-      .blipfx-group web-audio-waveform { border-color: #100020; }
-      .acid-group web-audio-waveform { border-color: #001500; }
-    `);
+      .blipfx-group   web-audio-waveform { border-color: #100020; }
+      .acid-group     web-audio-waveform { border-color: #001500; }
+    `;
+    document.head.appendChild(styleEl);
   }
 
   disconnectedCallback() {
-    super.disconnectedCallback();
-    this._stop();
+    this._transport?.stop();
     this._ctx?.close();
   }
 }

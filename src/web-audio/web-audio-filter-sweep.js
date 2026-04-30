@@ -63,6 +63,11 @@ export default class WebAudioFilterSweep extends HTMLElement {
     const labelText = document.createElement("span");
     labelText.className = "was-label-text";
     labelText.textContent = (this.getAttribute("label") || "Filter") + " ";
+    const tooltip = this.getAttribute("data-tooltip");
+    if (tooltip) {
+      labelText.setAttribute("data-tooltip", tooltip);
+      this.removeAttribute("data-tooltip");
+    }
 
     this._valEl = document.createElement("span");
     this._valEl.className = "was-val";

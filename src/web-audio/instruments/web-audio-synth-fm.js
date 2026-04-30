@@ -2,7 +2,7 @@ import "../web-audio-slider.js";
 import "../web-audio-step-seq.js";
 import { buildChordFromScale, scaleNotesInRange, scaleNoteOptions } from "../web-audio-scales.js";
 import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
-import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../web-audio-controls-base.js";
 
 /**
  * WebAudioSynthFM — polyphonic 2-operator FM synthesizer.
@@ -511,9 +511,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     const color = options.color || this._defaultColor();
 
     const mkSelect = (labelText, appendTo) => {
-      const wrap = document.createElement("div");
-      wrap.className = "wac-ctrl";
-      wrap.appendChild(Object.assign(document.createElement("label"), { textContent: labelText }));
+      const wrap = createCtrl(labelText);
       const sel = document.createElement("select");
       sel.className = "wac-select";
       wrap.appendChild(sel);

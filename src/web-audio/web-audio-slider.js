@@ -252,6 +252,8 @@ export default class WebAudioSlider extends HTMLElement {
       }
       .was-range {
         width: 100%;
+        height: 22px;
+        box-sizing: border-box;
         accent-color: var(--slider-accent, #0f0);
       }
     `;
@@ -273,21 +275,35 @@ export function injectControlsCSS() {
   if (_controlsCSSInjected) return;
   _controlsCSSInjected = true;
   const s = document.createElement("style");
-  s.textContent = `
-    web-audio-synth-acid-controls,
-    web-audio-synth-808-controls,
-    web-audio-synth-fm-controls,
-    web-audio-synth-blipfx-controls,
-    web-audio-synth-mono-controls,
-    web-audio-synth-pad-controls,
-    web-audio-perc-kick-controls,
-    web-audio-perc-hihat-controls,
-    web-audio-break-player-controls {
+  s.textContent = /* css */ `
+    .wac-panel {
       display: block;
       background: #141414;
       border: 1px solid #222;
       border-radius: 6px;
       font-family: monospace;
+    }
+    .wac-play-btn {
+      font-family: monospace;
+      font-size: 0.85em;
+      height: 22px;
+      padding: 0 14px;
+      box-sizing: border-box;
+      background: color-mix(in srgb, var(--slider-accent, #0f0) 10%, #111);
+      color: var(--slider-accent, #0f0);
+      border: 1px solid var(--slider-accent, #0f0);
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      letter-spacing: 0.04em;
+    }
+    .wac-play-btn:hover {
+      background: var(--slider-accent, #0f0);
+      color: #000;
+    }
+    .wac-play-btn.wac-playing {
+      background: color-mix(in srgb, var(--slider-accent, #0f0) 20%, #111);
+      border-style: solid;
     }
     /* Clip channel strip and waveform to the top rounded corners */
     .wac-channel-strip {
@@ -321,6 +337,7 @@ export function injectControlsCSS() {
     .wac-section-controls {
       display: flex;
       flex-wrap: wrap;
+      align-items: flex-start;
       gap: 8px 14px;
     }
     .wac-wave-row {
@@ -331,7 +348,9 @@ export function injectControlsCSS() {
     .wac-wave-btn {
       font-family: monospace;
       font-size: 0.78em;
-      padding: 4px 10px;
+      height: 22px;
+      padding: 0 10px;
+      box-sizing: border-box;
       background: #1a1a1a;
       color: #666;
       border: 1px solid #333;
@@ -345,11 +364,13 @@ export function injectControlsCSS() {
     .wac-select {
       font-family: monospace;
       font-size: 0.82em;
+      height: 22px;
+      padding: 0 5px;
+      box-sizing: border-box;
       background: #1a1a1a;
       color: #aaa;
       border: 1px solid #333;
       border-radius: 3px;
-      padding: 4px 5px;
       cursor: pointer;
       max-width: 160px;
     }
@@ -363,7 +384,9 @@ export function injectControlsCSS() {
     .wac-action-btn {
       font-family: monospace;
       font-size: 0.85em;
-      padding: 5px 12px;
+      height: 22px;
+      padding: 0 12px;
+      box-sizing: border-box;
       background: color-mix(in srgb, var(--slider-accent, #0f0) 10%, #111);
       color: var(--slider-accent, #0f0);
       border: 1px solid var(--slider-accent, #0f0);
@@ -383,15 +406,17 @@ export function injectControlsCSS() {
     }
     .wac-ctrl-wide { min-width: 220px; }
     .wac-ctrl label {
-      font-size: 0.72em;
-      color: #888;
+      font-size: 0.7em;
+      color: #555;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
     .wac-mute-btn {
       font-family: monospace;
       font-size: 0.7em;
-      padding: 3px 10px;
+      height: 22px;
+      padding: 0 10px;
+      box-sizing: border-box;
       background: transparent;
       color: #555;
       border: 1px solid #333;
@@ -431,7 +456,7 @@ export function injectControlsCSS() {
       opacity: 0.75;
     }
     .wac-strip-chevron {
-      font-size: 0.7em;
+      font-size: 1.3rem;
       color: #555;
       transition: transform 0.15s ease;
       line-height: 1;
@@ -447,12 +472,13 @@ export function injectControlsCSS() {
     /* ---- Expanded / collapsed ---- */
     [data-collapsed] > .wac-expanded { display: none; }
     /* ---- PicoCSS tooltip overrides for slider label ---- */
-    .was-label-text[data-tooltip] {
+    .was-label-text[data-tooltip],
+    .wac-ctrl label[data-tooltip] {
       cursor: help;
-      /* border-bottom: 1px dotted #555; */
       border-bottom: 0;
     }
-    .was-label-text[data-tooltip]::before {
+    .was-label-text[data-tooltip]::before,
+    .wac-ctrl label[data-tooltip]::before {
       white-space: normal;
       overflow: visible;
       width: 130px;
@@ -463,6 +489,25 @@ export function injectControlsCSS() {
     }
   `;
   document.head.appendChild(s);
+}
+
+/**
+ * Create a labeled control wrapper for use inside `.wac-section-controls`.
+ * Append the returned element to a section controls row; add your input as a child.
+ *
+ * @param {string}  labelText
+ * @param {object}  [opts]
+ * @param {boolean} [opts.wide=false]  Use min-width: 220px instead of 110px
+ * @returns {HTMLElement}
+ */
+export function createCtrl(labelText, { wide = false, tooltip = null } = {}) {
+  const el = document.createElement("div");
+  el.className = wide ? "wac-ctrl wac-ctrl-wide" : "wac-ctrl";
+  const lbl = document.createElement("label");
+  lbl.textContent = labelText;
+  if (tooltip) lbl.setAttribute("data-tooltip", tooltip);
+  el.appendChild(lbl);
+  return el;
 }
 
 /**
@@ -485,7 +530,6 @@ export function createSection(label) {
   return { el, controls };
 }
 
-
 /**
  * Create a channel strip row for an instrument controls panel.
  * Includes instrument name (collapse toggle), level meter, vol slider, pan slider, mute button.
@@ -497,9 +541,10 @@ export function createSection(label) {
  * @param {function} opts.getOutGain   Getter returning the controls output GainNode
  * @param {number}   [opts.initialVol=1]
  * @param {number}   [opts.initialPan=0]
+ * @param {boolean}  [opts.pan=true]   Set false to omit the pan slider (e.g. master bus)
  * @returns {{ volSlider, panSlider, meter, isMuted, setMuted }}
  */
-export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1, initialPan = 0 }) {
+export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1, initialPan = 0, pan = true }) {
   if (CHANNEL_STRIP_COLLAPSED_DEFAULT) parentEl.setAttribute("data-collapsed", "");
 
   const strip = document.createElement("div");
@@ -534,15 +579,18 @@ export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1
   strip.appendChild(volSlider);
 
   // Pan slider (double-click resets to center)
-  const panSlider = document.createElement("web-audio-slider");
-  panSlider.setAttribute("param", "pan");
-  panSlider.setAttribute("label", "Pan");
-  panSlider.setAttribute("min", "-1");
-  panSlider.setAttribute("max", "1");
-  panSlider.setAttribute("step", "0.01");
-  panSlider.setAttribute("default", "0");
-  panSlider.value = initialPan;
-  strip.appendChild(panSlider);
+  let panSlider = null;
+  if (pan) {
+    panSlider = document.createElement("web-audio-slider");
+    panSlider.setAttribute("param", "pan");
+    panSlider.setAttribute("label", "Pan");
+    panSlider.setAttribute("min", "-1");
+    panSlider.setAttribute("max", "1");
+    panSlider.setAttribute("step", "0.01");
+    panSlider.setAttribute("default", "0");
+    panSlider.value = initialPan;
+    strip.appendChild(panSlider);
+  }
 
   // Mute button
   const muteBtn = document.createElement("button");

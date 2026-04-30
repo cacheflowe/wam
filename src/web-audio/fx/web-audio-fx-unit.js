@@ -26,7 +26,7 @@ import WebAudioFxChorus from "./web-audio-fx-chorus.js";
 import WebAudioFxFilter from "./web-audio-fx-filter.js";
 import "../web-audio-slider.js";
 import "../web-audio-filter-sweep.js";
-import { injectControlsCSS, createSection } from "../web-audio-slider.js";
+import { injectControlsCSS, createSection, createCtrl } from "../web-audio-slider.js";
 
 // Set to false to start FX units expanded by default.
 const FX_UNIT_COLLAPSED_DEFAULT = true;
@@ -188,7 +188,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     }
     if (obj.delayInterval != null && this._delay) {
       this._delay.interval = obj.delayInterval;
-      const sel = this.querySelector(".fx-select");
+      const sel = this.querySelector('select[data-param="delayInterval"]');
       if (sel) sel.value = obj.delayInterval;
     }
     if (obj.delayFeedback != null && this._delay) {
@@ -290,12 +290,10 @@ export default class WebAudioFxUnit extends HTMLElement {
 
     if (FX_UNIT_COLLAPSED_DEFAULT) this.setAttribute("data-collapsed", "");
 
-    const mkSelect = (labelText, appendTo) => {
-      const wrap = document.createElement("div");
-      wrap.className = "fx-ctrl";
-      wrap.appendChild(Object.assign(document.createElement("label"), { textContent: labelText }));
+    const mkSelect = (labelText, appendTo, tooltip = null) => {
+      const wrap = createCtrl(labelText, { tooltip });
       const sel = document.createElement("select");
-      sel.className = "fx-select";
+      sel.className = "wac-select";
       wrap.appendChild(sel);
       appendTo.appendChild(wrap);
       return sel;
@@ -306,15 +304,21 @@ export default class WebAudioFxUnit extends HTMLElement {
     const sweep = document.createElement("web-audio-filter-sweep");
     sweep.setAttribute("param", "filterSweep");
     sweep.setAttribute("label", "Sweep");
+    sweep.setAttribute("data-tooltip", "Combined HP+LP filter sweep. Left = cut lows, right = cut highs, center = bypass.");
     sweep.value = options.filterSweep ?? 0;
     filtCtrl.appendChild(sweep);
-    filtCtrl.appendChild(this._addSlider("filterQ", "Q", 0.5, 15, 0.1, options.filterQ ?? 0.7));
+    filtCtrl.appendChild(this._addSlider("filterQ", "Q", 0.5, 15, 0.1, options.filterQ ?? 0.7, {
+      tooltip: "Filter resonance. Higher values add a peak at the cutoff, creating a sharper, more nasal tone.",
+    }));
     this.appendChild(filtEl);
 
     // ---- Delay ----
     const { el: delEl, controls: delCtrl } = createSection("Delay");
-    delCtrl.appendChild(this._addSlider("delayMix", "Mix", 0, 1, 0.01, options.delayMix ?? 0));
-    const intervalSelect = mkSelect("Interval", delCtrl);
+    delCtrl.appendChild(this._addSlider("delayMix", "Mix", 0, 1, 0.01, options.delayMix ?? 0, {
+      tooltip: "Delay wet/dry mix. 0 = dry only, 1 = delay only.",
+    }));
+    const intervalSelect = mkSelect("Interval", delCtrl, "Delay time as a rhythmic fraction. Syncs to the current BPM.");
+    intervalSelect.dataset.param = "delayInterval";
     WebAudioFxDelay.INTERVALS.forEach(({ label, beats }) => {
       const opt = document.createElement("option");
       opt.value = beats;
@@ -325,19 +329,26 @@ export default class WebAudioFxUnit extends HTMLElement {
     intervalSelect.addEventListener("change", () => {
       if (this._delay) this._delay.interval = parseFloat(intervalSelect.value);
     });
-    delCtrl.appendChild(this._addSlider("delayFeedback", "Feedbk", 0, 0.9, 0.01, options.delayFeedback ?? 0.35));
+    delCtrl.appendChild(this._addSlider("delayFeedback", "Feedbk", 0, 0.9, 0.01, options.delayFeedback ?? 0.35, {
+      tooltip: "How much of the delay output feeds back into the input. High values = long, cascading repeats.",
+    }));
     const delayFilterSweep = document.createElement("web-audio-filter-sweep");
     delayFilterSweep.setAttribute("param", "delayFilterSweep");
     delayFilterSweep.setAttribute("label", "Dub Filt");
+    delayFilterSweep.setAttribute("data-tooltip", "Filter applied to the delay feedback path. Creates dub-style filtered echoes.");
     delayFilterSweep.value = options.delayFilterSweep ?? 0;
     delCtrl.appendChild(delayFilterSweep);
-    delCtrl.appendChild(this._addSlider("delayModulation", "Mod", 0, 1, 0.01, 0));
+    delCtrl.appendChild(this._addSlider("delayModulation", "Mod", 0, 1, 0.01, 0, {
+      tooltip: "LFO modulation depth on the delay time. Adds a chorus-like pitch wobble to the echoes.",
+    }));
     this.appendChild(delEl);
 
     // ---- Chorus ----
     const { el: chorEl, controls: chorCtrl } = createSection("Chorus");
-    chorCtrl.appendChild(this._addSlider("chorusWet", "Wet", 0, 1, 0.01, options.chorusWet ?? 0));
-    const voicesSelect = mkSelect("Voices", chorCtrl);
+    chorCtrl.appendChild(this._addSlider("chorusWet", "Wet", 0, 1, 0.01, options.chorusWet ?? 0, {
+      tooltip: "Chorus wet/dry mix. 0 = dry, 1 = full chorus effect.",
+    }));
+    const voicesSelect = mkSelect("Voices", chorCtrl, "Number of chorus voices. More voices = thicker, denser modulation.");
     voicesSelect.dataset.param = "chorusVoices";
     for (let v = 1; v <= 6; v++) {
       const opt = document.createElement("option");
@@ -349,7 +360,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     voicesSelect.addEventListener("change", () => {
       if (this._chorus) this._chorus.voices = parseInt(voicesSelect.value);
     });
-    const shapeSelect = mkSelect("Shape", chorCtrl);
+    const shapeSelect = mkSelect("Shape", chorCtrl, "LFO waveform for modulation. Sine = smooth sweep, triangle = slightly sharper.");
     shapeSelect.dataset.param = "chorusShape";
     ["sine", "triangle"].forEach((s) => {
       const opt = document.createElement("option");
@@ -362,23 +373,44 @@ export default class WebAudioFxUnit extends HTMLElement {
       if (this._chorus) this._chorus.shape = shapeSelect.value;
     });
     chorCtrl.appendChild(
-      this._addSlider("chorusRate", "Rate", 0.05, 10, 0.01, options.chorusRate ?? 0.8, { scale: "log" }),
+      this._addSlider("chorusRate", "Rate", 0.05, 10, 0.01, options.chorusRate ?? 0.8, {
+        scale: "log",
+        tooltip: "LFO speed in Hz. Slow = gentle shimmer, fast = vibrato-like wobble.",
+      }),
     );
-    chorCtrl.appendChild(this._addSlider("chorusDepth", "Depth", 0, 1, 0.01, options.chorusDepth ?? 0.5));
-    chorCtrl.appendChild(this._addSlider("chorusDelay", "Delay", 1, 50, 0.1, options.chorusDelay ?? 10));
-    chorCtrl.appendChild(this._addSlider("chorusFeedback", "Feedbk", 0, 0.9, 0.01, options.chorusFeedback ?? 0));
-    chorCtrl.appendChild(this._addSlider("chorusSpread", "Spread", 0, 1, 0.01, options.chorusSpread ?? 1));
+    chorCtrl.appendChild(this._addSlider("chorusDepth", "Depth", 0, 1, 0.01, options.chorusDepth ?? 0.5, {
+      tooltip: "Amount of pitch modulation per voice. Higher = more pronounced detuning.",
+    }));
+    chorCtrl.appendChild(this._addSlider("chorusDelay", "Delay", 1, 50, 0.1, options.chorusDelay ?? 10, {
+      tooltip: "Base delay offset per voice in ms. Longer = more spacious, wider stereo image.",
+    }));
+    chorCtrl.appendChild(this._addSlider("chorusFeedback", "Feedbk", 0, 0.9, 0.01, options.chorusFeedback ?? 0, {
+      tooltip: "Feedback within chorus voices. Higher values add resonance and metallic coloring.",
+    }));
+    chorCtrl.appendChild(this._addSlider("chorusSpread", "Spread", 0, 1, 0.01, options.chorusSpread ?? 1, {
+      tooltip: "Stereo spread of chorus voices. 0 = mono, 1 = full stereo width.",
+    }));
     this.appendChild(chorEl);
 
     // ---- Reverb ----
     const { el: revEl, controls: revCtrl } = createSection("Reverb");
-    revCtrl.appendChild(this._addSlider("reverbWet", "Wet", 0, 1, 0.01, options.reverbWet ?? 0));
-    revCtrl.appendChild(this._addSlider("reverbPreDelay", "Pre-dly", 0, 80, 1, options.reverbPreDelay ?? 0));
+    revCtrl.appendChild(this._addSlider("reverbWet", "Wet", 0, 1, 0.01, options.reverbWet ?? 0, {
+      tooltip: "Reverb wet/dry mix. 0 = dry, 1 = reverb only.",
+    }));
+    revCtrl.appendChild(this._addSlider("reverbPreDelay", "Pre-dly", 0, 80, 1, options.reverbPreDelay ?? 0, {
+      tooltip: "Pre-delay before the reverb tail in ms. Adds space between the source and its reflections.",
+    }));
     revCtrl.appendChild(
-      this._addSlider("reverbHpFreq", "HP", 20, 800, 1, options.reverbHpFreq ?? 80, { scale: "log" }),
+      this._addSlider("reverbHpFreq", "HP", 20, 800, 1, options.reverbHpFreq ?? 80, {
+        scale: "log",
+        tooltip: "High-pass filter on the reverb output. Cuts muddy low frequencies from the tail.",
+      }),
     );
     revCtrl.appendChild(
-      this._addSlider("reverbLpFreq", "Damp", 2000, 20000, 1, options.reverbLpFreq ?? 8000, { scale: "log" }),
+      this._addSlider("reverbLpFreq", "Damp", 2000, 20000, 1, options.reverbLpFreq ?? 8000, {
+        scale: "log",
+        tooltip: "Low-pass filter on the reverb output. Lower = darker, warmer tail. Higher = bright, airy reverb.",
+      }),
     );
     this.appendChild(revEl);
 
@@ -445,8 +477,8 @@ export default class WebAudioFxUnit extends HTMLElement {
     slider.setAttribute("min", min);
     slider.setAttribute("max", max);
     slider.setAttribute("step", step);
-    if (opts.hint) slider.setAttribute("hint", opts.hint);
     if (opts.scale) slider.setAttribute("scale", opts.scale);
+    if (opts.tooltip) slider.setAttribute("data-tooltip", opts.tooltip);
     slider.value = value;
     return slider;
   }
@@ -489,29 +521,6 @@ export default class WebAudioFxUnit extends HTMLElement {
       }
       web-audio-fx-unit[data-collapsed] .fx-unit-chevron { transform: rotate(-90deg); }
       web-audio-fx-unit[data-collapsed] .wac-section { display: none; }
-      .fx-ctrl {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        min-width: 80px;
-      }
-      .fx-ctrl label {
-        font-size: 0.7em;
-        color: #555;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-      .fx-select {
-        font-family: monospace;
-        font-size: 0.82em;
-        background: #1a1a1a;
-        color: #aaa;
-        border: 1px solid #333;
-        border-radius: 3px;
-        padding: 4px 5px;
-        cursor: pointer;
-        max-width: 120px;
-      }
     `;
     document.head.appendChild(style);
   }

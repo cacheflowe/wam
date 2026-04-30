@@ -4,7 +4,7 @@ import "../web-audio-waveform.js";
 import "../fx/web-audio-pitch-shift.js";
 import "../fx/web-audio-time-stretch.js";
 import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
-import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../web-audio-controls-base.js";
 
 /**
  * WebAudioBreakPlayer — loads a drum loop, time-stretches it to the target
@@ -360,9 +360,7 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
     this._basePath = options.basePath || "";
 
     const mkSelect = (labelText, appendTo) => {
-      const wrap = document.createElement("div");
-      wrap.className = "wac-ctrl";
-      wrap.appendChild(Object.assign(document.createElement("label"), { textContent: labelText }));
+      const wrap = createCtrl(labelText);
       const sel = document.createElement("select");
       sel.className = "wac-select";
       wrap.appendChild(sel);
@@ -448,7 +446,7 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
     this._tsControls = null;
     if (this._instrument._useTimeStretch) {
       this._tsControls = document.createElement("web-audio-time-stretch-controls");
-      expanded.appendChild(this._tsControls);
+      controls.appendChild(this._tsControls);
       this._tsControls.init(this._instrument, { color: options.color || this._defaultColor() });
     }
 

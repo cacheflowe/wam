@@ -1,5 +1,5 @@
 import "./web-audio-slider.js";
-import { injectControlsCSS, createChannelStrip, createSection } from "./web-audio-slider.js";
+import { injectControlsCSS, createChannelStrip, createSection, createCtrl } from "./web-audio-slider.js";
 
 /**
  * WebAudioControlsBase — shared foundation for all instrument control panels.
@@ -52,6 +52,7 @@ export class WebAudioControlsBase extends HTMLElement {
     const color = options.color || this._defaultColor();
     this.innerHTML = "";
     this._sliders = {};
+    this.classList.add("wac-panel");
     injectControlsCSS();
     this.style.setProperty("--slider-accent", color);
     this.style.setProperty("--fx-accent", color);
@@ -341,5 +342,5 @@ export class WebAudioControlsBase extends HTMLElement {
   }
 }
 
-// Re-export createSection for subclass use
-export { createSection };
+// Re-export UI helpers for subclass use
+export { createSection, createCtrl };
