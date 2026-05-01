@@ -477,7 +477,9 @@ class WebAudioGenerativeMusicPlants extends HTMLElement {
     // Lead: osc type follows scale/mood; low dryness = lush detune
     this._lead.oscType = LEAD_OSC_TYPES[this._scaleIndex()];
     this._lead.detune = n.dry > 0.6 ? (n.dry - 0.6) * 25 * (Math.random() < 0.5 ? 1 : -1) : 0;
-    this._lead.detune2 = n.dry > 0.6 ? (n.dry - 0.6) * 15 : 0;
+    const leadSpread = n.dry > 0.6 ? (n.dry - 0.6) * 15 : 0;
+    this._lead.unisonVoices = leadSpread > 0.5 ? 2 : 1;
+    this._lead.unisonDetune = leadSpread;
     this._lead.filterFreq = 800 + mood * 5000 + excitement * 1500;
     this._lead.filterQ = 0.5 + (1 - mood) * 2.5;
     // Envelope: cactus = instant no-attack snap; oak = gentle ramp, longer sustain
@@ -489,7 +491,8 @@ class WebAudioGenerativeMusicPlants extends HTMLElement {
     // Bass: dark mood = square + sub; bright = sawtooth; spiky = bright filter
     this._bass.oscType = mood < 0.35 ? "square" : "sawtooth";
     this._bass.subGain = (1 - mood) * 0.45;
-    this._bass.detune2 = excitement * 6;
+    this._bass.unisonVoices = excitement > 0.1 ? 2 : 1;
+    this._bass.unisonDetune = excitement * 6;
     this._bass.filterFreq = 300 + (1 - n.tex) * 900; // spiky=bright 1200Hz; smooth=warm 300Hz
     this._bass.filterQ = 3 + (1 - n.tex) * 7;         // spiky=more resonant ring
     // Envelope: cactus = punchy click; oak = slow sustained thud

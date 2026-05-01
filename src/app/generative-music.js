@@ -348,14 +348,17 @@ class WebAudioGenerativeMusic extends HTMLElement {
     // Lead: osc type tracks scale (dark=square → bright=sine); low health = detuned thickness
     this._lead.oscType = LEAD_OSC_TYPES[this._scaleIndex()];
     this._lead.detune = (1 - health) * 20 * (Math.random() < 0.5 ? 1 : -1);
-    this._lead.detune2 = (1 - health) * 14; // low health = washy chorus
+    const leadSpread = (1 - health) * 14;
+    this._lead.unisonVoices = leadSpread > 0.5 ? 2 : 1;
+    this._lead.unisonDetune = leadSpread;
     this._lead.filterFreq = 1200 + mood * 5000 + excitement * 1500;
     this._lead.filterQ = 0.5 + (1 - mood) * 2.5; // dark = more resonant
 
     // Bass: dark mood = square + sub; bright = sawtooth punch; low health = wobbly
     this._bass.oscType = mood < 0.35 ? "square" : "sawtooth";
     this._bass.subGain = (1 - mood) * 0.45; // dark = thick sub
-    this._bass.detune2 = excitement * 6; // excited = slight unison spread
+    this._bass.unisonVoices = excitement > 0.1 ? 2 : 1;
+    this._bass.unisonDetune = excitement * 6; // excited = slight unison spread
     this._bass.filterFreq = 300 + health * 700;
     this._bass.filterQ = 3 + (1 - health) * 4; // unhealthy = ringing
   }
