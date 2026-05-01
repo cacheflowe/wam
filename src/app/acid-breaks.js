@@ -62,12 +62,17 @@ class WebAudioAcid extends HTMLElement {
       showScales: true,
     });
     this._transport.connect(this._ctx.destination);
+    this._transport.shareSlot.appendChild(this._shareBtn);
 
     // Transport events — resume AudioContext on play, clean up on stop
     this._transport.addEventListener("transport-play", () => {
       if (this._ctx.state === "suspended") this._ctx.resume();
       this._globalStep = 0;
       this._acid.reset();
+      this._acidControls?.resetSequencer();
+      this._808Controls?.resetSequencer();
+      this._fmControls?.resetSequencer();
+      this._blipfxControls?.resetSequencer();
     });
     this._transport.addEventListener("transport-stop", () => {
       this._break?.stop();
@@ -76,6 +81,10 @@ class WebAudioAcid extends HTMLElement {
       this._fmControls?.setActiveStep(-1);
       this._blipfxControls?.setActiveStep(-1);
       this._breakControls?.setActiveStep(-1);
+      this._acidControls?.resetSequencer();
+      this._808Controls?.resetSequencer();
+      this._fmControls?.resetSequencer();
+      this._blipfxControls?.resetSequencer();
     });
 
     // TB-303 acid
@@ -142,7 +151,7 @@ class WebAudioAcid extends HTMLElement {
       this._acidControls.step(step, time, dur);
       this._808Controls.step(step, time, dur);
       this._fmControls.step(step, time, dur);
-      this._blipfxControls.step(step, time);
+      this._blipfxControls.step(step, time, dur);
       this._breakControls.step(this._globalStep, this._transport.bpm, time);
 
       const uiDelay = Math.max(0, (time - this._ctx.currentTime) * 1000);
@@ -282,14 +291,11 @@ class WebAudioAcid extends HTMLElement {
     this._transport = document.createElement("web-audio-transport");
     transportGroup.appendChild(this._transport);
 
-    const shareRow = document.createElement("div");
-    shareRow.className = "transport-share-row";
+    // Share button — appended to transport's share slot after init()
     this._shareBtn = document.createElement("button");
     this._shareBtn.textContent = "Share URL";
-    this._shareBtn.className = "acid-share";
+    this._shareBtn.className = "wac-play-btn";
     this._shareBtn.addEventListener("click", () => this._shareURL());
-    shareRow.appendChild(this._shareBtn);
-    transportGroup.appendChild(shareRow);
 
     // ---- Break group ----
     const breakGroup = document.createElement("div");
@@ -355,29 +361,6 @@ class WebAudioAcid extends HTMLElement {
       .blipfx-group   { --fx-accent: #c0f; }
       .acid-group     { --fx-accent: #0f0; }
       .transport-group { --fx-accent: #aaa; --slider-accent: #aaa; }
-
-      /* Share URL row at bottom of transport panel */
-      .transport-share-row {
-        display: flex;
-        justify-content: flex-end;
-        padding: 4px 8px;
-        border-top: 1px solid #1a1a1a;
-        background: #0a0a0a;
-      }
-      .acid-share {
-        padding: 4px 12px;
-        height: 22px;
-        box-sizing: border-box;
-        font-family: monospace;
-        font-size: 0.8em;
-        background: #0a0a1a;
-        color: #4af;
-        border: 1px solid #4af;
-        border-radius: 3px;
-        cursor: pointer;
-        white-space: nowrap;
-      }
-      .acid-share:hover { background: #4af; color: #000; }
 
       web-audio-waveform {
         height: 44px;

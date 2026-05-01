@@ -305,6 +305,25 @@ export function injectControlsCSS() {
       background: color-mix(in srgb, var(--slider-accent, #0f0) 20%, #111);
       border-style: solid;
     }
+    .wac-transport-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      flex-wrap: wrap;
+      background: #0a0a14;
+    }
+    .wac-transport-row web-audio-slider {
+      flex: 1;
+      min-width: 80px;
+      max-width: 160px;
+    }
+    .wac-transport-row .wac-select {
+      max-width: 90px;
+    }
+    .wac-transport-share-slot {
+      margin-left: auto;
+    }
     /* Clip channel strip and waveform to the top rounded corners */
     .wac-channel-strip {
       border-radius: 5px 5px 0 0;
@@ -471,6 +490,8 @@ export function injectControlsCSS() {
     }
     /* ---- Expanded / collapsed ---- */
     [data-collapsed] > .wac-expanded { display: none; }
+    [data-no-sequencer] web-audio-step-seq,
+    [data-no-sequencer] .wac-action-row { display: none; }
     /* ---- PicoCSS tooltip overrides for slider label ---- */
     .was-label-text[data-tooltip],
     .wac-ctrl label[data-tooltip] {

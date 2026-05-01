@@ -18,21 +18,21 @@ const ROOT_MIDI = 36; // C2 — lower root for ambient
 // ---------------------------------------------------------------------------
 
 const PLANT_PRESETS = {
-  Cactus:    { dryness: 9, size: 120, branching: 2, physicalTexture: 0.0 },
-  Seedling:  { dryness: 4, size: 90,  branching: 3, physicalTexture: 0.4 },
-  Fern:      { dryness: 2, size: 200, branching: 9, physicalTexture: 0.7 },
-  Shrub:     { dryness: 5, size: 320, branching: 6, physicalTexture: 0.5 },
-  Oak:       { dryness: 2, size: 580, branching: 8, physicalTexture: 1.0 },
-  Willow:    { dryness: 1, size: 700, branching: 7, physicalTexture: 0.9 },
+  Cactus: { dryness: 9, size: 120, branching: 2, physicalTexture: 0.0 },
+  Seedling: { dryness: 4, size: 90, branching: 3, physicalTexture: 0.4 },
+  Fern: { dryness: 2, size: 200, branching: 9, physicalTexture: 0.7 },
+  Shrub: { dryness: 5, size: 320, branching: 6, physicalTexture: 0.5 },
+  Oak: { dryness: 2, size: 580, branching: 8, physicalTexture: 1.0 },
+  Willow: { dryness: 1, size: 700, branching: 7, physicalTexture: 0.9 },
   Unhealthy: { dryness: 9, size: 320, branching: 5, physicalTexture: 0.3 },
-  Healthy:   { dryness: 2, size: 520, branching: 7, physicalTexture: 0.8 },
+  Healthy: { dryness: 2, size: 520, branching: 7, physicalTexture: 0.8 },
 };
 
 function normPlant(p) {
   return {
     dry: Math.max(0, Math.min(1, p.dryness / 10)),
     siz: Math.max(0, Math.min(1, (p.size - 50) / 850)),
-    br:  Math.max(0, Math.min(1, p.branching / 10)),
+    br: Math.max(0, Math.min(1, p.branching / 10)),
     tex: Math.max(0, Math.min(1, p.physicalTexture)),
   };
 }
@@ -81,16 +81,20 @@ class AmbientDrone {
     this._activeOscs.forEach(({ osc, amp }) => {
       amp.gain.linearRampToValueAtTime(0, t + 4);
       osc.stop(t + 4.1);
-      osc.addEventListener("ended", () => { try { amp.disconnect(); } catch (_) {} });
+      osc.addEventListener("ended", () => {
+        try {
+          amp.disconnect();
+        } catch (_) {}
+      });
     });
 
     // Voices: root + fifth + octave, optional major 7th when branching is high
     const fifth = scaleIntervals[4] ?? 7;
     const seventh = scaleIntervals[6] ?? 11;
     const voices = [
-      { midi: midiRoot,         gain: 0.45, type: "sine" },
+      { midi: midiRoot, gain: 0.45, type: "sine" },
       { midi: midiRoot + fifth, gain: 0.28, type: "triangle" },
-      { midi: midiRoot + 12,    gain: 0.18, type: "sine" },
+      { midi: midiRoot + 12, gain: 0.18, type: "sine" },
     ];
     if (branchNorm > 0.6) {
       voices.push({ midi: midiRoot + seventh, gain: 0.12, type: "triangle" });
@@ -162,7 +166,8 @@ class WebAudioGenerativeAmbient extends HTMLElement {
     this._debugPanel = null;
     this._debugControls = [];
 
-    // Trigger spacing trackers (in sequencer steps)
+    // Trigger spacing trackers (monotonic step count)
+    this._stepCount = 0;
     this._lastPad = -32;
     this._lastPadB = -16;
     this._lastMelody = -8;
@@ -190,17 +195,21 @@ class WebAudioGenerativeAmbient extends HTMLElement {
     const n = normPlant(this._p);
     const wet = 1 - n.dry;
     return {
-      mood:       n.tex * 0.5 + wet * 0.5,
-      excitement: n.br  * 0.5 + (1 - n.siz) * 0.5,
-      health:     wet   * 0.6 + n.tex * 0.4,
+      mood: n.tex * 0.5 + wet * 0.5,
+      excitement: n.br * 0.5 + (1 - n.siz) * 0.5,
+      health: wet * 0.6 + n.tex * 0.4,
     };
   }
 
   _scaleIndex() {
     return Math.min(SCALES.length - 1, Math.floor(this._ms.mood * SCALES.length));
   }
-  _scaleName() { return SCALES[this._scaleIndex()][0]; }
-  _scaleIntervals() { return SCALES[this._scaleIndex()][1]; }
+  _scaleName() {
+    return SCALES[this._scaleIndex()][0];
+  }
+  _scaleIntervals() {
+    return SCALES[this._scaleIndex()][1];
+  }
 
   // Slower BPM than rhythmic — large plants breathe slowly
   _bpm() {
@@ -227,6 +236,7 @@ class WebAudioGenerativeAmbient extends HTMLElement {
 
     this._master = this._ctx.createGain();
     this._master.gain.value = this._p.volume;
+    this._master.connect(this._ctx.destination);
 
     // Gentle master LP on the whole mix
     this._masterFilter = this._ctx.createBiquadFilter();
@@ -269,16 +279,12 @@ class WebAudioGenerativeAmbient extends HTMLElement {
 
     this._pad = new WebAudioSynthPad(this._ctx, "Vapor");
     this._pad.volume = 0.55;
-    this._pad.connect(this._padChorus.input);
 
     this._padB = new WebAudioSynthMono(this._ctx, "Drone_Pad");
-    this._padB.connect(this._padBDelay.input);
 
     this._melody = new WebAudioSynthMono(this._ctx, "Whisper");
-    this._melody.connect(this._melDelay.input);
 
     this._fm = new WebAudioSynthFM(this._ctx, "Ether");
-    this._fm.connect(this._fmReverb.input);
 
     // ---- Master FX unit ----
     if (this._fxUnit) {
@@ -294,11 +300,11 @@ class WebAudioGenerativeAmbient extends HTMLElement {
       a.fftSize = fftSize;
       return a;
     };
-    const droneA  = mkA(64);
-    const padA    = mkA(256);
-    const padBA   = mkA(128);
-    const melA    = mkA(128);
-    const fmA     = mkA(128);
+    const droneA = mkA(64);
+    const padA = mkA(256);
+    const padBA = mkA(128);
+    const melA = mkA(128);
+    const fmA = mkA(128);
 
     this._drone.connect(droneA);
     this._pad.connect(padA);
@@ -307,13 +313,61 @@ class WebAudioGenerativeAmbient extends HTMLElement {
     this._fm.connect(fmA);
 
     if (this._visualizer) {
-      this._visualizer.init([
-        { analyser: droneA, color: "#6688ff", baseRadius: 110, radiusScale: 60, bins: 8,  rotMult: 0.4, lineWidth: 3.0, alpha: 0.80 },
-        { analyser: padA,   color: "#aa66ff", baseRadius: 85,  radiusScale: 50, bins: 20, rotMult: 0.6, lineWidth: 2.0, alpha: 0.65 },
-        { analyser: padBA,  color: "#66aaff", baseRadius: 62,  radiusScale: 38, bins: 24, rotMult: 0.9, lineWidth: 1.5, alpha: 0.55 },
-        { analyser: melA,   color: "#99eeff", baseRadius: 42,  radiusScale: 28, bins: 28, rotMult: 1.2, lineWidth: 1.5, alpha: 0.55 },
-        { analyser: fmA,    color: "#eeccff", baseRadius: 24,  radiusScale: 18, bins: 32, rotMult: 1.8, lineWidth: 1.0, alpha: 0.45 },
-      ], { symmetry: 5 });
+      this._visualizer.init(
+        [
+          {
+            analyser: droneA,
+            color: "#6688ff",
+            baseRadius: 110,
+            radiusScale: 60,
+            bins: 8,
+            rotMult: 0.4,
+            lineWidth: 3.0,
+            alpha: 0.8,
+          },
+          {
+            analyser: padA,
+            color: "#aa66ff",
+            baseRadius: 85,
+            radiusScale: 50,
+            bins: 20,
+            rotMult: 0.6,
+            lineWidth: 2.0,
+            alpha: 0.65,
+          },
+          {
+            analyser: padBA,
+            color: "#66aaff",
+            baseRadius: 62,
+            radiusScale: 38,
+            bins: 24,
+            rotMult: 0.9,
+            lineWidth: 1.5,
+            alpha: 0.55,
+          },
+          {
+            analyser: melA,
+            color: "#99eeff",
+            baseRadius: 42,
+            radiusScale: 28,
+            bins: 28,
+            rotMult: 1.2,
+            lineWidth: 1.5,
+            alpha: 0.55,
+          },
+          {
+            analyser: fmA,
+            color: "#eeccff",
+            baseRadius: 24,
+            radiusScale: 18,
+            bins: 32,
+            rotMult: 1.8,
+            lineWidth: 1.0,
+            alpha: 0.45,
+          },
+        ],
+        { symmetry: 5 },
+      );
     }
 
     if (this._waveform) {
@@ -337,56 +391,57 @@ class WebAudioGenerativeAmbient extends HTMLElement {
   _onStep(step, time) {
     if (step === 0) this._regenAmbient(time);
 
+    const tick = this._stepCount++;
     const dur = this._seq.stepDurationSec();
-    const n   = normPlant(this._p);
+    const n = normPlant(this._p);
     const { mood, excitement } = this._ms;
 
     // ---- Pad A — slow chord swells ----
-    // Minimum spacing: 12 steps (3 bars) at low branch; 6 steps (1.5 bars) at high branch
-    const padSpacing = Math.max(6, Math.round(14 - n.br * 8));
-    if (step - this._lastPad >= padSpacing) {
-      const padProb = 0.3 + n.br * 0.5;
+    // Minimum spacing: 8 steps (2 bars) at low branch; 4 steps (1 bar) at high branch
+    const padSpacing = Math.max(4, Math.round(10 - n.br * 6));
+    if (tick - this._lastPad >= padSpacing) {
+      const padProb = 0.5 + n.br * 0.4;
       if (Math.random() < padProb && this._padChord.length) {
         const noteDur = dur * (4 + n.tex * 10); // 4–14 beats
         const vel = 0.3 + mood * 0.35;
         this._pad.trigger(this._padChord, noteDur, vel, time);
-        this._lastPad = step;
+        this._lastPad = tick;
       }
     }
 
     // ---- Pad B — secondary melodic texture ----
-    const padBSpacing = Math.max(4, Math.round(10 - n.br * 6));
-    if (step - this._lastPadB >= padBSpacing) {
-      const padBProb = 0.2 + n.br * 0.45 + (1 - n.dry) * 0.15;
+    const padBSpacing = Math.max(3, Math.round(7 - n.br * 4));
+    if (tick - this._lastPadB >= padBSpacing) {
+      const padBProb = 0.4 + n.br * 0.4 + (1 - n.dry) * 0.1;
       if (Math.random() < padBProb && this._melPool.length) {
         const note = this._melPool[Math.floor(Math.random() * this._melPool.length)];
         const noteDur = dur * (3 + n.tex * 8);
         this._padB.trigger(note, noteDur, 0.25 + mood * 0.25, time);
-        this._lastPadB = step;
+        this._lastPadB = tick;
       }
     }
 
     // ---- Melody — sparse slow notes ----
-    const melSpacing = Math.max(2, Math.round(6 - excitement * 4));
-    if (step - this._lastMelody >= melSpacing) {
-      const melProb = 0.07 + excitement * 0.18 + n.br * 0.1;
+    const melSpacing = Math.max(2, Math.round(5 - excitement * 3));
+    if (tick - this._lastMelody >= melSpacing) {
+      const melProb = 0.15 + excitement * 0.25 + n.br * 0.15;
       if (Math.random() < melProb && this._melPool.length) {
         const note = this._melPool[Math.floor(Math.random() * this._melPool.length)];
         const noteDur = dur * (2 + n.tex * 6);
         this._melody.trigger(note, noteDur, 0.2 + excitement * 0.3, time);
-        this._lastMelody = step;
+        this._lastMelody = tick;
       }
     }
 
-    // ---- FM bells / shimmer — very sparse, mood-gated ----
-    const fmSpacing = Math.max(3, Math.round(8 - mood * 5));
-    if (step - this._lastFM >= fmSpacing) {
-      const fmProb = 0.04 + mood * 0.14 + n.br * 0.07;
+    // ---- FM bells / shimmer — mood-gated ----
+    const fmSpacing = Math.max(2, Math.round(6 - mood * 4));
+    if (tick - this._lastFM >= fmSpacing) {
+      const fmProb = 0.1 + mood * 0.2 + n.br * 0.1;
       if (Math.random() < fmProb && this._fmPool.length) {
         const note = this._fmPool[Math.floor(Math.random() * this._fmPool.length)];
         const noteDur = dur * (1 + n.tex * 4);
         this._fm.trigger([note], noteDur, time);
-        this._lastFM = step;
+        this._lastFM = tick;
       }
     }
 
@@ -428,45 +483,46 @@ class WebAudioGenerativeAmbient extends HTMLElement {
 
   _updateInstrumentCharacter() {
     if (!this._melody || !this._padB) return;
-    const { mood, excitement, health } = this._ms;
-    const n = normPlant(this._p);
+    const { health } = this._ms;
 
-    // Melody: texture controls envelope shape
-    this._melody.attack  = 0.1 + n.tex * 0.6;
-    this._melody.decay   = 0.3 + n.siz * 0.5 + n.tex * 0.4;
-    this._melody.sustain = 0.3 + n.tex * 0.5;
-    this._melody.release = 0.5 + n.tex * 2.0 + n.siz * 0.5;
-    this._melody.filterFreq = 400 + mood * 4000;
-    this._melody.filterQ = 1 + (1 - n.tex) * 3;
+    // Melody: healthy = soft warm attacks; unhealthy = sharp thin stabs
+    this._melody.attack = health * 0.8; // 0 (sharp) to 0.8 (soft)
+    this._melody.decay = 0.2 + health * 0.8;
+    this._melody.sustain = 0.1 + health * 0.6;
+    this._melody.release = 0.2 + health * 2.5;
+    this._melody.filterFreq = 300 + health * 3500; // thin when unhealthy
+    this._melody.filterQ = 1 + (1 - health) * 6; // resonant/harsh when unhealthy
 
-    // Pad B: slow and warm, texture = attack speed
-    this._padB.attack  = 0.3 + n.tex * 2.5;
-    this._padB.decay   = 0.5 + n.siz * 0.8;
-    this._padB.sustain = 0.6 + n.tex * 0.3;
-    this._padB.release = 1.0 + n.tex * 3.0 + n.siz * 0.5;
-    this._padB.filterFreq = 300 + mood * 2500;
-    this._padB.filterQ = 1.5 + (1 - n.tex) * 2;
+    // Pad B: healthy = warm sustained bloom; unhealthy = short brittle notes
+    this._padB.attack = 0.05 + health * 2.5;
+    this._padB.decay = 0.2 + health * 1.0;
+    this._padB.sustain = 0.1 + health * 0.7;
+    this._padB.release = 0.3 + health * 3.5;
+    this._padB.filterFreq = 200 + health * 3000;
+    this._padB.filterQ = 1 + (1 - health) * 5;
 
-    // Pad A: very slow bloom driven by texture
-    this._pad.attack  = 1.0 + n.tex * 5.0;    // 1–6s bloom
-    this._pad.release = 3.0 + n.tex * 6.0;    // 3–9s tail
-    this._pad.filterFreq = 200 + mood * 3500 + n.br * 2000;
-    this._pad.filterQ = 0.8 + (1 - n.tex) * 2;
+    // Pad A: healthy = lush slow bloom; unhealthy = thin and short
+    this._pad.attack = 0.2 + health * 5.0;
+    this._pad.release = 0.5 + health * 8.0;
+    this._pad.filterFreq = 150 + health * 4000;
+    this._pad.filterQ = 0.7 + (1 - health) * 3;
 
-    // FM: preset selected by mood; modulation index shaped by branching
+    // FM: healthy = gentle bells; unhealthy = metallic/harsh
     if (this._fm) {
       const fmPresets = Object.keys(WebAudioSynthFM.PRESETS);
-      const fmIdx = Math.min(fmPresets.length - 1, Math.floor(mood * fmPresets.length));
+      // Healthy → mellow presets (early); unhealthy → harsher presets (later)
+      const fmIdx = Math.min(fmPresets.length - 1, Math.floor((1 - health) * fmPresets.length));
       this._fm.applyPreset(fmPresets[fmIdx]);
-      this._fm.modIndex = Math.min(8, this._fm.modIndex * (0.4 + n.br * 0.8));
-      this._fm.attack  = n.tex * 0.08;
-      this._fm.release = 0.8 + n.tex * 2.5 + n.siz * 0.5;
+      // Unhealthy: higher mod index = more dissonant overtones
+      this._fm.modIndex = Math.min(12, this._fm.modIndex * (0.3 + (1 - health) * 1.5));
+      this._fm.attack = health * 0.1;
+      this._fm.release = 0.3 + health * 3.0;
     }
 
-    // Drone LFO: texture → speed, dryness → depth
+    // Drone LFO: unhealthy = faster/wider sweep (anxious); healthy = slow/gentle
     this._drone.setLFO(
-      0.02 + n.tex * 0.06,       // 0.02–0.08 Hz (12–50s cycle)
-      150 + n.dry * 700,         // 150–850 Hz sweep depth
+      0.01 + (1 - health) * 0.12, // unhealthy: faster 0.13Hz; healthy: slow 0.01Hz
+      100 + (1 - health) * 900,   // unhealthy: wider sweep; healthy: subtle
     );
 
     this._syncDebugControls();
@@ -479,36 +535,47 @@ class WebAudioGenerativeAmbient extends HTMLElement {
     const { mood, excitement } = this._ms;
     const n = normPlant(this._p);
     const wet = 1 - n.dry;
+    const health = wet * 0.6 + n.tex * 0.4; // 0 = dying, 1 = thriving
 
-    // Drone: filter openness by wetness + branching
-    const droneFilterHz = 150 + Math.pow(wet * 0.6 + n.br * 0.4, 2) * 3500;
+    // Drone: healthy = warm open filter; unhealthy = narrow, exposed
+    const droneFilterHz = 100 + Math.pow(health, 2) * 4000;
     this._drone.setFilterFreq(droneFilterHz);
 
     // Delay times synced to quarter note duration
-    const stepSec = 60 / this._bpm(); // 1 quarter note
+    const stepSec = 60 / this._bpm();
     if (this._melDelay?.delayTime != null) this._melDelay.delayTime = stepSec * 2;
     if (this._padBDelay?.delayTime != null) this._padBDelay.delayTime = stepSec * 3;
 
-    // Reverb wetness scales with wetness of plant
-    this._droneReverb.wet  = 0.5 + wet * 0.45;
-    this._padReverb.wet    = Math.min(0.95, 0.55 + wet * 0.4 + n.siz * 0.1);
-    this._padReverb.decay  = 6 + n.siz * 8;   // 6–14s pad reverb
-    this._padBReverb.wet   = 0.4 + wet * 0.4;
-    this._melReverb.wet    = 0.3 + wet * 0.5;
-    this._melReverb.decay  = 3 + n.siz * 5;
-    this._fmReverb.wet     = 0.4 + mood * 0.4;
-    this._fmReverb.decay   = 4 + n.siz * 4;
+    // Reverb: healthy plants bloom in deep reverb; dry plants are exposed and thin
+    this._droneReverb.wet = 0.2 + health * 0.7;
+    this._droneReverb.decay = 3 + health * 8;
+    this._padReverb.wet = 0.2 + health * 0.7;
+    this._padReverb.decay = 3 + health * 12;
+    this._padBReverb.wet = 0.15 + health * 0.6;
+    this._padBReverb.decay = 2 + health * 7;
+    this._melReverb.wet = 0.1 + health * 0.6;
+    this._melReverb.decay = 2 + health * 6;
+    this._fmReverb.wet = 0.15 + health * 0.55;
+    this._fmReverb.decay = 2 + health * 5;
 
-    // Chorus: branching drives richness
+    // Delay feedback: healthy = lush trails; dry = sparse/short
+    if (this._melDelay?.feedback != null) this._melDelay.feedback = 0.1 + health * 0.4;
+    if (this._melDelay?.wet != null) this._melDelay.wet = 0.05 + health * 0.35;
+    if (this._padBDelay?.feedback != null) this._padBDelay.feedback = 0.1 + health * 0.45;
+    if (this._padBDelay?.wet != null) this._padBDelay.wet = 0.05 + health * 0.3;
+
+    // Chorus: healthy = rich, wide; dry = off
     if (this._padChorus) {
-      this._padChorus.wet   = 0.3 + n.br * 0.45;
-      this._padChorus.rate  = 0.05 + n.tex * 0.2;
-      this._padChorus.depth = 4 + n.tex * 14;
+      this._padChorus.wet = health * 0.6;
+      this._padChorus.rate = 0.03 + n.tex * 0.15;
+      this._padChorus.depth = health * 18;
     }
 
-    // Master filter: smooth/wet = warm; spiky/dry = slightly brighter
-    const cutoffT = wet * 0.5 + n.tex * 0.3 + n.br * 0.2;
-    this._masterFilter.frequency.value = 1200 + cutoffT * 7000;
+    // Master filter: healthy = warm and full; unhealthy = thin, exposed highs
+    // Healthy: lower cutoff (warm), Unhealthy: higher cutoff (thin/bright/harsh)
+    this._masterFilter.frequency.value = 2000 + (1 - health) * 6000 + health * 2000;
+    // Unhealthy gets resonant peak for harshness
+    this._masterFilter.Q.value = 0.5 + (1 - health) * 3;
 
     this._updateInstrumentCharacter();
     this._updateStatus();
@@ -524,7 +591,7 @@ class WebAudioGenerativeAmbient extends HTMLElement {
   _flashBeat(step) {
     this._beatLeds.forEach((led, i) => led.classList.toggle("ga-led-on", i === step % 8));
     setTimeout(() => {
-      this._beatLeds.forEach(led => led.classList.remove("ga-led-on"));
+      this._beatLeds.forEach((led) => led.classList.remove("ga-led-on"));
     }, 200);
   }
 
@@ -552,12 +619,17 @@ class WebAudioGenerativeAmbient extends HTMLElement {
     this._autoPilot = !this._autoPilot;
     this._autoBtn.classList.toggle("ga-auto-active", this._autoPilot);
     this._autoBtn.textContent = this._autoPilot ? "◉ Auto" : "○ Auto";
-    if (this._autoPilot) { this._pickNewAutoTarget(); this._tickAutoPilot(); }
-    else { if (this._autoRaf) cancelAnimationFrame(this._autoRaf); this._autoRaf = null; }
+    if (this._autoPilot) {
+      this._pickNewAutoTarget();
+      this._tickAutoPilot();
+    } else {
+      if (this._autoRaf) cancelAnimationFrame(this._autoRaf);
+      this._autoRaf = null;
+    }
   }
 
   _pickNewAutoTarget() {
-    const names = Object.keys(PLANT_PRESETS).filter(n => n !== this._autoPresetName);
+    const names = Object.keys(PLANT_PRESETS).filter((n) => n !== this._autoPresetName);
     this._autoPresetName = names[Math.floor(Math.random() * names.length)];
     this._autoTarget = { ...PLANT_PRESETS[this._autoPresetName] };
     this._autoNextChange = performance.now() + 30000 + Math.random() * 30000; // slower morph for ambient
@@ -583,10 +655,18 @@ class WebAudioGenerativeAmbient extends HTMLElement {
     if (animate) {
       for (const key of keys) if (reading[key] != null) this._autoTarget[key] = reading[key];
       this._autoNextChange = performance.now() + 40000;
-      if (!this._autoPilot) { this._autoPilot = true; this._autoBtn.classList.add("ga-auto-active"); this._autoBtn.textContent = "◉ Auto"; this._tickAutoPilot(); }
+      if (!this._autoPilot) {
+        this._autoPilot = true;
+        this._autoBtn.classList.add("ga-auto-active");
+        this._autoBtn.textContent = "◉ Auto";
+        this._tickAutoPilot();
+      }
     } else {
       for (const key of keys) {
-        if (reading[key] != null) { this._p[key] = reading[key]; if (this._sliderRefs[key]) this._sliderRefs[key].value = reading[key]; }
+        if (reading[key] != null) {
+          this._p[key] = reading[key];
+          if (this._sliderRefs[key]) this._sliderRefs[key].value = reading[key];
+        }
       }
       if (this._started) this._updateEffects();
     }
@@ -672,10 +752,16 @@ class WebAudioGenerativeAmbient extends HTMLElement {
 
     // Plant reading sliders
     const paramSec = this._makeSection("Plant Reading", c1);
-    paramSec.appendChild(this._makeParamSlider("dryness",        "Dryness",   0,  10,  0.1,  this._p.dryness,        "Cactus — Rainforest"));
-    paramSec.appendChild(this._makeParamSlider("size",           "Size",      50, 900, 10,   this._p.size,           "Seedling — Ancient Tree"));
-    paramSec.appendChild(this._makeParamSlider("branching",      "Branching", 0,  10,  0.1,  this._p.branching,      "Simple — Complex"));
-    paramSec.appendChild(this._makeParamSlider("physicalTexture","Texture",   0,  1,   0.01, this._p.physicalTexture,"Spiky — Smooth"));
+    paramSec.appendChild(
+      this._makeParamSlider("dryness", "Dryness", 0, 10, 0.1, this._p.dryness, "Cactus — Rainforest"),
+    );
+    paramSec.appendChild(this._makeParamSlider("size", "Size", 50, 900, 10, this._p.size, "Seedling — Ancient Tree"));
+    paramSec.appendChild(
+      this._makeParamSlider("branching", "Branching", 0, 10, 0.1, this._p.branching, "Simple — Complex"),
+    );
+    paramSec.appendChild(
+      this._makeParamSlider("physicalTexture", "Texture", 0, 1, 0.01, this._p.physicalTexture, "Spiky — Smooth"),
+    );
 
     const volSec = this._makeSection("Volume", c1);
     volSec.appendChild(this._makeParamSlider("volume", "Master Vol", 0, 1, 0.01, this._p.volume));
@@ -714,13 +800,13 @@ class WebAudioGenerativeAmbient extends HTMLElement {
     this._debugControls = [];
 
     const INSTRUMENTS = [
-      { label: "Pad A",    tag: "web-audio-synth-pad-controls",  inst: this._pad,     color: "#aa66ff" },
-      { label: "Pad B",    tag: "web-audio-synth-mono-controls", inst: this._padB,    color: "#6688ff" },
-      { label: "Melody",   tag: "web-audio-synth-mono-controls", inst: this._melody,  color: "#99eeff" },
-      { label: "FM",       tag: "web-audio-synth-fm-controls",   inst: this._fm,      color: "#eeccff" },
+      { label: "Pad A", tag: "web-audio-synth-pad-controls", inst: this._pad, color: "#aa66ff", dest: this._padChorus.input },
+      { label: "Pad B", tag: "web-audio-synth-mono-controls", inst: this._padB, color: "#6688ff", dest: this._padBDelay.input },
+      { label: "Melody", tag: "web-audio-synth-mono-controls", inst: this._melody, color: "#99eeff", dest: this._melDelay.input },
+      { label: "FM", tag: "web-audio-synth-fm-controls", inst: this._fm, color: "#eeccff", dest: this._fmReverb.input },
     ];
 
-    for (const { label, tag, inst, color } of INSTRUMENTS) {
+    for (const { label, tag, inst, color, dest } of INSTRUMENTS) {
       // Collapsible wrapper
       const wrap = this._makeEl("div", "ga-inst-wrap");
       const hdr = this._makeEl("div", "ga-inst-header");
@@ -737,15 +823,15 @@ class WebAudioGenerativeAmbient extends HTMLElement {
         for (const def of (tag.includes("fm") ? [] : []).concat(
           Object.entries(inst)
             .filter(([k, v]) => typeof v !== "function" && !k.startsWith("_") && k !== "ctx")
-            .map(([k]) => ({ param: k }))
+            .map(([k]) => ({ param: k })),
         )) {
           if (inst[def.param] !== undefined) params[def.param] = inst[def.param];
         }
         // Use SLIDER_DEFS if available for a cleaner output
-        const ctrl = this._debugControls.find(c => c._instrument === inst);
+        const ctrl = this._debugControls.find((c) => c._instrument === inst);
         if (ctrl) {
           const clean = {};
-          for (const def of (ctrl.constructor.SLIDER_DEFS || [])) {
+          for (const def of ctrl.constructor.SLIDER_DEFS || []) {
             clean[def.param] = inst[def.param];
           }
           if (inst.oscType !== undefined) clean.oscType = inst.oscType;
@@ -756,17 +842,19 @@ class WebAudioGenerativeAmbient extends HTMLElement {
           console.groupEnd();
         }
         logBtn.textContent = "✓ Logged!";
-        setTimeout(() => logBtn.textContent = "Log Preset", 2000);
+        setTimeout(() => (logBtn.textContent = "Log Preset"), 2000);
       });
       hdr.appendChild(logBtn);
 
-      wrap.setAttribute("data-collapsed", "");
+      // wrap.setAttribute("data-collapsed", "");
       hdr.addEventListener("click", () => wrap.toggleAttribute("data-collapsed"));
       wrap.appendChild(hdr);
 
       const body = this._makeEl("div", "ga-inst-body");
       const ctrl = document.createElement(tag);
-      ctrl.bind(inst, this._ctx, { title: label, color, fx: { bpm: this._bpm() } });
+      ctrl.bind(inst, this._ctx, { title: label, color });
+      ctrl.showSequencer = false;
+      ctrl.connect(dest);
       body.appendChild(ctrl);
       wrap.appendChild(body);
       this._debugPanel.appendChild(wrap);
@@ -787,7 +875,7 @@ class WebAudioGenerativeAmbient extends HTMLElement {
   // ---- System guide ----
 
   _buildSystemGuideInto(container) {
-    container.innerHTML = /*html*/`
+    container.innerHTML = /*html*/ `
       <div class="ga-guide">
 
         <div class="ga-guide-intro">
@@ -890,7 +978,7 @@ class WebAudioGenerativeAmbient extends HTMLElement {
 
   addCSS() {
     const style = document.createElement("style");
-    style.textContent = /*css*/`
+    style.textContent = /*css*/ `
       generative-ambient {
         display: block;
         font-family: monospace;

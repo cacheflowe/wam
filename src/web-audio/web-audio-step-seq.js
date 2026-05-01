@@ -5,22 +5,32 @@
  *   • On/off toggle per step
  *   • Note select per step (options set via setNoteOptions)
  *   • Optional accent checkbox per step (enable with accent: true in init)
+ *   • Optional probability slider per step (0–1; enable with probability: true in init)
+ *   • Optional ratchet selector per step (1/2/3; enable with ratchet: true in init)
+ *   • Optional conditions selector per step (off/1:2/3:4/fill; enable with conditions: true in init)
+ *   • Pattern-level controls: bar density (playEvery), rotation (rotationOffset, rotationIntervalBars)
  *   • Active-step highlight (call setActiveStep(i) each tick)
  *   • Dispatches "step-change" CustomEvent when any step is edited
+ *   • Dispatches "pattern-change" CustomEvent when pattern-level controls change
  *
  * Usage:
  *   const seq = document.createElement("web-audio-step-seq");
  *   container.appendChild(seq);
  *   seq.init({
- *     steps: [...],              // array of {active, note, accent?}
+ *     steps: [...],              // array of {active, note, accent?, probability?, ratchet?, conditions?}
  *     noteOptions: [[name, midi], ...],  // initial options for note selects
  *     accent: false,             // show accent checkboxes?
+ *     probability: false,        // show probability sliders?
+ *     ratchet: false,            // show ratchet selectors?
+ *     conditions: false,         // show conditions selectors?
  *     color: "#0f0",             // CSS accent color (used as --seq-color var)
  *     stepClass: "acid-step",    // base CSS class for each step cell
  *   });
  *   seq.setActiveStep(stepIndex);
  *   seq.setNoteOptions([[name, midi], ...]);
- *   seq.steps;                   // returns current [{active, note, accent?}] array
+ *   seq.steps;                   // returns current [{active, note, accent?, probability?, ratchet?, conditions?}] array
+ *   seq.getPatternParams();      // returns {playEvery, rotationOffset, rotationIntervalBars}
+ *   seq.setPatternParams({playEvery: 2, rotationOffset: 1});
  */
 export default class WebAudioStepSeq extends HTMLElement {
   static #cssInjected = false;
@@ -95,6 +105,74 @@ export default class WebAudioStepSeq extends HTMLElement {
         width: 10px;
         height: 10px;
       }
+      web-audio-step-seq .wass-probability {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        font-size: 0.55rem;
+        opacity: 0.7;
+        width: 100%;
+        min-width: 0;
+      }
+      web-audio-step-seq .wass-probability input[type=range] {
+        width: 100%;
+        height: 6px;
+        margin: 0;
+        padding: 0;
+        cursor: pointer;
+        accent-color: var(--seq-color, #0f0);
+      }
+      web-audio-step-seq .wass-ratchet {
+        font-size: 0.55rem;
+        width: 100%;
+        min-width: 0;
+        background: #222;
+        color: #ccc;
+        border: 1px solid #444;
+        border-radius: 2px;
+        padding: 1px 2px;
+        opacity: 0.7;
+      }
+      web-audio-step-seq .wass-conditions {
+        font-size: 0.55rem;
+        width: 100%;
+        min-width: 0;
+        background: #222;
+        color: #ccc;
+        border: 1px solid #444;
+        border-radius: 2px;
+        padding: 1px 2px;
+        opacity: 0.7;
+      }
+      web-audio-step-seq .wass-pattern-controls {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 12px;
+        padding: 8px 4px;
+        border-top: 1px solid #333;
+        flex-wrap: wrap;
+        align-items: center;
+        font-size: 0.65rem;
+        opacity: 0.8;
+      }
+      web-audio-step-seq .wass-pattern-control {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+      }
+      web-audio-step-seq .wass-pattern-control label {
+        opacity: 0.7;
+      }
+      web-audio-step-seq .wass-pattern-control input,
+      web-audio-step-seq .wass-pattern-control select {
+        font-size: 0.65rem;
+        padding: 2px 4px;
+        background: #222;
+        color: #ccc;
+        border: 1px solid #444;
+        border-radius: 2px;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -106,9 +184,22 @@ export default class WebAudioStepSeq extends HTMLElement {
     this._onBtns = [];
     this._noteSelects = [];
     this._accentChks = [];
+    this._probabilityInputs = [];
+    this._ratchetSelects = [];
+    this._conditionSelects = [];
     this._hasAccent = false;
+    this._hasProbability = false;
+    this._hasRatchet = false;
+    this._hasConditions = false;
     this._stepClass = "wass-step";
     this._initialized = false;
+
+    // Pattern-level parameters
+    this._patternParams = {
+      playEvery: 1,
+      rotationOffset: 0,
+      rotationIntervalBars: 1,
+    };
   }
 
   connectedCallback() {
@@ -127,20 +218,41 @@ export default class WebAudioStepSeq extends HTMLElement {
 
   /**
    * @param {object} options
-   * @param {Array<{active: boolean, note: number, accent?: boolean}>} options.steps
+   * @param {Array<{active: boolean, note: number, accent?: boolean, probability?: number, ratchet?: number, conditions?: string}>} options.steps
    * @param {Array<[string, number]>} [options.noteOptions]  [[name, midi], ...]
    * @param {boolean} [options.accent]   Show accent checkbox column
+   * @param {boolean} [options.probability] Show probability slider column
+   * @param {boolean} [options.ratchet] Show ratchet selector column
+   * @param {boolean} [options.conditions] Show conditions selector column
+   * @param {boolean} [options.patternControls] Show pattern-level controls (playEvery, rotation)
    * @param {string}  [options.color]    CSS color for the active/highlight state
    * @param {string}  [options.stepClass] Extra class applied to each step cell
    */
-  init({ steps, noteOptions = [], accent = false, color, stepClass } = {}) {
+  init({
+    steps,
+    noteOptions = [],
+    accent = false,
+    probability = false,
+    ratchet = false,
+    conditions = false,
+    patternControls = false,
+    color,
+    stepClass,
+  } = {}) {
     WebAudioStepSeq.#injectCSS();
     this._steps = steps.map((s) => ({
       active: s.active,
       note: s.note,
       ...(accent ? { accent: s.accent ?? false } : {}),
+      ...(probability ? { probability: s.probability ?? 1 } : {}),
+      ...(ratchet ? { ratchet: s.ratchet ?? 1 } : {}),
+      ...(conditions ? { conditions: s.conditions ?? "off" } : {}),
     }));
     this._hasAccent = accent;
+    this._hasProbability = probability;
+    this._hasRatchet = ratchet;
+    this._hasConditions = conditions;
+    this._patternControls = patternControls;
     if (color) this.style.setProperty("--seq-color", color);
     if (stepClass) this._stepClass = stepClass;
     this._initialized = true;
@@ -153,6 +265,9 @@ export default class WebAudioStepSeq extends HTMLElement {
     this._onBtns = [];
     this._noteSelects = [];
     this._accentChks = [];
+    this._probabilityInputs = [];
+    this._ratchetSelects = [];
+    this._conditionSelects = [];
 
     this._steps.forEach((step, i) => {
       const el = document.createElement("div");
@@ -212,9 +327,135 @@ export default class WebAudioStepSeq extends HTMLElement {
         this._accentChks.push(accentChk);
       }
 
+      // Probability slider (optional)
+      if (this._hasProbability) {
+        const probLabel = document.createElement("label");
+        probLabel.className = "wass-probability";
+        probLabel.title = "Fire probability (0–100%)";
+        const probInput = document.createElement("input");
+        probInput.type = "range";
+        probInput.min = "0";
+        probInput.max = "100";
+        probInput.step = "1";
+        probInput.value = Math.round((step.probability ?? 1) * 100);
+        probInput.addEventListener("input", () => {
+          this._steps[i].probability = parseInt(probInput.value) / 100;
+        });
+        probInput.addEventListener("change", () => {
+          this._steps[i].probability = parseInt(probInput.value) / 100;
+          this._dispatch(i);
+        });
+        probLabel.appendChild(probInput);
+        el.appendChild(probLabel);
+        this._probabilityInputs.push(probInput);
+      }
+
+      // Ratchet selector (optional)
+      if (this._hasRatchet) {
+        const ratchetSelect = document.createElement("select");
+        ratchetSelect.className = "wass-ratchet";
+        ratchetSelect.title = "Ratchet — subdivide trigger into repeats";
+        [1, 2, 3].forEach((val) => {
+          const opt = document.createElement("option");
+          opt.value = val;
+          opt.textContent = `${val}x`;
+          if (val === (step.ratchet ?? 1)) opt.selected = true;
+          ratchetSelect.appendChild(opt);
+        });
+        ratchetSelect.addEventListener("change", () => {
+          this._steps[i].ratchet = parseInt(ratchetSelect.value);
+          this._dispatch(i);
+        });
+        el.appendChild(ratchetSelect);
+        this._ratchetSelects.push(ratchetSelect);
+      }
+
+      // Conditions selector (optional)
+      if (this._hasConditions) {
+        const condSelect = document.createElement("select");
+        condSelect.className = "wass-conditions";
+        condSelect.title = "Conditions — gate by bar cycle";
+        ["off", "1:2", "3:4", "fill"].forEach((val) => {
+          const opt = document.createElement("option");
+          opt.value = val;
+          opt.textContent = val === "off" ? "—" : val;
+          if (val === (step.conditions ?? "off")) opt.selected = true;
+          condSelect.appendChild(opt);
+        });
+        condSelect.addEventListener("change", () => {
+          this._steps[i].conditions = condSelect.value;
+          this._dispatch(i);
+        });
+        el.appendChild(condSelect);
+        this._conditionSelects.push(condSelect);
+      }
+
       this.appendChild(el);
       this._stepEls.push(el);
     });
+
+    // Pattern-level controls (optional)
+    if (this._patternControls) {
+      const controlsDiv = document.createElement("div");
+      controlsDiv.className = "wass-pattern-controls";
+
+      // Play every N bars
+      const playEveryDiv = document.createElement("div");
+      playEveryDiv.className = "wass-pattern-control";
+      const playEveryLabel = document.createElement("label");
+      playEveryLabel.textContent = "Play";
+      const playEveryInput = document.createElement("input");
+      playEveryInput.type = "number";
+      playEveryInput.min = "1";
+      playEveryInput.max = "16";
+      playEveryInput.value = this._patternParams.playEvery;
+      playEveryInput.addEventListener("change", () => {
+        this._patternParams.playEvery = parseInt(playEveryInput.value);
+        this._dispatchPatternChange();
+      });
+      const playEveryOf = document.createElement("span");
+      playEveryOf.textContent = "of N bars";
+      playEveryDiv.appendChild(playEveryLabel);
+      playEveryDiv.appendChild(playEveryInput);
+      playEveryDiv.appendChild(playEveryOf);
+      controlsDiv.appendChild(playEveryDiv);
+
+      // Rotation offset
+      const rotationDiv = document.createElement("div");
+      rotationDiv.className = "wass-pattern-control";
+      const rotationLabel = document.createElement("label");
+      rotationLabel.textContent = "Rotate";
+      const rotationInput = document.createElement("input");
+      rotationInput.type = "number";
+      rotationInput.min = "0";
+      rotationInput.max = "15";
+      rotationInput.value = this._patternParams.rotationOffset;
+      rotationInput.addEventListener("change", () => {
+        this._patternParams.rotationOffset = parseInt(rotationInput.value);
+        this._dispatchPatternChange();
+      });
+      const rotationSteps = document.createElement("span");
+      rotationSteps.textContent = "steps every";
+      const rotationIntervalInput = document.createElement("input");
+      rotationIntervalInput.type = "number";
+      rotationIntervalInput.min = "1";
+      rotationIntervalInput.max = "16";
+      rotationIntervalInput.value = this._patternParams.rotationIntervalBars;
+      rotationIntervalInput.addEventListener("change", () => {
+        this._patternParams.rotationIntervalBars = parseInt(rotationIntervalInput.value);
+        this._dispatchPatternChange();
+      });
+      const rotationBars = document.createElement("span");
+      rotationBars.textContent = "bars";
+      rotationDiv.appendChild(rotationLabel);
+      rotationDiv.appendChild(rotationInput);
+      rotationDiv.appendChild(rotationSteps);
+      rotationDiv.appendChild(rotationIntervalInput);
+      rotationDiv.appendChild(rotationBars);
+      controlsDiv.appendChild(rotationDiv);
+
+      this.appendChild(controlsDiv);
+    }
   }
 
   _dispatch(stepIndex) {
@@ -222,6 +463,15 @@ export default class WebAudioStepSeq extends HTMLElement {
       new CustomEvent("step-change", {
         bubbles: true,
         detail: { index: stepIndex, step: { ...this._steps[stepIndex] } },
+      }),
+    );
+  }
+
+  _dispatchPatternChange() {
+    this.dispatchEvent(
+      new CustomEvent("pattern-change", {
+        bubbles: true,
+        detail: { params: { ...this._patternParams } },
       }),
     );
   }
@@ -240,6 +490,9 @@ export default class WebAudioStepSeq extends HTMLElement {
       active: s.active,
       note: s.note,
       ...(this._hasAccent ? { accent: s.accent ?? false } : {}),
+      ...(this._hasProbability ? { probability: s.probability ?? 1 } : {}),
+      ...(this._hasRatchet ? { ratchet: s.ratchet ?? 1 } : {}),
+      ...(this._hasConditions ? { conditions: s.conditions ?? "off" } : {}),
     }));
     // Update UI in place without full re-render
     this._steps.forEach((step, i) => {
@@ -252,6 +505,12 @@ export default class WebAudioStepSeq extends HTMLElement {
       if (sel) sel.value = step.note;
       const chk = this._accentChks[i];
       if (chk) chk.checked = step.accent ?? false;
+      const probInput = this._probabilityInputs[i];
+      if (probInput) probInput.value = Math.round((step.probability ?? 1) * 100);
+      const ratchetSel = this._ratchetSelects[i];
+      if (ratchetSel) ratchetSel.value = step.ratchet ?? 1;
+      const condSel = this._conditionSelects[i];
+      if (condSel) condSel.value = step.conditions ?? "off";
     });
   }
 
@@ -284,6 +543,60 @@ export default class WebAudioStepSeq extends HTMLElement {
    */
   setActiveStep(i) {
     this._stepEls.forEach((el, idx) => el.classList.toggle("wass-active", idx === i));
+  }
+
+  /**
+   * Get pattern-level parameters (playEvery, rotation, etc.)
+   * @returns {object} {playEvery, rotationOffset, rotationIntervalBars}
+   */
+  getPatternParams() {
+    return { ...this._patternParams };
+  }
+
+  /**
+   * Set pattern-level parameters and update UI.
+   * @param {object} params
+   * @param {number} [params.playEvery] Play every N bars
+   * @param {number} [params.rotationOffset] Rotate by N steps
+   * @param {number} [params.rotationIntervalBars] Update rotation every M bars
+   */
+  setPatternParams(params) {
+    if (params.playEvery != null) this._patternParams.playEvery = params.playEvery;
+    if (params.rotationOffset != null) this._patternParams.rotationOffset = params.rotationOffset;
+    if (params.rotationIntervalBars != null) this._patternParams.rotationIntervalBars = params.rotationIntervalBars;
+    // Note: UI update would require re-render; assuming external code handles that
+  }
+
+  /**
+   * Physically rotate the step array left by N positions and update the UI.
+   * Step 0 becomes step (length - n), etc. This makes the visual pattern
+   * always reflect what's actually playing.
+   * @param {number} n  Number of positions to rotate left
+   */
+  rotate(n) {
+    if (!this._steps.length || n === 0) return;
+    const len = this._steps.length;
+    const offset = ((n % len) + len) % len; // normalize to positive
+    this._steps = [...this._steps.slice(offset), ...this._steps.slice(0, offset)];
+    // Update UI in place
+    this._steps.forEach((step, i) => {
+      const btn = this._onBtns[i];
+      if (btn) {
+        btn.className = `wass-on${step.active ? " on" : ""}`;
+        btn.textContent = step.active ? "●" : "○";
+      }
+      const sel = this._noteSelects[i];
+      if (sel) sel.value = step.note;
+      const chk = this._accentChks[i];
+      if (chk) chk.checked = step.accent ?? false;
+      const probInput = this._probabilityInputs[i];
+      if (probInput) probInput.value = Math.round((step.probability ?? 1) * 100);
+      const ratchetSel = this._ratchetSelects[i];
+      if (ratchetSel) ratchetSel.value = step.ratchet ?? 1;
+      const condSel = this._conditionSelects[i];
+      if (condSel) condSel.value = step.conditions ?? "off";
+    });
+    this.dispatchEvent(new CustomEvent("step-change", { bubbles: true, detail: { rotated: n } }));
   }
 }
 

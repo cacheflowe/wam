@@ -491,26 +491,110 @@ export default class WebAudioSynthFM extends WebAudioInstrumentBase {
 
 export class WebAudioSynthFMControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "volume",         label: "Vol",       min: 0,    max: 1,     step: 0.01 },
-    { param: "octaveOffset",   label: "Octave",    min: -2,   max: 2,     step: 1,     tooltip: "Shift all notes up or down by octaves." },
-    { param: "octaveJumpProb", label: "Oct Jump",  min: 0,    max: 1,     step: 0.01,  tooltip: "Probability of randomly jumping an octave each step." },
-    { param: "carrierRatio",   label: "Carrier",   min: 0.5,  max: 4,     step: 0.01,  tooltip: "Carrier frequency as a ratio to the note pitch. Affects tuning character." },
-    { param: "modRatio",       label: "Mod Ratio", min: 0.5,  max: 8,     step: 0.01,  tooltip: "Modulator frequency ratio. Shapes the harmonic timbre." },
-    { param: "modIndex",       label: "Mod Index", min: 0,    max: 10,    step: 0.1,   tooltip: "FM modulation depth. Higher = more harmonics and brightness." },
-    { param: "modDecay",       label: "Mod Decay", min: 0.01, max: 2,     step: 0.01,  tooltip: "How quickly the FM modulation fades. Short = percussive attack." },
-    { param: "attack",         label: "Attack",    min: 0.001,max: 1,     step: 0.001, tooltip: "Amplitude envelope attack time." },
-    { param: "decay",          label: "Decay",     min: 0.01, max: 2,     step: 0.01,  tooltip: "Amplitude envelope decay time." },
-    { param: "sustain",        label: "Sustain",   min: 0,    max: 1,     step: 0.01,  tooltip: "Amplitude sustain level (0–1) during held notes." },
-    { param: "release",        label: "Release",   min: 0.01, max: 3,     step: 0.01,  tooltip: "Amplitude envelope release time after note off." },
-    { param: "filterFreq",     label: "Filter",    min: 100,  max: 12000, step: 1,  scale: "log", tooltip: "Lowpass filter cutoff frequency." },
-    { param: "filterQ",        label: "Filter Q",  min: 0.5,  max: 20,    step: 0.1,   tooltip: "Filter resonance. Emphasizes the cutoff frequency." },
-    { param: "detune",         label: "Detune",    min: -50,  max: 50,    step: 1,     tooltip: "Global pitch detune in cents." },
-    { param: "lfoDepth",       label: "LFO Depth", min: 0,    max: 3000,  step: 10,    tooltip: "LFO vibrato depth in cents. 0 = no vibrato." },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
+    {
+      param: "octaveOffset",
+      label: "Octave",
+      min: -2,
+      max: 2,
+      step: 1,
+      tooltip: "Shift all notes up or down by octaves.",
+    },
+    {
+      param: "octaveJumpProb",
+      label: "Oct Jump",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Probability of randomly jumping an octave each step.",
+    },
+    {
+      param: "carrierRatio",
+      label: "Carrier",
+      min: 0.5,
+      max: 4,
+      step: 0.01,
+      tooltip: "Carrier frequency as a ratio to the note pitch. Affects tuning character.",
+    },
+    {
+      param: "modRatio",
+      label: "Mod Ratio",
+      min: 0.5,
+      max: 8,
+      step: 0.01,
+      tooltip: "Modulator frequency ratio. Shapes the harmonic timbre.",
+    },
+    {
+      param: "modIndex",
+      label: "Mod Index",
+      min: 0,
+      max: 10,
+      step: 0.1,
+      tooltip: "FM modulation depth. Higher = more harmonics and brightness.",
+    },
+    {
+      param: "modDecay",
+      label: "Mod Decay",
+      min: 0.01,
+      max: 2,
+      step: 0.01,
+      tooltip: "How quickly the FM modulation fades. Short = percussive attack.",
+    },
+    { param: "attack", label: "Attack", min: 0.001, max: 1, step: 0.001, tooltip: "Amplitude envelope attack time." },
+    { param: "decay", label: "Decay", min: 0.01, max: 2, step: 0.01, tooltip: "Amplitude envelope decay time." },
+    {
+      param: "sustain",
+      label: "Sustain",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Amplitude sustain level (0–1) during held notes.",
+    },
+    {
+      param: "release",
+      label: "Release",
+      min: 0.01,
+      max: 3,
+      step: 0.01,
+      tooltip: "Amplitude envelope release time after note off.",
+    },
+    {
+      param: "filterFreq",
+      label: "Filter",
+      min: 100,
+      max: 12000,
+      step: 1,
+      scale: "log",
+      tooltip: "Lowpass filter cutoff frequency.",
+    },
+    {
+      param: "filterQ",
+      label: "Filter Q",
+      min: 0.5,
+      max: 20,
+      step: 0.1,
+      tooltip: "Filter resonance. Emphasizes the cutoff frequency.",
+    },
+    { param: "detune", label: "Detune", min: -50, max: 50, step: 1, tooltip: "Global pitch detune in cents." },
+    {
+      param: "lfoDepth",
+      label: "LFO Depth",
+      min: 0,
+      max: 3000,
+      step: 10,
+      tooltip: "LFO vibrato depth in cents. 0 = no vibrato.",
+    },
   ];
 
   static DEFAULT_PATTERN() {
     const active = new Set([0, 8]);
-    return Array.from({ length: 16 }, (_, i) => ({ active: active.has(i), note: 29 }));
+    return Array.from({ length: 16 }, (_, i) => ({
+      active: active.has(i),
+      note: 29,
+      probability: 1,
+      ratchet: 1,
+      conditions: "off",
+    }));
   }
 
   constructor() {
@@ -522,13 +606,23 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     this._rootMidi = 29;
     this._scaleName = "Minor";
     this._chordSize = 3;
+
+    // Sequencer position tracking
+    this._globalStep = 0;
+    this._seqPosition = 0;
   }
 
   // ---- Identity overrides ----
 
-  _defaultColor() { return "#4af"; }
-  _defaultTitle() { return "FM Chord Synth"; }
-  _fxTitle() { return "FM FX"; }
+  _defaultColor() {
+    return "#4af";
+  }
+  _defaultTitle() {
+    return "FM Chord Synth";
+  }
+  _fxTitle() {
+    return "FM FX";
+  }
 
   // ---- Bind override to set BPM on instrument ----
 
@@ -560,25 +654,27 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
 
     // ---- FM ----
     const { el: fmEl, controls: fmCtrl } = createSection("FM");
-    fmCtrl.appendChild(mkSlider({ param: "carrierRatio", label: "Carrier",   min: 0.5,  max: 4,  step: 0.01 }));
-    fmCtrl.appendChild(mkSlider({ param: "modRatio",     label: "Mod Ratio", min: 0.5,  max: 8,  step: 0.01 }));
-    fmCtrl.appendChild(mkSlider({ param: "modIndex",     label: "Mod Index", min: 0,    max: 10, step: 0.1 }));
-    fmCtrl.appendChild(mkSlider({ param: "modDecay",     label: "Mod Decay", min: 0.01, max: 2,  step: 0.01 }));
+    fmCtrl.appendChild(mkSlider({ param: "carrierRatio", label: "Carrier", min: 0.5, max: 4, step: 0.01 }));
+    fmCtrl.appendChild(mkSlider({ param: "modRatio", label: "Mod Ratio", min: 0.5, max: 8, step: 0.01 }));
+    fmCtrl.appendChild(mkSlider({ param: "modIndex", label: "Mod Index", min: 0, max: 10, step: 0.1 }));
+    fmCtrl.appendChild(mkSlider({ param: "modDecay", label: "Mod Decay", min: 0.01, max: 2, step: 0.01 }));
     controls.appendChild(fmEl);
 
     // ---- Envelope ----
     const { el: envEl, controls: envCtrl } = createSection("Envelope");
-    envCtrl.appendChild(mkSlider({ param: "attack",  label: "Attack",  min: 0.001, max: 1, step: 0.001 }));
-    envCtrl.appendChild(mkSlider({ param: "decay",   label: "Decay",   min: 0.01,  max: 2, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "sustain", label: "Sustain", min: 0,     max: 1, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "release", label: "Release", min: 0.01,  max: 3, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "attack", label: "Attack", min: 0.001, max: 1, step: 0.001 }));
+    envCtrl.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.01, max: 2, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "release", label: "Release", min: 0.01, max: 3, step: 0.01 }));
     controls.appendChild(envEl);
 
     // ---- Filter ----
     const { el: filtEl, controls: filtCtrl } = createSection("Filter");
-    filtCtrl.appendChild(mkSlider({ param: "filterFreq", label: "Cutoff",   min: 100, max: 12000, step: 1,   scale: "log" }));
-    filtCtrl.appendChild(mkSlider({ param: "filterQ",    label: "Resonance",min: 0.5, max: 20,    step: 0.1 }));
-    filtCtrl.appendChild(mkSlider({ param: "detune",     label: "Detune",   min: -50, max: 50,    step: 1 }));
+    filtCtrl.appendChild(
+      mkSlider({ param: "filterFreq", label: "Cutoff", min: 100, max: 12000, step: 1, scale: "log" }),
+    );
+    filtCtrl.appendChild(mkSlider({ param: "filterQ", label: "Resonance", min: 0.5, max: 20, step: 0.1 }));
+    filtCtrl.appendChild(mkSlider({ param: "detune", label: "Detune", min: -50, max: 50, step: 1 }));
     controls.appendChild(filtEl);
 
     // ---- LFO ----
@@ -612,9 +708,33 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
 
     // ---- Octave ----
     const { el: octEl, controls: octCtrl } = createSection("Octave");
-    octCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Offset",    min: -2, max: 2, step: 1 }));
-    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0,  max: 1, step: 0.01 }));
+    octCtrl.appendChild(mkSlider({ param: "octaveOffset", label: "Offset", min: -2, max: 2, step: 1 }));
+    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(octEl);
+
+    // ---- Sequencer Speed ----
+    const { el: speedEl, controls: speedCtrl } = createSection("Sequencer");
+    const speedSelect = document.createElement("select");
+    speedSelect.className = "wac-select";
+    [0.5, 1, 2].forEach((val) => {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = val === 0.5 ? "0.5x" : val === 1 ? "1x (Normal)" : "2x";
+      if (val === 1) opt.selected = true;
+      speedSelect.appendChild(opt);
+    });
+    speedSelect.addEventListener("change", () => {
+      this.speedMultiplier = parseFloat(speedSelect.value);
+      this._emitChange();
+    });
+    const speedLabel = document.createElement("label");
+    speedLabel.style.display = "flex";
+    speedLabel.style.gap = "6px";
+    speedLabel.style.alignItems = "center";
+    speedLabel.appendChild(document.createTextNode("Speed:"));
+    speedLabel.appendChild(speedSelect);
+    speedCtrl.appendChild(speedLabel);
+    controls.appendChild(speedEl);
 
     // Action row
     const actionRow = document.createElement("div");
@@ -666,10 +786,15 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     this._seq.init({
       steps: WebAudioSynthFMControls.DEFAULT_PATTERN(),
       noteOptions: noteOpts,
+      probability: true,
+      ratchet: true,
+      conditions: true,
+      patternControls: true,
       color,
     });
     expanded.appendChild(this._seq);
     this._seq.addEventListener("step-change", () => this._emitChange());
+    this._seq.addEventListener("pattern-change", () => this._emitChange());
   }
 
   // ---- Slider input override (emit change after set) ----
@@ -731,15 +856,79 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
 
   step(index, time, stepDurationSec) {
     if (!this._instrument || !this._seq) return;
-    const s = this._seq.steps[index];
-    if (s?.active) {
-      const chord = buildChordFromScale(s.note + 24, this._scaleName, this._chordSize);
-      this._instrument.trigger(chord, stepDurationSec, time);
+
+    const multiplier = this.speedMultiplier ?? 1;
+    if (multiplier === 0.5 && index % 2 !== 0) return;
+
+    // Pattern parameters
+    const patternParams = this._seq?.getPatternParams() ?? {};
+    const playEvery = patternParams.playEvery ?? 1;
+    const rotationOffset = patternParams.rotationOffset ?? 0;
+    const rotationIntervalBars = patternParams.rotationIntervalBars ?? 1;
+
+    // Apply rotation physically when local sequencer completes a full cycle
+    if (this._seqPosition > 0 && this._seqPosition % 16 === 0 && rotationOffset > 0) {
+      const localBar = this._seqPosition / 16;
+      if (localBar % rotationIntervalBars === 0) {
+        this._seq.rotate(rotationOffset);
+      }
+    }
+
+    // Bar density
+    const currentBar = Math.floor(this._globalStep / 16);
+    if (currentBar % playEvery !== 0) {
+      this._globalStep++;
+      return;
+    }
+
+    // Advance sequencer position (2x = 2 steps per tick, offset in time)
+    const stepsToAdvance = multiplier === 2 ? 2 : 1;
+    const subStepDur = stepDurationSec / stepsToAdvance;
+    for (let si = 0; si < stepsToAdvance; si++) {
+      const subTime = time + si * subStepDur;
+      const stepIndex = this._seqPosition % 16;
+      const s = this._seq.steps[stepIndex];
+
+      if (s?.active) {
+        if (Math.random() < (s.probability ?? 1)) {
+          if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            const chord = buildChordFromScale(s.note + 24, this._scaleName, this._chordSize);
+            const ratchet = s.ratchet ?? 1;
+            if (ratchet > 1) {
+              const ratchetDuration = subStepDur / ratchet;
+              for (let i = 0; i < ratchet; i++) {
+                this._instrument.trigger(chord, ratchetDuration * 0.9, subTime + i * ratchetDuration);
+              }
+            } else {
+              this._instrument.trigger(chord, subStepDur, subTime);
+            }
+          }
+        }
+      }
+
+      this._seqPosition++;
+    }
+
+    this._globalStep++;
+  }
+
+  _meetsCondition(condition, barIndex) {
+    switch (condition) {
+      case "off":
+        return true;
+      case "1:2":
+        return barIndex % 2 === 0;
+      case "3:4":
+        return barIndex % 4 === 2;
+      case "fill":
+        return barIndex % 4 === 3;
+      default:
+        return true;
     }
   }
 
-  setActiveStep(i) {
-    this._seq?.setActiveStep(i);
+  setActiveStep() {
+    this._seq?.setActiveStep((this._seqPosition - 1 + 16) % 16);
   }
 
   setScale(rootMidi, scaleName) {

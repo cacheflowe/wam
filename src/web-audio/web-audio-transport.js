@@ -1,7 +1,7 @@
 import "./web-audio-slider.js";
 import "./web-audio-waveform.js";
 import "./fx/web-audio-fx-unit.js";
-import { injectControlsCSS, createSection, createChannelStrip, createCtrl } from "./web-audio-slider.js";
+import { injectControlsCSS, createChannelStrip } from "./web-audio-slider.js";
 import { NOTE_NAMES, SCALES } from "./web-audio-scales.js";
 
 /**
@@ -97,31 +97,18 @@ export class WebAudioTransportControls extends HTMLElement {
       }
     });
 
-    // Waveform — always visible
-    const waveform = document.createElement("web-audio-waveform");
-    this.appendChild(waveform);
+    // ---- Always-visible transport row (between strip and expanded) ----
+    const topRow = document.createElement("div");
+    topRow.className = "wac-transport-row";
 
-    // Expanded panel
-    const expanded = document.createElement("div");
-    expanded.className = "wac-expanded";
-    this.appendChild(expanded);
-
-    // Controls wrapper — provides padding and flex-column layout, matching instrument panels
-    const controls = document.createElement("div");
-    controls.className = "wac-controls";
-    expanded.appendChild(controls);
-
-    // Transport section: play/stop + BPM
-    const { el: transportSec, controls: transportCtrl } = createSection("Transport");
-
-    const playWrap = createCtrl("");
+    // Play/Stop
     this._playBtn = document.createElement("button");
     this._playBtn.className = "wac-play-btn";
     this._playBtn.textContent = "▶ Play";
     this._playBtn.addEventListener("click", () => this._playing ? this._stop() : this._play());
-    playWrap.appendChild(this._playBtn);
-    transportCtrl.appendChild(playWrap);
+    topRow.appendChild(this._playBtn);
 
+    // BPM
     this._bpmSlider = document.createElement("web-audio-slider");
     this._bpmSlider.setAttribute("param", "bpm");
     this._bpmSlider.setAttribute("label", "BPM");
@@ -134,13 +121,10 @@ export class WebAudioTransportControls extends HTMLElement {
       this._setBpm(e.detail.value);
       this._emitChange();
     });
-    transportCtrl.appendChild(this._bpmSlider);
-    controls.appendChild(transportSec);
+    topRow.appendChild(this._bpmSlider);
 
-    // Key/Scale section
+    // Key/Scale
     if (showScales) {
-      const { el: scaleSec, controls: scaleCtrl } = createSection("Key / Scale");
-
       this._rootSelect = document.createElement("select");
       this._rootSelect.className = "wac-select";
       for (let midi = 24; midi <= 35; midi++) {
@@ -164,17 +148,27 @@ export class WebAudioTransportControls extends HTMLElement {
       this._rootSelect.addEventListener("change", onScaleChange);
       this._scaleSelect.addEventListener("change", onScaleChange);
 
-      const keyWrap = createCtrl("Key");
-      keyWrap.appendChild(this._rootSelect);
-      scaleCtrl.appendChild(keyWrap);
-
-      const scaleWrap = createCtrl("Scale");
-      scaleWrap.appendChild(this._scaleSelect);
-      scaleCtrl.appendChild(scaleWrap);
-      controls.appendChild(scaleSec);
+      topRow.appendChild(this._rootSelect);
+      topRow.appendChild(this._scaleSelect);
     }
 
-    // FX unit goes directly in expanded (outside wac-controls), same as instrument panels
+    // Share URL slot — apps can append a button here
+    this._shareSlot = document.createElement("span");
+    this._shareSlot.className = "wac-transport-share-slot";
+    topRow.appendChild(this._shareSlot);
+
+    this.appendChild(topRow);
+
+    // Waveform — always visible
+    const waveform = document.createElement("web-audio-waveform");
+    this.appendChild(waveform);
+
+    // Expanded panel — only Master FX
+    const expanded = document.createElement("div");
+    expanded.className = "wac-expanded";
+    this.appendChild(expanded);
+
+    // FX unit
     this._fxUnit = document.createElement("web-audio-fx-unit");
     expanded.appendChild(this._fxUnit);
 
@@ -202,6 +196,9 @@ export class WebAudioTransportControls extends HTMLElement {
   // ---- Routing ----
 
   get masterGain() { return this._masterGain; }
+
+  /** Slot element where apps can append a share/export button. */
+  get shareSlot() { return this._shareSlot; }
 
   connect(node) {
     this._out?.connect(node.input ?? node);

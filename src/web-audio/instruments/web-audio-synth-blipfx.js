@@ -1,4 +1,5 @@
 import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
+import "../web-audio-step-seq.js";
 import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
 
 /**
@@ -617,11 +618,25 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     { param: "chance",       label: "Chance",     min: 0,    max: 1,    step: 0.01,              tooltip: "Probability this sound fires each step. 1 = always plays." },
   ];
 
+  static DEFAULT_PATTERN() {
+    return Array.from({ length: 16 }, (_, i) => ({
+      active: i % 4 === 0,
+      probability: 0.5,
+      ratchet: 1,
+      conditions: "off",
+    }));
+  }
+
   constructor() {
     super();
     this._shapeSelect = null;
     this._chance = 0.15;
     this._lastStep = -1;
+    this._seq = null;
+
+    // Sequencer position tracking
+    this._globalStep = 0;
+    this._seqPosition = 0;
   }
 
   // ---- Identity overrides ----
@@ -731,6 +746,45 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     actionRow.appendChild(playBtn);
 
     expanded.appendChild(actionRow);
+
+    // ---- Sequencer Speed ----
+    const color = options.color || this._defaultColor();
+    const { el: speedEl, controls: speedCtrl } = createSection("Sequencer");
+    const speedSelect = document.createElement("select");
+    speedSelect.className = "wac-select";
+    [0.5, 1, 2].forEach((val) => {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = val === 0.5 ? "0.5x" : val === 1 ? "1x (Normal)" : "2x";
+      if (val === 1) opt.selected = true;
+      speedSelect.appendChild(opt);
+    });
+    speedSelect.addEventListener("change", () => {
+      this.speedMultiplier = parseFloat(speedSelect.value);
+      this._emitChange();
+    });
+    const speedLabel = document.createElement("label");
+    speedLabel.style.display = "flex";
+    speedLabel.style.gap = "6px";
+    speedLabel.style.alignItems = "center";
+    speedLabel.appendChild(document.createTextNode("Speed:"));
+    speedLabel.appendChild(speedSelect);
+    speedCtrl.appendChild(speedLabel);
+    controls.appendChild(speedEl);
+
+    // Step sequencer (no note selection — probability controls when blips fire)
+    this._seq = document.createElement("web-audio-step-seq");
+    this._seq.init({
+      steps: WebAudioSynthBlipFXControls.DEFAULT_PATTERN(),
+      probability: true,
+      ratchet: true,
+      conditions: true,
+      patternControls: true,
+      color,
+    });
+    expanded.appendChild(this._seq);
+    this._seq.addEventListener("step-change", () => this._emitChange());
+    this._seq.addEventListener("pattern-change", () => this._emitChange());
   }
 
   // ---- Slider input override (chance is stored on controls, not instrument) ----
@@ -767,20 +821,94 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
 
   // ---- Sequencer integration ----
 
-  /** Probabilistic trigger — fires on random steps based on chance slider. */
-  step(index, time) {
-    if (!this._instrument || index === this._lastStep) return;
-    this._lastStep = index;
-    if (Math.random() < this._chance) {
-      this._instrument.randomize();
-      this._syncSliders();
-      this._syncExtraControls();
-      this._instrument.trigger(time);
+  /** Step sequencer trigger — uses grid when available, falls back to chance-based. */
+  step(index, time, stepDurationSec) {
+    if (!this._instrument) return;
+
+    // If no sequencer, use legacy chance-based mode
+    if (!this._seq) {
+      if (index === this._lastStep) return;
+      this._lastStep = index;
+      if (Math.random() < this._chance) {
+        this._instrument.randomize();
+        this._syncSliders();
+        this._syncExtraControls();
+        this._instrument.trigger(time);
+      }
+      return;
+    }
+
+    const multiplier = this.speedMultiplier ?? 1;
+    if (multiplier === 0.5 && index % 2 !== 0) return;
+
+    // Pattern parameters
+    const patternParams = this._seq?.getPatternParams() ?? {};
+    const playEvery = patternParams.playEvery ?? 1;
+    const rotationOffset = patternParams.rotationOffset ?? 0;
+    const rotationIntervalBars = patternParams.rotationIntervalBars ?? 1;
+
+    // Apply rotation physically when local sequencer completes a full cycle
+    if (this._seqPosition > 0 && this._seqPosition % 16 === 0 && rotationOffset > 0) {
+      const localBar = this._seqPosition / 16;
+      if (localBar % rotationIntervalBars === 0) {
+        this._seq.rotate(rotationOffset);
+      }
+    }
+
+    // Bar density
+    const currentBar = Math.floor(this._globalStep / 16);
+    if (currentBar % playEvery !== 0) {
+      this._globalStep++;
+      return;
+    }
+
+    // Advance sequencer position (2x = 2 steps per tick, offset in time)
+    const stepsToAdvance = multiplier === 2 ? 2 : 1;
+    const subStepDur = stepDurationSec / stepsToAdvance;
+    for (let si = 0; si < stepsToAdvance; si++) {
+      const subTime = time + si * subStepDur;
+      const stepIndex = this._seqPosition % 16;
+      const s = this._seq.steps[stepIndex];
+
+      if (s?.active) {
+        if (Math.random() < (s.probability ?? 1)) {
+          if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            // Randomize sound on each trigger
+            this._instrument.randomize();
+            this._syncSliders();
+            this._syncExtraControls();
+
+            const ratchet = s.ratchet ?? 1;
+            if (ratchet > 1) {
+              const ratchetDuration = subStepDur / ratchet;
+              for (let i = 0; i < ratchet; i++) {
+                this._instrument.trigger(subTime + i * ratchetDuration);
+              }
+            } else {
+              this._instrument.trigger(subTime);
+            }
+          }
+        }
+      }
+
+      this._seqPosition++;
+    }
+
+    this._globalStep++;
+  }
+
+  _meetsCondition(condition, barIndex) {
+    switch (condition) {
+      case "off": return true;
+      case "1:2": return barIndex % 2 === 0;
+      case "3:4": return barIndex % 4 === 2;
+      case "fill": return barIndex % 4 === 3;
+      default: return true;
     }
   }
 
   setActiveStep() {
-    /* no step grid to highlight */
+    this._seq?.setActiveStep((this._seqPosition - 1 + 16) % 16);
   }
   setScale() {
     /* no-op — blipfx doesn't use note data */
@@ -816,6 +944,11 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     if (obj.params?.shape != null && this._shapeSelect) {
       this._shapeSelect.value = obj.params.shape;
     }
+    if (obj.steps && this._seq) this._seq.steps = obj.steps;
+  }
+
+  _extendJSON(obj) {
+    obj.steps = this._seq?.steps ?? [];
   }
 }
 

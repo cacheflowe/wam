@@ -1,4 +1,6 @@
 import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
+import "../web-audio-step-seq.js";
+import { scaleNoteOptions, buildChordFromScale } from "../web-audio-scales.js";
 import { WebAudioControlsBase, createSection, createCtrl } from "../web-audio-controls-base.js";
 
 export default class WebAudioSynthPad extends WebAudioInstrumentBase {
@@ -225,11 +227,35 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     { param: "volume",        label: "Vol",       min: 0,    max: 1,     step: 0.01 },
   ];
 
+  static DEFAULT_PATTERN() {
+    const active = new Set([0, 4, 8, 12]);
+    return Array.from({ length: 16 }, (_, i) => ({
+      active: active.has(i),
+      note: 29,
+      probability: 1,
+      ratchet: 1,
+      conditions: "off",
+    }));
+  }
+
+  constructor() {
+    super();
+    this._seq = null;
+    this._rootMidi = 29;
+    this._scaleName = "Minor";
+    this._chordSize = 3;
+
+    // Sequencer position tracking
+    this._globalStep = 0;
+    this._seqPosition = 0;
+  }
+
   _defaultColor() { return "#88f"; }
   _defaultTitle() { return "Pad Synth"; }
   _fxTitle() { return "Pad FX"; }
 
-  _buildControls(controls, expanded, mkSlider) {
+  _buildControls(controls, expanded, mkSlider, ctx, options) {
+    const color = options.color || this._defaultColor();
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
     this._makePresetDropdown(WebAudioSynthPad.PRESETS, toneCtrl);
@@ -273,6 +299,176 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     voiceCtrl.appendChild(mkSlider({ param: "voiceLimit",  label: "V.Limit", min: 0,   max: 16, step: 1 }));
     voiceCtrl.appendChild(mkSlider({ param: "velToFilter", label: "Vel→Flt", min: 0,   max: 1,  step: 0.01 }));
     controls.appendChild(voiceEl);
+
+    // ---- Sequencer Speed ----
+    const { el: speedEl, controls: speedCtrl } = createSection("Sequencer");
+    const speedSelect = document.createElement("select");
+    speedSelect.className = "wac-select";
+    [0.5, 1, 2].forEach((val) => {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = val === 0.5 ? "0.5x" : val === 1 ? "1x (Normal)" : "2x";
+      if (val === 1) opt.selected = true;
+      speedSelect.appendChild(opt);
+    });
+    speedSelect.addEventListener("change", () => {
+      this.speedMultiplier = parseFloat(speedSelect.value);
+      this._emitChange();
+    });
+    const speedLabel = document.createElement("label");
+    speedLabel.style.display = "flex";
+    speedLabel.style.gap = "6px";
+    speedLabel.style.alignItems = "center";
+    speedLabel.appendChild(document.createTextNode("Speed:"));
+    speedLabel.appendChild(speedSelect);
+    speedCtrl.appendChild(speedLabel);
+
+    const chordSizeSelect = document.createElement("select");
+    chordSizeSelect.className = "wac-select";
+    this._chordSizeSelect = chordSizeSelect;
+    [2, 3, 4].forEach((n) => {
+      const opt = document.createElement("option");
+      opt.value = n;
+      opt.textContent = `${n} notes`;
+      if (n === this._chordSize) opt.selected = true;
+      chordSizeSelect.appendChild(opt);
+    });
+    chordSizeSelect.addEventListener("change", () => {
+      this._chordSize = parseInt(chordSizeSelect.value);
+      this._emitChange();
+    });
+    const chordLabel = document.createElement("label");
+    chordLabel.style.display = "flex";
+    chordLabel.style.gap = "6px";
+    chordLabel.style.alignItems = "center";
+    chordLabel.appendChild(document.createTextNode("Chord:"));
+    chordLabel.appendChild(chordSizeSelect);
+    speedCtrl.appendChild(chordLabel);
+    controls.appendChild(speedEl);
+
+    // Randomize button
+    const actionRow = document.createElement("div");
+    actionRow.className = "wac-action-row";
+    const randBtn = document.createElement("button");
+    randBtn.textContent = "\u2684 Randomize";
+    randBtn.className = "wac-action-btn";
+    randBtn.addEventListener("click", () => this.randomize());
+    actionRow.appendChild(randBtn);
+    expanded.appendChild(actionRow);
+
+    // Step sequencer
+    this._seq = document.createElement("web-audio-step-seq");
+    const noteOpts = scaleNoteOptions(this._rootMidi, this._scaleName, 36, 72);
+    this._seq.init({
+      steps: WebAudioSynthPadControls.DEFAULT_PATTERN(),
+      noteOptions: noteOpts,
+      probability: true,
+      ratchet: true,
+      conditions: true,
+      patternControls: true,
+      color,
+    });
+    expanded.appendChild(this._seq);
+    this._seq.addEventListener("step-change", () => this._emitChange());
+    this._seq.addEventListener("pattern-change", () => this._emitChange());
+  }
+
+  // ---- Sequencer integration ----
+
+  step(index, time, stepDurationSec) {
+    if (!this._instrument || !this._seq) return;
+
+    const multiplier = this.speedMultiplier ?? 1;
+    if (multiplier === 0.5 && index % 2 !== 0) return;
+
+    // Pattern parameters
+    const patternParams = this._seq?.getPatternParams() ?? {};
+    const playEvery = patternParams.playEvery ?? 1;
+    const rotationOffset = patternParams.rotationOffset ?? 0;
+    const rotationIntervalBars = patternParams.rotationIntervalBars ?? 1;
+
+    // Apply rotation physically when local sequencer completes a full cycle
+    if (this._seqPosition > 0 && this._seqPosition % 16 === 0 && rotationOffset > 0) {
+      const localBar = this._seqPosition / 16;
+      if (localBar % rotationIntervalBars === 0) {
+        this._seq.rotate(rotationOffset);
+      }
+    }
+
+    // Bar density
+    const currentBar = Math.floor(this._globalStep / 16);
+    if (currentBar % playEvery !== 0) {
+      this._globalStep++;
+      return;
+    }
+
+    // Advance sequencer position (2x = 2 steps per tick, offset in time)
+    const stepsToAdvance = multiplier === 2 ? 2 : 1;
+    const subStepDur = stepDurationSec / stepsToAdvance;
+    for (let si = 0; si < stepsToAdvance; si++) {
+      const subTime = time + si * subStepDur;
+      const stepIndex = this._seqPosition % 16;
+      const s = this._seq.steps[stepIndex];
+
+      if (s?.active) {
+        if (Math.random() < (s.probability ?? 1)) {
+          if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            const chord = buildChordFromScale(s.note, this._scaleName, this._chordSize);
+            const ratchet = s.ratchet ?? 1;
+            if (ratchet > 1) {
+              const ratchetDuration = subStepDur / ratchet;
+              for (let i = 0; i < ratchet; i++) {
+                this._instrument.trigger(chord, ratchetDuration * 0.9, 0.8, subTime + i * ratchetDuration);
+              }
+            } else {
+              this._instrument.trigger(chord, subStepDur, 0.8, subTime);
+            }
+          }
+        }
+      }
+
+      this._seqPosition++;
+    }
+
+    this._globalStep++;
+  }
+
+  _meetsCondition(condition, barIndex) {
+    switch (condition) {
+      case "off": return true;
+      case "1:2": return barIndex % 2 === 0;
+      case "3:4": return barIndex % 4 === 2;
+      case "fill": return barIndex % 4 === 3;
+      default: return true;
+    }
+  }
+
+  setActiveStep() {
+    this._seq?.setActiveStep((this._seqPosition - 1 + 16) % 16);
+  }
+
+  setScale(rootMidi, scaleName) {
+    this._rootMidi = rootMidi;
+    this._scaleName = scaleName;
+    this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 36, 72));
+  }
+
+  randomize() {
+    const noteOpts = scaleNoteOptions(this._rootMidi, this._scaleName, 36, 72);
+    const notes = noteOpts.map(([, midi]) => midi);
+    if (!notes.length) return;
+    const numActive = 2 + Math.floor(Math.random() * 3);
+    const activeSet = new Set([0]);
+    while (activeSet.size < numActive) activeSet.add(Math.floor(Math.random() * 16));
+    const newSteps = Array.from({ length: 16 }, (_, i) => ({
+      active: activeSet.has(i),
+      note: notes[Math.floor(Math.random() * notes.length)],
+      probability: 1,
+      ratchet: 1,
+      conditions: "off",
+    }));
+    if (this._seq) this._seq.steps = newSteps;
+    this._emitChange();
   }
 
   _makeFilterTypeSelect() {
@@ -336,6 +532,11 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     params.lfoDest = this._instrument.lfoDest;
   }
 
+  _extendJSON(obj) {
+    obj.steps = this._seq?.steps ?? [];
+    obj.chordSize = this._chordSize;
+  }
+
   _restoreParam(key, val) {
     switch (key) {
       case "oscType":
@@ -357,6 +558,14 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
       default:
         super._restoreParam(key, val);
     }
+  }
+
+  _restoreExtra(obj) {
+    if (obj.chordSize != null) {
+      this._chordSize = obj.chordSize;
+      if (this._chordSizeSelect) this._chordSizeSelect.value = obj.chordSize;
+    }
+    if (obj.steps && this._seq) this._seq.steps = obj.steps;
   }
 
   _syncExtraControls() {

@@ -22,15 +22,98 @@ import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.
  *   acid.reset(); // clear portamento tracking (call on stop/restart)
  */
 export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
-
   static PRESETS = {
-    Default: { cutoff: 600,  resonance: 18, envMod: 0.6, decay: 0.25, attack: 0.005, distortion: 0,   portamento: 0,    oscType: "sawtooth", volume: 1.0, unisonVoices: 1, unisonDetune: 0 },
-    Squelch: { cutoff: 400,  resonance: 24, envMod: 0.9, decay: 0.18, attack: 0.003, distortion: 0,   portamento: 0,    oscType: "sawtooth", volume: 0.9, unisonVoices: 1, unisonDetune: 0 },
-    Growl:   { cutoff: 300,  resonance: 16, envMod: 0.7, decay: 0.35, attack: 0.008, distortion: 0.4, portamento: 0,    oscType: "sawtooth", volume: 0.85, unisonVoices: 1, unisonDetune: 0 },
-    Smooth:  { cutoff: 800,  resonance: 8,  envMod: 0.4, decay: 0.40, attack: 0.015, distortion: 0,   portamento: 0.05, oscType: "sawtooth", volume: 1.0, unisonVoices: 1, unisonDetune: 0 },
-    Square:  { cutoff: 500,  resonance: 20, envMod: 0.75,decay: 0.20, attack: 0.004, distortion: 0,   portamento: 0,    oscType: "square",   volume: 0.8, unisonVoices: 1, unisonDetune: 0 },
-    Fat:     { cutoff: 500,  resonance: 14, envMod: 0.5, decay: 0.3,  attack: 0.005, distortion: 0.2, portamento: 0,    oscType: "sawtooth", volume: 0.9, unisonVoices: 3, unisonDetune: 15 },
-    Hoover:  { cutoff: 600,  resonance: 10, envMod: 0.5, decay: 0.4,  attack: 0.01,  distortion: 0.3, portamento: 0.08, oscType: "sawtooth", volume: 0.85, unisonVoices: 4, unisonDetune: 30 },
+    Default: {
+      cutoff: 600,
+      resonance: 18,
+      envMod: 0.6,
+      decay: 0.25,
+      attack: 0.005,
+      distortion: 0,
+      portamento: 0,
+      oscType: "sawtooth",
+      volume: 1.0,
+      unisonVoices: 1,
+      unisonDetune: 0,
+    },
+    Squelch: {
+      cutoff: 400,
+      resonance: 24,
+      envMod: 0.9,
+      decay: 0.18,
+      attack: 0.003,
+      distortion: 0,
+      portamento: 0,
+      oscType: "sawtooth",
+      volume: 0.9,
+      unisonVoices: 1,
+      unisonDetune: 0,
+    },
+    Growl: {
+      cutoff: 300,
+      resonance: 16,
+      envMod: 0.7,
+      decay: 0.35,
+      attack: 0.008,
+      distortion: 0.4,
+      portamento: 0,
+      oscType: "sawtooth",
+      volume: 0.85,
+      unisonVoices: 1,
+      unisonDetune: 0,
+    },
+    Smooth: {
+      cutoff: 800,
+      resonance: 8,
+      envMod: 0.4,
+      decay: 0.4,
+      attack: 0.015,
+      distortion: 0,
+      portamento: 0.05,
+      oscType: "sawtooth",
+      volume: 1.0,
+      unisonVoices: 1,
+      unisonDetune: 0,
+    },
+    Square: {
+      cutoff: 500,
+      resonance: 20,
+      envMod: 0.75,
+      decay: 0.2,
+      attack: 0.004,
+      distortion: 0,
+      portamento: 0,
+      oscType: "square",
+      volume: 0.8,
+      unisonVoices: 1,
+      unisonDetune: 0,
+    },
+    Fat: {
+      cutoff: 500,
+      resonance: 14,
+      envMod: 0.5,
+      decay: 0.3,
+      attack: 0.005,
+      distortion: 0.2,
+      portamento: 0,
+      oscType: "sawtooth",
+      volume: 0.9,
+      unisonVoices: 3,
+      unisonDetune: 15,
+    },
+    Hoover: {
+      cutoff: 600,
+      resonance: 10,
+      envMod: 0.5,
+      decay: 0.4,
+      attack: 0.01,
+      distortion: 0.3,
+      portamento: 0.08,
+      oscType: "sawtooth",
+      volume: 0.85,
+      unisonVoices: 4,
+      unisonDetune: 30,
+    },
   };
 
   constructor(ctx, preset = "Default") {
@@ -126,9 +209,7 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
       osc.type = this.oscType;
 
       // Detune spread: symmetric around center
-      const detuneOffset = numVoices > 1
-        ? this.unisonDetune * ((v / (numVoices - 1)) * 2 - 1)
-        : 0;
+      const detuneOffset = numVoices > 1 ? this.unisonDetune * ((v / (numVoices - 1)) * 2 - 1) : 0;
       osc.detune.value = detuneOffset;
 
       // Portamento: slide from previous note's frequency
@@ -145,10 +226,15 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
         vGain.gain.value = voiceGain;
         osc.connect(vGain);
         vGain.connect(dist);
-        osc.onended = () => { osc.disconnect(); vGain.disconnect(); };
+        osc.onended = () => {
+          osc.disconnect();
+          vGain.disconnect();
+        };
       } else {
         osc.connect(dist);
-        osc.onended = () => { osc.disconnect(); };
+        osc.onended = () => {
+          osc.disconnect();
+        };
       }
 
       osc.start(atTime);
@@ -190,27 +276,111 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
  *   controls.step(index, time, stepDurationSec);
  */
 export class WebAudioSynthAcidControls extends WebAudioControlsBase {
-
   static SLIDER_DEFS = [
-    { param: "volume",     label: "Vol",        min: 0,     max: 1,     step: 0.01 },
-    { param: "cutoff",     label: "Cutoff",     min: 50,    max: 10000, step: 1, scale: "log", tooltip: "Base filter cutoff. Lower = darker tone." },
-    { param: "resonance",  label: "Resonance",  min: 0.1,   max: 30,    step: 0.1,             tooltip: "Filter resonance. High values add a nasal peak at the cutoff." },
-    { param: "envMod",     label: "Env Mod",    min: 0,     max: 1,     step: 0.01,            tooltip: "How much the envelope opens the filter. Higher = more 'wah'." },
-    { param: "decay",      label: "Decay",      min: 0.01,  max: 2,     step: 0.01,            tooltip: "Envelope decay time. Sets how quickly the filter closes." },
-    { param: "attack",     label: "Attack",     min: 0.001, max: 0.3,   step: 0.001,           tooltip: "Envelope attack time. Short = sharp pluck, long = swell." },
-    { param: "distortion", label: "Distortion", min: 0,     max: 1,     step: 0.01,            tooltip: "Waveshaper distortion. Adds harmonic grit to the bass." },
-    { param: "portamento", label: "Portamento", min: 0,     max: 0.5,   step: 0.001,           tooltip: "Slide time between notes. 0 = instant pitch change." },
-    { param: "unisonVoices",   label: "Unison",    min: 1,  max: 4,  step: 1,                  tooltip: "Number of detuned oscillator voices stacked together." },
-    { param: "unisonDetune",   label: "Detune",    min: 0,  max: 50, step: 1,                  tooltip: "Pitch spread between unison voices in cents." },
-    { param: "octaveOffset",   label: "Octave",    min: -2, max: 2,  step: 1,                  tooltip: "Shift all notes up or down by octaves." },
-    { param: "octaveJumpProb", label: "Oct Jump",  min: 0,  max: 1,  step: 0.01,               tooltip: "Probability of randomly jumping an octave on each note." },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
+    {
+      param: "cutoff",
+      label: "Cutoff",
+      min: 50,
+      max: 10000,
+      step: 1,
+      scale: "log",
+      tooltip: "Base filter cutoff. Lower = darker tone.",
+    },
+    {
+      param: "resonance",
+      label: "Resonance",
+      min: 0.1,
+      max: 30,
+      step: 0.1,
+      tooltip: "Filter resonance. High values add a nasal peak at the cutoff.",
+    },
+    {
+      param: "envMod",
+      label: "Env Mod",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "How much the envelope opens the filter. Higher = more 'wah'.",
+    },
+    {
+      param: "decay",
+      label: "Decay",
+      min: 0.01,
+      max: 2,
+      step: 0.01,
+      tooltip: "Envelope decay time. Sets how quickly the filter closes.",
+    },
+    {
+      param: "attack",
+      label: "Attack",
+      min: 0.001,
+      max: 0.3,
+      step: 0.001,
+      tooltip: "Envelope attack time. Short = sharp pluck, long = swell.",
+    },
+    {
+      param: "distortion",
+      label: "Distortion",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Waveshaper distortion. Adds harmonic grit to the bass.",
+    },
+    {
+      param: "portamento",
+      label: "Portamento",
+      min: 0,
+      max: 0.5,
+      step: 0.001,
+      tooltip: "Slide time between notes. 0 = instant pitch change.",
+    },
+    {
+      param: "unisonVoices",
+      label: "Unison",
+      min: 1,
+      max: 4,
+      step: 1,
+      tooltip: "Number of detuned oscillator voices stacked together.",
+    },
+    {
+      param: "unisonDetune",
+      label: "Detune",
+      min: 0,
+      max: 50,
+      step: 1,
+      tooltip: "Pitch spread between unison voices in cents.",
+    },
+    {
+      param: "octaveOffset",
+      label: "Octave",
+      min: -2,
+      max: 2,
+      step: 1,
+      tooltip: "Shift all notes up or down by octaves.",
+    },
+    {
+      param: "octaveJumpProb",
+      label: "Oct Jump",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Probability of randomly jumping an octave on each note.",
+    },
   ];
 
   static DEFAULT_PATTERN() {
     const notes = [29, 29, 36, 29, 34, 29, 36, 41, 29, 36, 34, 29, 32, 34, 36, 29];
     const active = new Set([0, 2, 4, 6, 7, 9, 11, 12, 14]);
     const accent = new Set([0, 7, 12]);
-    return notes.map((note, i) => ({ active: active.has(i), note, accent: accent.has(i) }));
+    return notes.map((note, i) => ({
+      active: active.has(i),
+      note,
+      accent: accent.has(i),
+      probability: 1,
+      ratchet: 1,
+      conditions: "off",
+    }));
   }
 
   constructor() {
@@ -219,13 +389,23 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     this._rootMidi = 29;
     this._scaleName = "Minor";
     this._pendingNote = null;
+
+    // Sequencer position tracking
+    this._globalStep = 0;
+    this._seqPosition = 0;
   }
 
   // ---- Base class overrides ----
 
-  _defaultColor() { return "#0f0"; }
-  _defaultTitle() { return "TB-303 Acid"; }
-  _fxTitle() { return "Acid FX"; }
+  _defaultColor() {
+    return "#0f0";
+  }
+  _defaultTitle() {
+    return "TB-303 Acid";
+  }
+  _fxTitle() {
+    return "Acid FX";
+  }
 
   _buildControls(controls, expanded, mkSlider, ctx, options) {
     const color = options.color || this._defaultColor();
@@ -238,34 +418,59 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
 
     // ---- Filter ----
     const { el: filterEl, controls: filterCtrl } = createSection("Filter");
-    filterCtrl.appendChild(mkSlider({ param: "cutoff",    label: "Cutoff",    min: 50,   max: 10000, step: 1,    scale: "log" }));
-    filterCtrl.appendChild(mkSlider({ param: "resonance", label: "Resonance", min: 0.1,  max: 30,    step: 0.1 }));
-    filterCtrl.appendChild(mkSlider({ param: "envMod",    label: "Env Mod",   min: 0,    max: 1,     step: 0.01 }));
+    filterCtrl.appendChild(mkSlider({ param: "cutoff", label: "Cutoff", min: 50, max: 10000, step: 1, scale: "log" }));
+    filterCtrl.appendChild(mkSlider({ param: "resonance", label: "Resonance", min: 0.1, max: 30, step: 0.1 }));
+    filterCtrl.appendChild(mkSlider({ param: "envMod", label: "Env Mod", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(filterEl);
 
     // ---- Envelope ----
     const { el: envEl, controls: envCtrl } = createSection("Envelope");
     envCtrl.appendChild(mkSlider({ param: "attack", label: "Attack", min: 0.001, max: 0.3, step: 0.001 }));
-    envCtrl.appendChild(mkSlider({ param: "decay",  label: "Decay",  min: 0.01,  max: 2,   step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.01, max: 2, step: 0.01 }));
     controls.appendChild(envEl);
 
     // ---- Character ----
     const { el: charEl, controls: charCtrl } = createSection("Character");
-    charCtrl.appendChild(mkSlider({ param: "distortion", label: "Distortion", min: 0, max: 1,   step: 0.01 }));
+    charCtrl.appendChild(mkSlider({ param: "distortion", label: "Distortion", min: 0, max: 1, step: 0.01 }));
     charCtrl.appendChild(mkSlider({ param: "portamento", label: "Portamento", min: 0, max: 0.5, step: 0.001 }));
     controls.appendChild(charEl);
 
     // ---- Unison ----
     const { el: unisonEl, controls: unisonCtrl } = createSection("Unison");
-    unisonCtrl.appendChild(mkSlider({ param: "unisonVoices", label: "Voices", min: 1, max: 4,  step: 1 }));
+    unisonCtrl.appendChild(mkSlider({ param: "unisonVoices", label: "Voices", min: 1, max: 4, step: 1 }));
     unisonCtrl.appendChild(mkSlider({ param: "unisonDetune", label: "Detune", min: 0, max: 50, step: 1 }));
     controls.appendChild(unisonEl);
 
     // ---- Octave ----
     const { el: octEl, controls: octCtrl } = createSection("Octave");
-    octCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Offset",   min: -2, max: 2, step: 1 }));
-    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0,  max: 1, step: 0.01 }));
+    octCtrl.appendChild(mkSlider({ param: "octaveOffset", label: "Offset", min: -2, max: 2, step: 1 }));
+    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(octEl);
+
+    // ---- Sequencer Speed ----
+    const { el: speedEl, controls: speedCtrl } = createSection("Sequencer");
+    const speedSelect = document.createElement("select");
+    speedSelect.className = "wac-select";
+    speedSelect.setAttribute("data-tooltip", "Playback rate multiplier for this instrument");
+    [0.5, 1, 2].forEach((val) => {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = val === 0.5 ? "0.5x" : val === 1 ? "1x (Normal)" : "2x";
+      if (val === 1) opt.selected = true;
+      speedSelect.appendChild(opt);
+    });
+    speedSelect.addEventListener("change", () => {
+      this.speedMultiplier = parseFloat(speedSelect.value);
+      this._emitChange();
+    });
+    const speedLabel = document.createElement("label");
+    speedLabel.style.display = "flex";
+    speedLabel.style.gap = "6px";
+    speedLabel.style.alignItems = "center";
+    speedLabel.appendChild(document.createTextNode("Speed:"));
+    speedLabel.appendChild(speedSelect);
+    speedCtrl.appendChild(speedLabel);
+    controls.appendChild(speedEl);
 
     // Action row — randomize + note buttons
     const actionRow = document.createElement("div");
@@ -292,10 +497,15 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
       steps: WebAudioSynthAcidControls.DEFAULT_PATTERN(),
       noteOptions: noteOpts,
       accent: true,
+      probability: true,
+      ratchet: true,
+      conditions: true,
+      patternControls: true,
       color,
     });
     expanded.appendChild(this._seq);
     this._seq.addEventListener("step-change", () => this._emitChange());
+    this._seq.addEventListener("pattern-change", () => this._emitChange());
   }
 
   // ---- Serialization hooks ----
@@ -333,20 +543,88 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
   /** Called by the host on each sequencer tick. */
   step(index, time, stepDurationSec) {
     if (!this._instrument || !this._seq) return;
-    const steps = this._seq.steps;
-    const s = steps[index];
-    if (s?.active) {
-      this._instrument.trigger(s.note, stepDurationSec, s.accent, time);
+
+    // Speed multiplier: 0.5x skips odd ticks
+    const multiplier = this.speedMultiplier ?? 1;
+    if (multiplier === 0.5 && index % 2 !== 0) return;
+
+    // Pattern parameters
+    const patternParams = this._seq?.getPatternParams() ?? {};
+    const playEvery = patternParams.playEvery ?? 1;
+    const rotationOffset = patternParams.rotationOffset ?? 0;
+    const rotationIntervalBars = patternParams.rotationIntervalBars ?? 1;
+
+    // Apply rotation physically when local sequencer completes a full cycle
+    if (this._seqPosition > 0 && this._seqPosition % 16 === 0 && rotationOffset > 0) {
+      const localBar = this._seqPosition / 16;
+      if (localBar % rotationIntervalBars === 0) {
+        this._seq.rotate(rotationOffset);
+      }
     }
+
+    // Bar density: skip if not a play cycle
+    const currentBar = Math.floor(this._globalStep / 16);
+    if (currentBar % playEvery !== 0) {
+      this._globalStep++;
+      return;
+    }
+
+    // Advance sequencer position (2x = 2 steps per tick, offset in time)
+    const stepsToAdvance = multiplier === 2 ? 2 : 1;
+    const subStepDur = stepDurationSec / stepsToAdvance;
+    for (let si = 0; si < stepsToAdvance; si++) {
+      const subTime = time + si * subStepDur;
+      const stepIndex = this._seqPosition % 16;
+      const s = this._seq.steps[stepIndex];
+
+      if (s?.active) {
+        const probability = s.probability ?? 1;
+        if (Math.random() < probability) {
+          if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            const ratchet = s.ratchet ?? 1;
+            if (ratchet > 1) {
+              const ratchetDuration = subStepDur / ratchet;
+              for (let i = 0; i < ratchet; i++) {
+                this._instrument.trigger(s.note, ratchetDuration * 0.9, s.accent && i === 0, subTime + i * ratchetDuration);
+              }
+            } else {
+              this._instrument.trigger(s.note, subStepDur, s.accent, subTime);
+            }
+          }
+        }
+      }
+
+      this._seqPosition++;
+    }
+
+    // Pending note (keyboard jam)
     if (this._pendingNote !== null) {
       this._instrument.trigger(this._pendingNote, stepDurationSec, false, time);
       this._pendingNote = null;
     }
+
+    this._globalStep++;
+  }
+
+  /** Check if a step meets its condition (e.g., "1:2" = every other bar). */
+  _meetsCondition(condition, barIndex) {
+    switch (condition) {
+      case "off":
+        return true;
+      case "1:2":
+        return barIndex % 2 === 0;
+      case "3:4":
+        return barIndex % 4 === 2;
+      case "fill":
+        return barIndex % 4 === 3;
+      default:
+        return true;
+    }
   }
 
   /** Highlight the currently playing step. */
-  setActiveStep(i) {
-    this._seq?.setActiveStep(i);
+  setActiveStep() {
+    this._seq?.setActiveStep((this._seqPosition - 1 + 16) % 16);
   }
 
   /** Update note options when global scale changes. */

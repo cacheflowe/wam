@@ -31,6 +31,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._pan = null;
     this._panSlider = null;
     this._muteHandle = null;
+    this._speedMultiplier = 1;
   }
 
   // ---- Override points for subclass identity ----
@@ -290,6 +291,7 @@ export class WebAudioControlsBase extends HTMLElement {
       fx: this._fxUnit?.toJSON(),
       muted: this._muteHandle?.isMuted() ?? false,
       pan: this._pan?.pan.value ?? 0,
+      speedMultiplier: this._speedMultiplier,
     };
     this._extendJSON(obj);
     return obj;
@@ -315,6 +317,7 @@ export class WebAudioControlsBase extends HTMLElement {
       this._pan.pan.value = obj.pan;
       if (this._panSlider) this._panSlider.value = obj.pan;
     }
+    if (obj.speedMultiplier != null) this._speedMultiplier = obj.speedMultiplier;
   }
 
   /** Restore a single param. Override for special handling (e.g. oscType → wave buttons). */
@@ -334,6 +337,25 @@ export class WebAudioControlsBase extends HTMLElement {
 
   set bpm(v) {
     if (this._fxUnit) this._fxUnit.bpm = v;
+  }
+
+  get speedMultiplier() {
+    return this._speedMultiplier;
+  }
+
+  set speedMultiplier(v) {
+    this._speedMultiplier = v;
+  }
+
+  /** Reset sequencer playhead to the beginning. Call on transport stop/play. */
+  resetSequencer() {
+    this._globalStep = 0;
+    this._seqPosition = 0;
+  }
+
+  /** Hide or show the step sequencer UI. */
+  set showSequencer(v) {
+    this.toggleAttribute("data-no-sequencer", !v);
   }
 
   connect(node) {

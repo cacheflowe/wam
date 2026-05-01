@@ -225,18 +225,74 @@ export default class WebAudioSynth808 extends WebAudioInstrumentBase {
 
 export class WebAudioSynth808Controls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "volume",             label: "Vol",         min: 0,    max: 1,    step: 0.01 },
-    { param: "decay",              label: "Decay",       min: 0.1,  max: 3,    step: 0.01,  tooltip: "Amplitude decay time. Longer = sustained sub-bass thump." },
-    { param: "pitchSweepSemitones",label: "Pitch Sweep", min: 0,    max: 36,   step: 1,     tooltip: "Starting pitch above target in semitones — creates the 808 pitch drop." },
-    { param: "pitchDecay",         label: "Pitch Decay", min: 0.01, max: 1,    step: 0.01,  tooltip: "How quickly the pitch drop resolves to the target note." },
-    { param: "distortion",         label: "Distortion",  min: 0,    max: 1,    step: 0.01,  tooltip: "Adds saturation and harmonic content to the bass." },
-    { param: "click",              label: "Click",       min: 0,    max: 1,    step: 0.01,  tooltip: "Adds a transient click at note onset for extra punch." },
-    { param: "subOscMix",          label: "Sub Mix",     min: 0,    max: 1,    step: 0.01,  tooltip: "Blend of a sub-octave oscillator beneath the main tone." },
-    { param: "tone",               label: "Tone",        min: 50,   max: 8000, step: 1,     scale: "log", tooltip: "Tone filter cutoff. Lower = rounder, darker bass." },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
+    {
+      param: "decay",
+      label: "Decay",
+      min: 0.1,
+      max: 3,
+      step: 0.01,
+      tooltip: "Amplitude decay time. Longer = sustained sub-bass thump.",
+    },
+    {
+      param: "pitchSweepSemitones",
+      label: "Pitch Sweep",
+      min: 0,
+      max: 36,
+      step: 1,
+      tooltip: "Starting pitch above target in semitones — creates the 808 pitch drop.",
+    },
+    {
+      param: "pitchDecay",
+      label: "Pitch Decay",
+      min: 0.01,
+      max: 1,
+      step: 0.01,
+      tooltip: "How quickly the pitch drop resolves to the target note.",
+    },
+    {
+      param: "distortion",
+      label: "Distortion",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Adds saturation and harmonic content to the bass.",
+    },
+    {
+      param: "click",
+      label: "Click",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Adds a transient click at note onset for extra punch.",
+    },
+    {
+      param: "subOscMix",
+      label: "Sub Mix",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Blend of a sub-octave oscillator beneath the main tone.",
+    },
+    {
+      param: "tone",
+      label: "Tone",
+      min: 50,
+      max: 8000,
+      step: 1,
+      scale: "log",
+      tooltip: "Tone filter cutoff. Lower = rounder, darker bass.",
+    },
   ];
 
   static DEFAULT_PATTERN() {
-    return Array.from({ length: 16 }, (_, i) => ({ active: i === 0 || i === 8, note: 29 }));
+    return Array.from({ length: 16 }, (_, i) => ({
+      active: i === 0 || i === 8,
+      note: 29,
+      probability: 1,
+      ratchet: 1,
+      conditions: "off",
+    }));
   }
 
   constructor() {
@@ -244,16 +300,26 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
     this._seq = null;
     this._rootMidi = 29;
     this._scaleName = "Minor";
+
+    // Sequencer position tracking
+    this._globalStep = 0;
+    this._seqPosition = 0;
   }
 
   // ---- Identity overrides ----
 
-  _defaultColor() { return "#fa0"; }
-  _defaultTitle() { return "808 Bass"; }
+  _defaultColor() {
+    return "#fa0";
+  }
+  _defaultTitle() {
+    return "808 Bass";
+  }
 
   // ---- No FX unit ----
 
-  _createFxUnit() { return null; }
+  _createFxUnit() {
+    return null;
+  }
 
   // ---- Build controls ----
 
@@ -268,17 +334,41 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
 
     // ---- Shape ----
     const { el: shapeEl, controls: shapeCtrl } = createSection("Shape");
-    shapeCtrl.appendChild(mkSlider({ param: "decay",               label: "Decay",       min: 0.1,  max: 3,   step: 0.01 }));
-    shapeCtrl.appendChild(mkSlider({ param: "pitchSweepSemitones", label: "Pitch Sweep", min: 0,    max: 36,  step: 1 }));
-    shapeCtrl.appendChild(mkSlider({ param: "pitchDecay",          label: "Pitch Decay", min: 0.01, max: 1,   step: 0.01 }));
+    shapeCtrl.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.1, max: 3, step: 0.01 }));
+    shapeCtrl.appendChild(mkSlider({ param: "pitchSweepSemitones", label: "Pitch Sweep", min: 0, max: 36, step: 1 }));
+    shapeCtrl.appendChild(mkSlider({ param: "pitchDecay", label: "Pitch Decay", min: 0.01, max: 1, step: 0.01 }));
     controls.appendChild(shapeEl);
 
     // ---- Character ----
     const { el: charEl, controls: charCtrl } = createSection("Character");
     charCtrl.appendChild(mkSlider({ param: "distortion", label: "Distortion", min: 0, max: 1, step: 0.01 }));
-    charCtrl.appendChild(mkSlider({ param: "click",      label: "Click",      min: 0, max: 1, step: 0.01 }));
-    charCtrl.appendChild(mkSlider({ param: "subOscMix",  label: "Sub Mix",    min: 0, max: 1, step: 0.01 }));
+    charCtrl.appendChild(mkSlider({ param: "click", label: "Click", min: 0, max: 1, step: 0.01 }));
+    charCtrl.appendChild(mkSlider({ param: "subOscMix", label: "Sub Mix", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(charEl);
+
+    // ---- Sequencer Speed ----
+    const { el: speedEl, controls: speedCtrl } = createSection("Sequencer");
+    const speedSelect = document.createElement("select");
+    speedSelect.className = "wac-select";
+    [0.5, 1, 2].forEach((val) => {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = val === 0.5 ? "0.5x" : val === 1 ? "1x (Normal)" : "2x";
+      if (val === 1) opt.selected = true;
+      speedSelect.appendChild(opt);
+    });
+    speedSelect.addEventListener("change", () => {
+      this.speedMultiplier = parseFloat(speedSelect.value);
+      this._emitChange();
+    });
+    const speedLabel = document.createElement("label");
+    speedLabel.style.display = "flex";
+    speedLabel.style.gap = "6px";
+    speedLabel.style.alignItems = "center";
+    speedLabel.appendChild(document.createTextNode("Speed:"));
+    speedLabel.appendChild(speedSelect);
+    speedCtrl.appendChild(speedLabel);
+    controls.appendChild(speedEl);
 
     // Randomize button
     const actionRow = document.createElement("div");
@@ -296,24 +386,93 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
     this._seq.init({
       steps: WebAudioSynth808Controls.DEFAULT_PATTERN(),
       noteOptions: noteOpts,
+      probability: true,
+      ratchet: true,
+      conditions: true,
+      patternControls: true,
       color,
     });
     expanded.appendChild(this._seq);
     this._seq.addEventListener("step-change", () => this._emitChange());
+    this._seq.addEventListener("pattern-change", () => this._emitChange());
   }
 
   // ---- Sequencer integration ----
 
   step(index, time, stepDurationSec) {
     if (!this._instrument || !this._seq) return;
-    const s = this._seq.steps[index];
-    if (s?.active) {
-      this._instrument.trigger(s.note, stepDurationSec, time);
+
+    const multiplier = this.speedMultiplier ?? 1;
+    if (multiplier === 0.5 && index % 2 !== 0) return;
+
+    // Pattern parameters
+    const patternParams = this._seq?.getPatternParams() ?? {};
+    const playEvery = patternParams.playEvery ?? 1;
+    const rotationOffset = patternParams.rotationOffset ?? 0;
+    const rotationIntervalBars = patternParams.rotationIntervalBars ?? 1;
+
+    // Apply rotation physically when local sequencer completes a full cycle
+    if (this._seqPosition > 0 && this._seqPosition % 16 === 0 && rotationOffset > 0) {
+      const localBar = this._seqPosition / 16;
+      if (localBar % rotationIntervalBars === 0) {
+        this._seq.rotate(rotationOffset);
+      }
+    }
+
+    // Bar density
+    const currentBar = Math.floor(this._globalStep / 16);
+    if (currentBar % playEvery !== 0) {
+      this._globalStep++;
+      return;
+    }
+
+    // Advance sequencer position (2x = 2 steps per tick, offset in time)
+    const stepsToAdvance = multiplier === 2 ? 2 : 1;
+    const subStepDur = stepDurationSec / stepsToAdvance;
+    for (let si = 0; si < stepsToAdvance; si++) {
+      const subTime = time + si * subStepDur;
+      const stepIndex = this._seqPosition % 16;
+      const s = this._seq.steps[stepIndex];
+
+      if (s?.active) {
+        if (Math.random() < (s.probability ?? 1)) {
+          if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            const ratchet = s.ratchet ?? 1;
+            if (ratchet > 1) {
+              const ratchetDuration = subStepDur / ratchet;
+              for (let i = 0; i < ratchet; i++) {
+                this._instrument.trigger(s.note, ratchetDuration * 0.9, subTime + i * ratchetDuration);
+              }
+            } else {
+              this._instrument.trigger(s.note, subStepDur, subTime);
+            }
+          }
+        }
+      }
+
+      this._seqPosition++;
+    }
+
+    this._globalStep++;
+  }
+
+  _meetsCondition(condition, barIndex) {
+    switch (condition) {
+      case "off":
+        return true;
+      case "1:2":
+        return barIndex % 2 === 0;
+      case "3:4":
+        return barIndex % 4 === 2;
+      case "fill":
+        return barIndex % 4 === 3;
+      default:
+        return true;
     }
   }
 
-  setActiveStep(i) {
-    this._seq?.setActiveStep(i);
+  setActiveStep() {
+    this._seq?.setActiveStep((this._seqPosition - 1 + 16) % 16);
   }
 
   setScale(rootMidi, scaleName) {
