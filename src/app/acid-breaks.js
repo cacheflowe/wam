@@ -4,6 +4,9 @@ import WebAudioSynth808 from "../web-audio/instruments/web-audio-synth-808.js";
 import WebAudioSynthBlipFX from "../web-audio/instruments/web-audio-synth-blipfx.js";
 import WebAudioBreakPlayer from "../web-audio/instruments/web-audio-break-player.js";
 import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
+import WebAudioPercKick from "../web-audio/instruments/web-audio-perc-kick.js";
+import WebAudioPercHihat from "../web-audio/instruments/web-audio-perc-hihat.js";
+import WebAudioPercSnare from "../web-audio/instruments/web-audio-perc-snare.js";
 import "../web-audio/web-audio-transport.js";
 
 const BASE_PATH = "/audio/breaks/";
@@ -25,6 +28,9 @@ class WebAudioAcid extends HTMLElement {
     this._break = null;
     this._blipfx = null;
     this._fmSynth = null;
+    this._kick = null;
+    this._hihat = null;
+    this._snare = null;
     this._seq = null;
     this._globalStep = 0;
     this._saveTimer = null;
@@ -35,6 +41,9 @@ class WebAudioAcid extends HTMLElement {
     this._fmControls = null;
     this._blipfxControls = null;
     this._breakControls = null;
+    this._kickControls = null;
+    this._hihatControls = null;
+    this._snareControls = null;
 
     this.buildUI();
     this.addCSS();
@@ -73,6 +82,9 @@ class WebAudioAcid extends HTMLElement {
       this._808Controls?.resetSequencer();
       this._fmControls?.resetSequencer();
       this._blipfxControls?.resetSequencer();
+      this._kickControls?.resetSequencer();
+      this._hihatControls?.resetSequencer();
+      this._snareControls?.resetSequencer();
     });
     this._transport.addEventListener("transport-stop", () => {
       this._break?.stop();
@@ -81,10 +93,16 @@ class WebAudioAcid extends HTMLElement {
       this._fmControls?.setActiveStep(-1);
       this._blipfxControls?.setActiveStep(-1);
       this._breakControls?.setActiveStep(-1);
+      this._kickControls?.setActiveStep(-1);
+      this._hihatControls?.setActiveStep(-1);
+      this._snareControls?.setActiveStep(-1);
       this._acidControls?.resetSequencer();
       this._808Controls?.resetSequencer();
       this._fmControls?.resetSequencer();
       this._blipfxControls?.resetSequencer();
+      this._kickControls?.resetSequencer();
+      this._hihatControls?.resetSequencer();
+      this._snareControls?.resetSequencer();
     });
 
     // TB-303 acid
@@ -128,12 +146,30 @@ class WebAudioAcid extends HTMLElement {
     });
     this._fmControls.connect(this._transport.masterGain);
 
+    // Kick
+    this._kick = new WebAudioPercKick(this._ctx);
+    this._kickControls.bind(this._kick, this._ctx, { color: "#f44", fx: { bpm: 128 } });
+    this._kickControls.connect(this._transport.masterGain);
+
+    // Hi-Hat
+    this._hihat = new WebAudioPercHihat(this._ctx);
+    this._hihatControls.bind(this._hihat, this._ctx, { color: "#ff0", fx: { bpm: 128 } });
+    this._hihatControls.connect(this._transport.masterGain);
+
+    // Snare
+    this._snare = new WebAudioPercSnare(this._ctx);
+    this._snareControls.bind(this._snare, this._ctx, { color: "#f80", fx: { bpm: 128 } });
+    this._snareControls.connect(this._transport.masterGain);
+
     // Register instruments for BPM + scale broadcast
     this._transport.registerInstrument(this._acidControls);
     this._transport.registerInstrument(this._808Controls);
     this._transport.registerInstrument(this._fmControls);
     this._transport.registerInstrument(this._blipfxControls);
     this._transport.registerInstrument(this._breakControls);
+    this._transport.registerInstrument(this._kickControls);
+    this._transport.registerInstrument(this._hihatControls);
+    this._transport.registerInstrument(this._snareControls);
 
     // Push initial scale to all instruments
     this._transport.broadcastScale();
@@ -152,6 +188,9 @@ class WebAudioAcid extends HTMLElement {
       this._808Controls.step(step, time, dur);
       this._fmControls.step(step, time, dur);
       this._blipfxControls.step(step, time, dur);
+      this._kickControls.step(step, time, dur);
+      this._hihatControls.step(step, time, dur);
+      this._snareControls.step(step, time, dur);
       this._breakControls.step(this._globalStep, this._transport.bpm, time);
 
       const uiDelay = Math.max(0, (time - this._ctx.currentTime) * 1000);
@@ -160,6 +199,9 @@ class WebAudioAcid extends HTMLElement {
         this._808Controls.setActiveStep(step);
         this._fmControls.setActiveStep(step);
         this._blipfxControls.setActiveStep(step);
+        this._kickControls.setActiveStep(step);
+        this._hihatControls.setActiveStep(step);
+        this._snareControls.setActiveStep(step);
       }, uiDelay);
       this._globalStep++;
     });
@@ -213,6 +255,9 @@ class WebAudioAcid extends HTMLElement {
       fm: this._fmControls?.toJSON(),
       blipfx: this._blipfxControls?.toJSON(),
       break: this._breakControls?.toJSON(),
+      kick: this._kickControls?.toJSON(),
+      hihat: this._hihatControls?.toJSON(),
+      snare: this._snareControls?.toJSON(),
       masterFx: t?.fx,
     };
   }
@@ -232,6 +277,9 @@ class WebAudioAcid extends HTMLElement {
     if (state.fm) this._fmControls?.fromJSON(state.fm);
     if (state.blipfx || state.zzfx) this._blipfxControls?.fromJSON(state.blipfx ?? state.zzfx);
     if (state.break) this._breakControls?.fromJSON(state.break);
+    if (state.kick) this._kickControls?.fromJSON(state.kick);
+    if (state.hihat) this._hihatControls?.fromJSON(state.hihat);
+    if (state.snare) this._snareControls?.fromJSON(state.snare);
   }
 
   _debouncedSave() {
@@ -304,6 +352,27 @@ class WebAudioAcid extends HTMLElement {
     this._breakControls = document.createElement("web-audio-break-player-controls");
     breakGroup.appendChild(this._breakControls);
 
+    // ---- Kick group ----
+    const kickGroup = document.createElement("div");
+    kickGroup.className = "instrument-group kick-group";
+    this.appendChild(kickGroup);
+    this._kickControls = document.createElement("web-audio-perc-kick-controls");
+    kickGroup.appendChild(this._kickControls);
+
+    // ---- Snare group ----
+    const snareGroup = document.createElement("div");
+    snareGroup.className = "instrument-group snare-group";
+    this.appendChild(snareGroup);
+    this._snareControls = document.createElement("web-audio-perc-snare-controls");
+    snareGroup.appendChild(this._snareControls);
+
+    // ---- Hi-Hat group ----
+    const hihatGroup = document.createElement("div");
+    hihatGroup.className = "instrument-group hihat-group";
+    this.appendChild(hihatGroup);
+    this._hihatControls = document.createElement("web-audio-perc-hihat-controls");
+    hihatGroup.appendChild(this._hihatControls);
+
     // ---- 808 group ----
     const g808 = document.createElement("div");
     g808.className = "instrument-group bass808-group";
@@ -356,6 +425,9 @@ class WebAudioAcid extends HTMLElement {
 
       /* Per-instrument accent colors */
       .break-group    { --fx-accent: #0cc; }
+      .kick-group     { --fx-accent: #f44; }
+      .snare-group    { --fx-accent: #f80; }
+      .hihat-group    { --fx-accent: #ff0; }
       .bass808-group  { --fx-accent: #fa0; }
       .chord-fm-group { --fx-accent: #4af; }
       .blipfx-group   { --fx-accent: #c0f; }
