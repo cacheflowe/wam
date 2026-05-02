@@ -57,8 +57,8 @@ Build a library of browser-based instruments that are:
 | Responsive volume / overload protection | Medium | See **Responsive Volume** section below |
 | Acid-breaks UI grid layout | Medium | Container queries for responsive panel grid; see **Layout** section below |
 | Pattern evolution tools | Medium | Slow morph / mutation of sequences over time; see **Pattern Evolution** section below |
-| **Jam buttons in channel strip** | Medium | Move manual trigger buttons to channel strip for easy access; see **Jam & Randomize Buttons** section below |
 | **Auto-normalization / gain staging** | Medium | Per-instrument default volumes and red-line protection; see **Auto-Normalization** section below |
+| **Jam buttons in channel strip** | Medium | Move manual trigger buttons to channel strip for easy access; see **Jam & Randomize Buttons** section below |
 | **BlipFX lock sound toggle** | Low | Toggle to disable per-trigger randomization so you can keep a sound; see **BlipFX Random Sound** section below |
 | Per-instrument product specs | Medium | Fill out individual spec files in [product-specs/](../product-specs/) |
 | MIDI learn | Medium | See **MIDI** section below |

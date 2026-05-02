@@ -1,7 +1,7 @@
-import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
-import "../web-audio-step-seq.js";
-import { STEP_WEIGHTS } from "../web-audio-scales.js";
-import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
+import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
+import "../ui/web-audio-step-seq.js";
+import { STEP_WEIGHTS } from "../global/web-audio-scales.js";
+import { WebAudioControlsBase, createSection } from "../ui/web-audio-controls-base.js";
 
 /**
  * WebAudioPercSnare — layered snare drum with tone body, noise snap, and snare buzz.

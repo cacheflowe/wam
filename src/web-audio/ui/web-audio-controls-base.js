@@ -362,6 +362,10 @@ export class WebAudioControlsBase extends HTMLElement {
     (this._pan ?? this._out)?.connect(node.input ?? node);
     return this;
   }
+
+  disconnect() {
+    (this._pan ?? this._out)?.disconnect();
+  }
 }
 
 // Re-export UI helpers for subclass use

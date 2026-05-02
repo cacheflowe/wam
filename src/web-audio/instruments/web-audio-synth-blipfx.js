@@ -1,6 +1,6 @@
-import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
-import "../web-audio-step-seq.js";
-import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
+import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
+import "../ui/web-audio-step-seq.js";
+import { WebAudioControlsBase, createSection } from "../ui/web-audio-controls-base.js";
 
 /**
  * WebAudioSynthBlipFX — procedural sound effect synthesizer.

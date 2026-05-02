@@ -24,9 +24,9 @@ import WebAudioFxReverb from "./web-audio-fx-reverb.js";
 import WebAudioFxDelay from "./web-audio-fx-delay.js";
 import WebAudioFxChorus from "./web-audio-fx-chorus.js";
 import WebAudioFxFilter from "./web-audio-fx-filter.js";
-import "../web-audio-slider.js";
-import "../web-audio-filter-sweep.js";
-import { injectControlsCSS, createSection, createCtrl } from "../web-audio-slider.js";
+import "../ui/web-audio-slider.js";
+import "../ui/web-audio-filter-sweep.js";
+import { injectControlsCSS, createSection, createCtrl } from "../ui/web-audio-slider.js";
 
 // Set to false to start FX units expanded by default.
 const FX_UNIT_COLLAPSED_DEFAULT = true;

@@ -1,23 +1,55 @@
 import WebAudioVocoder from "../web-audio/instruments/web-audio-vocoder.js";
-import "../web-audio/web-audio-waveform.js";
+import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
+import WebAudioSynthMono from "../web-audio/instruments/web-audio-synth-mono.js";
+import "../web-audio/ui/web-audio-waveform.js";
+import "../web-audio/ui/web-audio-level-meter.js";
 
 // QWERTY piano — two rows covering C3 to E4
 const KEY_NOTE_MAP = {
-  a: 48, w: 49, s: 50, e: 51, d: 52, f: 53, t: 54,
-  g: 55, y: 56, h: 57, u: 58, j: 59, k: 60,
-  o: 61, l: 62, p: 63, ";": 64,
+  a: 48,
+  w: 49,
+  s: 50,
+  e: 51,
+  d: 52,
+  f: 53,
+  t: 54,
+  g: 55,
+  y: 56,
+  h: 57,
+  u: 58,
+  j: 59,
+  k: 60,
+  o: 61,
+  l: 62,
+  p: 63,
+  ";": 64,
 };
 
-const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-function midiToFreq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
-function midiToName(midi) { return NOTE_NAMES[midi % 12] + Math.floor(midi / 12 - 1); }
+function midiToFreq(midi) {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+function midiToName(midi) {
+  return NOTE_NAMES[midi % 12] + Math.floor(midi / 12 - 1);
+}
 
 class VocoderApp extends HTMLElement {
   connectedCallback() {
     this._ctx = null;
     this._vocoder = null;
     this._activeKeys = new Set();
+    this._micAnalyser = null;
+
+    // Carrier mode: "builtin" | "fm" | "mono"
+    this._carrierMode = "builtin";
+    this._builtinCarrierType = "sawtooth";
+    this._fmCarrier = null;
+    this._monoCarrier = null;
+    this._fmControls = null;
+    this._monoControls = null;
+    this._externalCarrierNode = null;
+
     this.buildUI();
     this.addCSS();
     this._setupKeyboard();
@@ -26,12 +58,11 @@ class VocoderApp extends HTMLElement {
   // ---- Audio ----
 
   _initAudio() {
-    if (this._ctx) return;
-    this._ctx = new AudioContext();
+    if (this._vocoder) return;
+    if (!this._ctx) this._ctx = new AudioContext({ latencyHint: "interactive" });
     this._vocoder = new WebAudioVocoder(this._ctx);
     this._vocoder.connect(this._ctx.destination);
 
-    // Wire waveform to output
     const analyser = this._ctx.createAnalyser();
     analyser.fftSize = 2048;
     this._vocoder._out.connect(analyser);
@@ -40,11 +71,13 @@ class VocoderApp extends HTMLElement {
 
   async _toggleMic() {
     this._initAudio();
+    if (!this._vocoder) return;
     if (this._vocoder.micActive) {
       this._vocoder.stopMic();
       this._micBtn.textContent = "🎤 Connect Mic";
       this._micBtn.classList.remove("vc-active");
       this._micStatus.textContent = "Mic off";
+      this._micStatus.classList.remove("vc-mic-on");
     } else {
       this._micBtn.textContent = "Connecting…";
       this._micBtn.disabled = true;
@@ -54,6 +87,7 @@ class VocoderApp extends HTMLElement {
         this._micBtn.classList.add("vc-active");
         this._micStatus.textContent = "Mic active";
         this._micStatus.classList.add("vc-mic-on");
+        this._connectMicMeter();
       } catch (err) {
         this._micBtn.textContent = "🎤 Connect Mic";
         this._micStatus.textContent = `Mic error: ${err.message}`;
@@ -62,8 +96,17 @@ class VocoderApp extends HTMLElement {
     }
   }
 
+  _connectMicMeter() {
+    if (this._micAnalyser) return;
+    this._micAnalyser = this._ctx.createAnalyser();
+    this._micAnalyser.fftSize = 1024;
+    this._vocoder._inputGain.connect(this._micAnalyser);
+    this.querySelector("#micMeter").setAnalyser(this._micAnalyser);
+  }
+
   _togglePlay() {
     this._initAudio();
+    if (!this._vocoder) return;
     if (this._vocoder.playing) {
       this._vocoder.stop();
       this._playBtn.textContent = "▶ Play";
@@ -76,6 +119,92 @@ class VocoderApp extends HTMLElement {
     }
   }
 
+  // ---- Carrier mode ----
+
+  _setCarrierMode(mode) {
+    if (this._carrierMode === mode) return;
+    this._initAudio();
+    if (!this._vocoder) return;
+
+    // Disconnect previous external carrier from vocoder
+    if (this._externalCarrierNode) {
+      try {
+        this._externalCarrierNode.disconnect(this._vocoder.carrierInput);
+      } catch (_) {}
+      this._externalCarrierNode = null;
+    }
+
+    this._carrierMode = mode;
+
+    const builtinControls = this.querySelector("#builtinControls");
+    const extPanel = this.querySelector("#extCarrierPanel");
+
+    if (mode === "builtin") {
+      this._vocoder.carrierType = this._builtinCarrierType;
+      builtinControls.style.display = "";
+      extPanel.style.display = "none";
+    } else {
+      this._vocoder.carrierType = "external";
+      builtinControls.style.display = "none";
+      extPanel.style.display = "";
+      this._activateExternalCarrier(mode);
+    }
+
+    // Update source button states
+    this.querySelectorAll(".vc-src-btn").forEach((b) => b.classList.toggle("vc-src-active", b.dataset.source === mode));
+  }
+
+  _activateExternalCarrier(mode) {
+    const panel = this.querySelector("#extCarrierPanel");
+
+    if (mode === "fm") {
+      if (!this._fmCarrier) {
+        this._fmCarrier = new WebAudioSynthFM(this._ctx);
+        this._fmControls = document.createElement("web-audio-synth-fm-controls");
+        panel.innerHTML = `<div class="vc-ext-label">FM Synth Carrier</div>`;
+        panel.appendChild(this._fmControls);
+        this._fmControls.bind(this._fmCarrier, this._ctx, { color: "#4df", fx: { bpm: 120 } });
+      }
+      this._fmCarrier._out.connect(this._vocoder.carrierInput);
+      this._externalCarrierNode = this._fmCarrier._out;
+    } else if (mode === "mono") {
+      if (!this._monoCarrier) {
+        this._monoCarrier = new WebAudioSynthMono(this._ctx);
+        this._monoControls = document.createElement("web-audio-synth-mono-controls");
+        panel.innerHTML = `<div class="vc-ext-label">Mono Synth Carrier</div>`;
+        panel.appendChild(this._monoControls);
+        this._monoControls.bind(this._monoCarrier, this._ctx, { color: "#6df", fx: { bpm: 120 } });
+      }
+      this._monoCarrier._out.connect(this._vocoder.carrierInput);
+      this._externalCarrierNode = this._monoCarrier._out;
+    }
+  }
+
+  // ---- Carrier note trigger ----
+
+  _triggerCarrierNote(midi) {
+    if (!this._vocoder) return;
+    if (this._ctx.state === "suspended") this._ctx.resume();
+    if (!this._vocoder.playing) {
+      this._vocoder.play();
+      this._playBtn.textContent = "◼ Stop";
+      this._playBtn.classList.add("vc-active");
+    }
+    const now = this._ctx.currentTime;
+    if (this._carrierMode === "builtin") {
+      const hz = midiToFreq(midi);
+      this._vocoder.carrierFreq = hz;
+      this._syncPitchFromFreq(hz);
+    } else if (this._carrierMode === "fm" && this._fmCarrier) {
+      this._fmCarrier.trigger([midi], 4.0, now);
+    } else if (this._carrierMode === "mono" && this._monoCarrier) {
+      this._monoCarrier.trigger(midi, 4.0, 0.8, now);
+    }
+    const name = midiToName(midi);
+    const hz = Math.round(midiToFreq(midi));
+    this.querySelector("#noteDisplay").textContent = `${name} · ${hz} Hz`;
+  }
+
   // ---- Keyboard jam ----
 
   _setupKeyboard() {
@@ -83,14 +212,16 @@ class VocoderApp extends HTMLElement {
       if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
       if (e.repeat) return;
       const key = e.key.toLowerCase();
-      if (key === " ") { e.preventDefault(); this._togglePlay(); return; }
+      if (key === " ") {
+        e.preventDefault();
+        this._togglePlay();
+        return;
+      }
       const midi = KEY_NOTE_MAP[key];
       if (midi == null) return;
       this._initAudio();
-      if (this._ctx.state === "suspended") this._ctx.resume();
       this._activeKeys.add(key);
-      this._vocoder.carrierFreq = midiToFreq(midi);
-      this._syncPitchFromFreq(midiToFreq(midi));
+      this._triggerCarrierNote(midi);
       this._highlightKey(key, true);
     });
 
@@ -114,13 +245,14 @@ class VocoderApp extends HTMLElement {
   // ---- UI ----
 
   buildUI() {
-    this.innerHTML = /* html */`
+    this.innerHTML = /* html */ `
       <div class="vc-layout">
 
         <header class="vc-header">
           <h2>🎙 Vocoder</h2>
           <div class="vc-transport">
             <button class="vc-btn vc-mic-btn" id="micBtn">🎤 Connect Mic</button>
+            <web-audio-level-meter id="micMeter"></web-audio-level-meter>
             <span class="vc-mic-status" id="micStatus">Mic off</span>
             <button class="vc-btn vc-play-btn" id="playBtn">▶ Play</button>
           </div>
@@ -131,20 +263,29 @@ class VocoderApp extends HTMLElement {
           <!-- Left: carrier + pitch -->
           <section class="vc-section">
             <div class="vc-section-title">Carrier</div>
-            <div class="vc-carrier-row" id="carrierRow">
-              <button class="vc-wave-btn vc-wave-active" data-type="sawtooth">SAW</button>
-              <button class="vc-wave-btn" data-type="square">SQR</button>
-              <button class="vc-wave-btn" data-type="triangle">TRI</button>
-              <button class="vc-wave-btn" data-type="sine">SIN</button>
-              <button class="vc-wave-btn" data-type="noise">NOI</button>
+
+            <div class="vc-source-row" id="sourceRow">
+              <button class="vc-src-btn vc-src-active" data-source="builtin">BUILT-IN</button>
+              <button class="vc-src-btn" data-source="fm">FM SYNTH</button>
+              <button class="vc-src-btn" data-source="mono">MONO SYNTH</button>
             </div>
 
-            <label class="vc-label">
-              <span>Pitch</span>
-              <span class="vc-val" id="pitchLabel">220 Hz</span>
-            </label>
-            <input type="range" class="vc-range" id="pitchSlider"
-              min="0" max="1" step="0.001" value="0.317">
+            <div id="builtinControls">
+              <div class="vc-carrier-row" id="carrierRow">
+                <button class="vc-wave-btn vc-wave-active" data-type="sawtooth">SAW</button>
+                <button class="vc-wave-btn" data-type="square">SQR</button>
+                <button class="vc-wave-btn" data-type="triangle">TRI</button>
+                <button class="vc-wave-btn" data-type="sine">SIN</button>
+                <button class="vc-wave-btn" data-type="noise">NOI</button>
+              </div>
+
+              <label class="vc-label">
+                <span>Pitch</span>
+                <span class="vc-val" id="pitchLabel">220 Hz</span>
+              </label>
+              <input type="range" class="vc-range" id="pitchSlider"
+                min="0" max="1" step="0.001" value="0.317">
+            </div>
 
             <label class="vc-label">
               <span>Formant</span>
@@ -163,7 +304,14 @@ class VocoderApp extends HTMLElement {
               <span class="vc-val" id="sensitivityLabel">10</span>
             </label>
             <input type="range" class="vc-range" id="sensitivitySlider"
-              min="1" max="60" step="0.5" value="10">
+              min="1" max="200" step="1" value="10">
+
+            <label class="vc-label">
+              <span>Gate</span>
+              <span class="vc-val" id="gateLabel">0.05</span>
+            </label>
+            <input type="range" class="vc-range" id="gateSlider"
+              min="0" max="0.3" step="0.005" value="0.05">
 
             <label class="vc-label">
               <span>Env Speed</span>
@@ -189,12 +337,15 @@ class VocoderApp extends HTMLElement {
 
           <!-- Right: keyboard -->
           <section class="vc-section vc-kb-section">
-            <div class="vc-section-title">Keyboard <span class="vc-hint">(hold to play carrier)</span></div>
+            <div class="vc-section-title">Keyboard <span class="vc-hint">(triggers carrier)</span></div>
             <div class="vc-keyboard" id="keyboard"></div>
             <div class="vc-note-display" id="noteDisplay">A3 · 220 Hz</div>
           </section>
 
         </div>
+
+        <!-- External carrier instrument controls (shown when FM / MONO selected) -->
+        <div id="extCarrierPanel" style="display:none"></div>
 
         <web-audio-waveform id="waveform" class="vc-waveform"></web-audio-waveform>
       </div>
@@ -213,20 +364,28 @@ class VocoderApp extends HTMLElement {
     this._buildKeyboard();
     this._wireSliders();
     this._wireCarrierButtons();
+    this._wireSourceButtons();
   }
 
   _buildKeyboard() {
     const kb = this.querySelector("#keyboard");
-    // Two-octave layout: C3–E4
     const layout = [
-      { key: "a", midi: 48, black: false }, { key: "w", midi: 49, black: true  },
-      { key: "s", midi: 50, black: false }, { key: "e", midi: 51, black: true  },
-      { key: "d", midi: 52, black: false }, { key: "f", midi: 53, black: false },
-      { key: "t", midi: 54, black: true  }, { key: "g", midi: 55, black: false },
-      { key: "y", midi: 56, black: true  }, { key: "h", midi: 57, black: false },
-      { key: "u", midi: 58, black: true  }, { key: "j", midi: 59, black: false },
-      { key: "k", midi: 60, black: false }, { key: "o", midi: 61, black: true  },
-      { key: "l", midi: 62, black: false }, { key: "p", midi: 63, black: true  },
+      { key: "a", midi: 48, black: false },
+      { key: "w", midi: 49, black: true },
+      { key: "s", midi: 50, black: false },
+      { key: "e", midi: 51, black: true },
+      { key: "d", midi: 52, black: false },
+      { key: "f", midi: 53, black: false },
+      { key: "t", midi: 54, black: true },
+      { key: "g", midi: 55, black: false },
+      { key: "y", midi: 56, black: true },
+      { key: "h", midi: 57, black: false },
+      { key: "u", midi: 58, black: true },
+      { key: "j", midi: 59, black: false },
+      { key: "k", midi: 60, black: false },
+      { key: "o", midi: 61, black: true },
+      { key: "l", midi: 62, black: false },
+      { key: "p", midi: 63, black: true },
       { key: ";", midi: 64, black: false },
     ];
 
@@ -239,33 +398,34 @@ class VocoderApp extends HTMLElement {
 
       btn.addEventListener("mousedown", () => {
         this._initAudio();
-        if (this._ctx.state === "suspended") this._ctx.resume();
-        this._vocoder?.play();
-        this._vocoder.carrierFreq = midiToFreq(midi);
-        this._syncPitchFromFreq(midiToFreq(midi));
-        this.querySelector("#noteDisplay").textContent = `${midiToName(midi)} · ${Math.round(midiToFreq(midi))} Hz`;
+        this._activeKeys.add(key);
+        this._triggerCarrierNote(midi);
         btn.classList.add("vc-key-active");
       });
-      btn.addEventListener("mouseup",   () => btn.classList.remove("vc-key-active"));
-      btn.addEventListener("mouseleave",() => btn.classList.remove("vc-key-active"));
+      btn.addEventListener("mouseup", () => {
+        this._activeKeys.delete(key);
+        btn.classList.remove("vc-key-active");
+      });
+      btn.addEventListener("mouseleave", () => {
+        this._activeKeys.delete(key);
+        btn.classList.remove("vc-key-active");
+      });
 
       kb.appendChild(btn);
     });
   }
 
   _wireSliders() {
-    // Pitch (log scale 20–20000 Hz, normalized 0–1)
     const pitchEl = this.querySelector("#pitchSlider");
     const pitchLbl = this.querySelector("#pitchLabel");
-    const sliderToHz = v => 20 * Math.pow(20000 / 20, parseFloat(v));
+    const sliderToHz = (v) => 20 * Math.pow(20000 / 20, parseFloat(v));
     pitchEl.addEventListener("input", () => {
       const hz = sliderToHz(pitchEl.value);
       pitchLbl.textContent = `${Math.round(hz)} Hz`;
       this.querySelector("#noteDisplay").textContent = `${Math.round(hz)} Hz`;
-      if (this._vocoder) this._vocoder.carrierFreq = hz;
+      if (this._vocoder && this._carrierMode === "builtin") this._vocoder.carrierFreq = hz;
     });
 
-    // Formant shift
     const formantEl = this.querySelector("#formantSlider");
     const formantLbl = this.querySelector("#formantLabel");
     formantEl.addEventListener("input", () => {
@@ -274,7 +434,6 @@ class VocoderApp extends HTMLElement {
       if (this._vocoder) this._vocoder.formantShift = v;
     });
 
-    // Sensitivity
     const sensEl = this.querySelector("#sensitivitySlider");
     const sensLbl = this.querySelector("#sensitivityLabel");
     sensEl.addEventListener("input", () => {
@@ -283,7 +442,14 @@ class VocoderApp extends HTMLElement {
       if (this._vocoder) this._vocoder.sensitivity = v;
     });
 
-    // Env speed
+    const gateEl = this.querySelector("#gateSlider");
+    const gateLbl = this.querySelector("#gateLabel");
+    gateEl.addEventListener("input", () => {
+      const v = parseFloat(gateEl.value);
+      gateLbl.textContent = v.toFixed(3);
+      if (this._vocoder) this._vocoder.gate = v;
+    });
+
     const envEl = this.querySelector("#envSpeedSlider");
     const envLbl = this.querySelector("#envSpeedLabel");
     envEl.addEventListener("input", () => {
@@ -292,7 +458,6 @@ class VocoderApp extends HTMLElement {
       if (this._vocoder) this._vocoder.envSpeed = v;
     });
 
-    // Filter Q
     const qEl = this.querySelector("#filterQSlider");
     const qLbl = this.querySelector("#filterQLabel");
     qEl.addEventListener("input", () => {
@@ -301,7 +466,6 @@ class VocoderApp extends HTMLElement {
       if (this._vocoder) this._vocoder.filterQ = v;
     });
 
-    // Volume
     const volEl = this.querySelector("#volumeSlider");
     const volLbl = this.querySelector("#volumeLabel");
     volEl.addEventListener("input", () => {
@@ -313,14 +477,25 @@ class VocoderApp extends HTMLElement {
 
   _wireCarrierButtons() {
     const row = this.querySelector("#carrierRow");
-    row.querySelectorAll(".vc-wave-btn").forEach(btn => {
+    row.querySelectorAll(".vc-wave-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        row.querySelectorAll(".vc-wave-btn").forEach(b => b.classList.remove("vc-wave-active"));
+        row.querySelectorAll(".vc-wave-btn").forEach((b) => b.classList.remove("vc-wave-active"));
         btn.classList.add("vc-wave-active");
+        this._builtinCarrierType = btn.dataset.type;
         this._initAudio();
-        this._vocoder.carrierType = btn.dataset.type;
+        if (this._vocoder && this._carrierMode === "builtin") {
+          this._vocoder.carrierType = btn.dataset.type;
+        }
       });
     });
+  }
+
+  _wireSourceButtons() {
+    this.querySelector("#sourceRow")
+      .querySelectorAll(".vc-src-btn")
+      .forEach((btn) => {
+        btn.addEventListener("click", () => this._setCarrierMode(btn.dataset.source));
+      });
   }
 
   disconnectedCallback() {
@@ -340,7 +515,7 @@ class VocoderApp extends HTMLElement {
         padding: 1rem;
       }
 
-      .vc-layout { max-width: 900px; margin: 0 auto; }
+      .vc-layout { max-width: 960px; margin: 0 auto; }
 
       .vc-header {
         display: flex;
@@ -353,6 +528,7 @@ class VocoderApp extends HTMLElement {
       .vc-header h2 { margin: 0; color: #9b8dff; font-size: 1.4rem; }
 
       .vc-transport { display: flex; align-items: center; gap: 0.75rem; }
+      .vc-transport web-audio-level-meter { height: 28px; }
 
       .vc-btn {
         font-family: monospace;
@@ -418,6 +594,27 @@ class VocoderApp extends HTMLElement {
         margin-bottom: 0.2rem;
       }
 
+      /* Source selector */
+      .vc-source-row {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 0.6rem;
+      }
+      .vc-src-btn {
+        font-family: monospace;
+        font-size: 0.65rem;
+        padding: 3px 6px;
+        border: 1px solid #333;
+        border-radius: 3px;
+        background: #111;
+        color: #666;
+        cursor: pointer;
+        flex: 1;
+        white-space: nowrap;
+      }
+      .vc-src-btn:hover { border-color: #9b8dff; color: #bbb; }
+      .vc-src-btn.vc-src-active { background: #1e1844; border-color: #9b8dff; color: #c8b8ff; }
+
       .vc-carrier-row {
         display: flex;
         gap: 4px;
@@ -437,6 +634,22 @@ class VocoderApp extends HTMLElement {
       }
       .vc-wave-btn:hover { border-color: #7c6cff; color: #bbb; }
       .vc-wave-btn.vc-wave-active { background: #1e1844; border-color: #7c6cff; color: #c8b8ff; }
+
+      /* External carrier panel */
+      #extCarrierPanel {
+        margin-bottom: 1rem;
+        border: 1px solid #2a2040;
+        border-radius: 6px;
+        padding: 0.5rem;
+        background: #0a0a16;
+      }
+      .vc-ext-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #9b8dff;
+        margin-bottom: 0.5rem;
+      }
 
       /* ---- Keyboard ---- */
       .vc-kb-section { overflow: hidden; }

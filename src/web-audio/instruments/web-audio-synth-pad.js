@@ -1,7 +1,7 @@
-import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
-import "../web-audio-step-seq.js";
-import { scaleNoteOptions, buildChordFromScale } from "../web-audio-scales.js";
-import { WebAudioControlsBase, createSection, createCtrl } from "../web-audio-controls-base.js";
+import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
+import "../ui/web-audio-step-seq.js";
+import { scaleNoteOptions, buildChordFromScale } from "../global/web-audio-scales.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../ui/web-audio-controls-base.js";
 
 export default class WebAudioSynthPad extends WebAudioInstrumentBase {
   static PRESETS = {

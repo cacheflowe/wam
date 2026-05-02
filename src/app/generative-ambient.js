@@ -4,12 +4,12 @@ import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
 import WebAudioFxReverb from "../web-audio/fx/web-audio-fx-reverb.js";
 import WebAudioFxDelay from "../web-audio/fx/web-audio-fx-delay.js";
 import WebAudioFxChorus from "../web-audio/fx/web-audio-fx-chorus.js";
-import "../web-audio/web-audio-slider.js";
+import "../web-audio/ui/web-audio-slider.js";
 import "../web-audio/fx/web-audio-fx-unit.js";
-import "../web-audio/web-audio-waveform.js";
-import "../web-audio/web-audio-plant-visualizer.js";
-import WebAudioSequencer from "../web-audio/web-audio-sequencer.js";
-import { SCALES_ORDERED as SCALES, buildChordFromScale } from "../web-audio/web-audio-scales.js";
+import "../web-audio/ui/web-audio-waveform.js";
+import "../web-audio/ui/web-audio-plant-visualizer.js";
+import WebAudioSequencer from "../web-audio/global/web-audio-sequencer.js";
+import { SCALES_ORDERED as SCALES, buildChordFromScale } from "../web-audio/global/web-audio-scales.js";
 
 const ROOT_MIDI = 36; // C2 — lower root for ambient
 

@@ -5,13 +5,13 @@ import WebAudioPercKick, { WebAudioPercKickControls } from "../web-audio/instrum
 import WebAudioPercHihat, { WebAudioPercHihatControls } from "../web-audio/instruments/web-audio-perc-hihat.js";
 import WebAudioFxReverb from "../web-audio/fx/web-audio-fx-reverb.js";
 import WebAudioFxDelay from "../web-audio/fx/web-audio-fx-delay.js";
-import "../web-audio/web-audio-slider.js";
+import "../web-audio/ui/web-audio-slider.js";
 import "../web-audio/fx/web-audio-fx-unit.js";
-import "../web-audio/web-audio-waveform.js";
-import "../web-audio/web-audio-plant-visualizer.js";
-import "../web-audio/web-audio-sequence-grid.js";
-import WebAudioSequencer from "../web-audio/web-audio-sequencer.js";
-import { SCALES_ORDERED as SCALES, buildChordFromScale, LEAD_OSC_TYPES } from "../web-audio/web-audio-scales.js";
+import "../web-audio/ui/web-audio-waveform.js";
+import "../web-audio/ui/web-audio-plant-visualizer.js";
+import "../web-audio/ui/web-audio-sequence-grid.js";
+import WebAudioSequencer from "../web-audio/global/web-audio-sequencer.js";
+import { SCALES_ORDERED as SCALES, buildChordFromScale, LEAD_OSC_TYPES } from "../web-audio/global/web-audio-scales.js";
 
 const ROOT_MIDI = 48; // C3
 

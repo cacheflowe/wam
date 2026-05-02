@@ -1,8 +1,8 @@
-import "../web-audio-slider.js";
-import "../web-audio-step-seq.js";
-import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../web-audio-scales.js";
-import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
-import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
+import "../ui/web-audio-slider.js";
+import "../ui/web-audio-step-seq.js";
+import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/web-audio-scales.js";
+import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
+import { WebAudioControlsBase, createSection } from "../ui/web-audio-controls-base.js";
 
 /**
  * WebAudioSynthAcid — TB-303-style monophonic acid bass synthesizer.

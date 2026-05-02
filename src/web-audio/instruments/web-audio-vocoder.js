@@ -1,5 +1,3 @@
-import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
-
 /**
  * WebAudioVocoder — 16-band phase vocoder with mic input.
  *
@@ -33,6 +31,7 @@ export default class WebAudioVocoder {
     this._envSpeed = 20;
     this._filterQ = 3.5;
     this._formantShift = 0;
+    this._gate = 0.05;
     this._carrierType = "sawtooth";
     this._carrierFreq = 220;
 
@@ -41,10 +40,16 @@ export default class WebAudioVocoder {
 
   // ---- Public API ----
 
-  get volume()  { return this._out.gain.value; }
-  set volume(v) { this._out.gain.value = v; }
+  get volume() {
+    return this._out.gain.value;
+  }
+  set volume(v) {
+    this._out.gain.value = v;
+  }
 
-  get input()   { return this._out; }
+  get input() {
+    return this._out;
+  }
 
   connect(node) {
     this._out.connect(node.input ?? node);
@@ -64,11 +69,19 @@ export default class WebAudioVocoder {
   }
 
   stopMic() {
-    if (this._micSource) { this._micSource.disconnect(); this._micSource = null; }
-    if (this._micStream) { this._micStream.getTracks().forEach(t => t.stop()); this._micStream = null; }
+    if (this._micSource) {
+      this._micSource.disconnect();
+      this._micSource = null;
+    }
+    if (this._micStream) {
+      this._micStream.getTracks().forEach((t) => t.stop());
+      this._micStream = null;
+    }
   }
 
-  get micActive() { return !!this._micSource; }
+  get micActive() {
+    return !!this._micSource;
+  }
 
   /** Enable carrier output. */
   play() {
@@ -89,23 +102,33 @@ export default class WebAudioVocoder {
     this._carrierBus.gain.setTargetAtTime(0, this.ctx.currentTime, 0.02);
   }
 
-  get playing() { return this._running; }
+  get playing() {
+    return this._running;
+  }
 
   // ---- Properties with live node updates ----
 
-  get carrierFreq() { return this._carrierFreq; }
+  get carrierFreq() {
+    return this._carrierFreq;
+  }
   set carrierFreq(hz) {
     this._carrierFreq = hz;
     if (this._carrierOsc) this._carrierOsc.frequency.setTargetAtTime(hz, this.ctx.currentTime, 0.01);
   }
 
-  get carrierType() { return this._carrierType; }
+  get carrierType() {
+    return this._carrierType;
+  }
   set carrierType(v) {
     this._carrierType = v;
     if (!this._carrierOsc) return;
     if (v === "noise") {
       this._oscGain.gain.value = 0;
       this._noiseGain.gain.value = 1;
+    } else if (v === "external") {
+      // Silence built-in; external source feeds _carrierBus directly
+      this._oscGain.gain.value = 0;
+      this._noiseGain.gain.value = 0;
     } else {
       this._oscGain.gain.value = 1;
       this._noiseGain.gain.value = 0;
@@ -113,19 +136,30 @@ export default class WebAudioVocoder {
     }
   }
 
-  get sensitivity() { return this._sensitivity; }
+  /** AudioNode to connect an external carrier source to. */
+  get carrierInput() {
+    return this._carrierBus;
+  }
+
+  get sensitivity() {
+    return this._sensitivity;
+  }
   set sensitivity(v) {
     this._sensitivity = v;
     if (this._inputGain) this._inputGain.gain.value = v;
   }
 
-  get envSpeed() { return this._envSpeed; }
+  get envSpeed() {
+    return this._envSpeed;
+  }
   set envSpeed(v) {
     this._envSpeed = v;
     for (const b of this._bands) b.envLP.frequency.value = v;
   }
 
-  get filterQ() { return this._filterQ; }
+  get filterQ() {
+    return this._filterQ;
+  }
   set filterQ(v) {
     this._filterQ = v;
     for (const b of this._bands) {
@@ -135,7 +169,9 @@ export default class WebAudioVocoder {
   }
 
   /** Formant shift in semitones — shifts synthesis bands relative to analysis bands. */
-  get formantShift() { return this._formantShift; }
+  get formantShift() {
+    return this._formantShift;
+  }
   set formantShift(semitones) {
     this._formantShift = semitones;
     const freqs = this._computeFreqs();
@@ -143,6 +179,15 @@ export default class WebAudioVocoder {
     for (let i = 0; i < this._bands.length; i++) {
       this._bands[i].synBP.frequency.value = Math.min(freqs[i] * ratio, this.ctx.sampleRate / 2);
     }
+  }
+
+  /** Gate threshold (0–1). Signals below this level produce zero envelope output. */
+  get gate() {
+    return this._gate;
+  }
+  set gate(v) {
+    this._gate = v;
+    this._updateAbsCurves();
   }
 
   // ---- DSP graph ----
@@ -218,7 +263,7 @@ export default class WebAudioVocoder {
     this._oscGain.connect(this._carrierBus);
 
     // Noise carrier (looping buffer)
-    this._noiseSource = ctx.createAudioBufferSource();
+    this._noiseSource = ctx.createBufferSource();
     this._noiseSource.buffer = this._makeNoiseBuffer();
     this._noiseSource.loop = true;
     this._noiseGain = ctx.createGain();
@@ -235,10 +280,23 @@ export default class WebAudioVocoder {
 
   _makeAbsCurve(size = 256) {
     const curve = new Float32Array(size);
+    const threshold = this._gate;
     for (let i = 0; i < size; i++) {
-      curve[i] = Math.abs((i / (size - 1)) * 2 - 1);
+      const x = Math.abs((i / (size - 1)) * 2 - 1);
+      if (x < threshold) {
+        curve[i] = 0;
+      } else {
+        // Soft-knee expansion: remap (threshold..1) → (0..1) with power curve
+        const norm = (x - threshold) / (1 - threshold);
+        curve[i] = norm * norm; // quadratic expansion suppresses quiet signals
+      }
     }
     return curve;
+  }
+
+  _updateAbsCurves() {
+    const curve = this._makeAbsCurve();
+    for (const b of this._bands) b.absShaper.curve = curve;
   }
 
   _makeNoiseBuffer() {

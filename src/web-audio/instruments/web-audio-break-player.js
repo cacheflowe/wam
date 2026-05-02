@@ -1,10 +1,10 @@
-import "../web-audio-slider.js";
+import "../ui/web-audio-slider.js";
 import "../fx/web-audio-fx-unit.js";
-import "../web-audio-waveform.js";
+import "../ui/web-audio-waveform.js";
 import "../fx/web-audio-pitch-shift.js";
 import "../fx/web-audio-time-stretch.js";
-import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
-import { WebAudioControlsBase, createSection, createCtrl } from "../web-audio-controls-base.js";
+import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../ui/web-audio-controls-base.js";
 
 /**
  * WebAudioBreakPlayer — loads a drum loop, time-stretches it to the target

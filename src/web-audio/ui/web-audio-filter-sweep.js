@@ -14,7 +14,7 @@
  */
 
 import WebAudioSlider from "./web-audio-slider.js";
-import { sweepToLpFreq, sweepToHpFreq } from "./fx/web-audio-fx-filter.js";
+import { sweepToLpFreq, sweepToHpFreq } from "../fx/web-audio-fx-filter.js";
 
 function fmtFreq(hz) {
   if (hz >= 9950) return "20k";

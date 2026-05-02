@@ -1,7 +1,7 @@
-import WebAudioInstrumentBase from "../web-audio-instrument-base.js";
-import "../web-audio-step-seq.js";
-import { scaleNoteOptions, STEP_WEIGHTS } from "../web-audio-scales.js";
-import { WebAudioControlsBase, createSection, createCtrl } from "../web-audio-controls-base.js";
+import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
+import "../ui/web-audio-step-seq.js";
+import { scaleNoteOptions, STEP_WEIGHTS } from "../global/web-audio-scales.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../ui/web-audio-controls-base.js";
 
 export default class WebAudioSynthMono extends WebAudioInstrumentBase {
   static PRESETS = {

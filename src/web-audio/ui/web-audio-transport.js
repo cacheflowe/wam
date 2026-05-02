@@ -1,8 +1,8 @@
 import "./web-audio-slider.js";
 import "./web-audio-waveform.js";
-import "./fx/web-audio-fx-unit.js";
+import "../fx/web-audio-fx-unit.js";
 import { injectControlsCSS, createChannelStrip } from "./web-audio-slider.js";
-import { NOTE_NAMES, SCALES } from "./web-audio-scales.js";
+import { NOTE_NAMES, SCALES } from "../global/web-audio-scales.js";
 
 /**
  * WebAudioTransportControls — master transport panel as a Web Component.

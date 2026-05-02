@@ -1,4 +1,4 @@
-import WebAudioSequencer from "../web-audio/web-audio-sequencer.js";
+import WebAudioSequencer from "../web-audio/global/web-audio-sequencer.js";
 import WebAudioSynthAcid from "../web-audio/instruments/web-audio-synth-acid.js";
 import WebAudioSynth808 from "../web-audio/instruments/web-audio-synth-808.js";
 import WebAudioSynthBlipFX from "../web-audio/instruments/web-audio-synth-blipfx.js";
@@ -7,7 +7,7 @@ import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
 import WebAudioPercKick from "../web-audio/instruments/web-audio-perc-kick.js";
 import WebAudioPercHihat from "../web-audio/instruments/web-audio-perc-hihat.js";
 import WebAudioPercSnare from "../web-audio/instruments/web-audio-perc-snare.js";
-import "../web-audio/web-audio-transport.js";
+import "../web-audio/ui/web-audio-transport.js";
 
 const BASE_PATH = "/audio/breaks/";
 const BREAK_FILES = [
