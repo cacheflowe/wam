@@ -4,11 +4,18 @@ import { STEP_WEIGHTS } from "../web-audio-scales.js";
 import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
 
 /**
- * WebAudioPercSnare — layered snare drum: pitched tone body + filtered noise snap.
+ * WebAudioPercSnare — layered snare drum with tone body, noise snap, and snare buzz.
  *
- * The tone layer uses a sine oscillator with fast pitch sweep (like kick, but higher).
- * The noise layer uses highpass-filtered white noise for the snare rattle/crack.
- * Optional clap mode fires multiple noise bursts with micro-timing offsets.
+ * Layers:
+ *   1. Tone body — oscillator (sine/triangle/square) with fast pitch sweep
+ *   2. Noise snap — highpass-filtered white noise for crack/attack
+ *   3. Snare buzz — narrow bandpass noise simulating snare wire rattle (longer tail)
+ *
+ * Features:
+ *   - Selectable body wave shape (sine = round 808, triangle = 909 bite, square = harsh)
+ *   - Noise filter sweep (filter opens then closes during decay for movement)
+ *   - Clap mode (3 micro-timed noise bursts)
+ *   - Buzz layer for realistic snare wire rattle
  *
  * Usage:
  *   const snare = new WebAudioPercSnare(ctx);
@@ -17,76 +24,14 @@ import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.
  */
 export default class WebAudioPercSnare extends WebAudioInstrumentBase {
   static PRESETS = {
-    Default: {
-      toneFreq: 200,
-      toneSweep: 80,
-      toneDecay: 0.08,
-      noiseFreq: 1500,
-      noiseDecay: 0.15,
-      noiseMix: 0.6,
-      clapMode: false,
-      volume: 1,
-    },
-    808: {
-      toneFreq: 180,
-      toneSweep: 60,
-      toneDecay: 0.12,
-      noiseFreq: 1200,
-      noiseDecay: 0.2,
-      noiseMix: 0.5,
-      clapMode: false,
-      volume: 1,
-    },
-    Tight: {
-      toneFreq: 250,
-      toneSweep: 100,
-      toneDecay: 0.04,
-      noiseFreq: 2500,
-      noiseDecay: 0.08,
-      noiseMix: 0.7,
-      clapMode: false,
-      volume: 1,
-    },
-    Clap: {
-      toneFreq: 200,
-      toneSweep: 50,
-      toneDecay: 0.02,
-      noiseFreq: 1800,
-      noiseDecay: 0.18,
-      noiseMix: 0.95,
-      clapMode: true,
-      volume: 0.9,
-    },
-    Rim: {
-      toneFreq: 400,
-      toneSweep: 150,
-      toneDecay: 0.03,
-      noiseFreq: 4000,
-      noiseDecay: 0.04,
-      noiseMix: 0.3,
-      clapMode: false,
-      volume: 1,
-    },
-    Industrial: {
-      toneFreq: 150,
-      toneSweep: 40,
-      toneDecay: 0.15,
-      noiseFreq: 800,
-      noiseDecay: 0.25,
-      noiseMix: 0.4,
-      clapMode: false,
-      volume: 0.9,
-    },
-    Brush: {
-      toneFreq: 180,
-      toneSweep: 30,
-      toneDecay: 0.03,
-      noiseFreq: 3000,
-      noiseDecay: 0.35,
-      noiseMix: 0.85,
-      clapMode: false,
-      volume: 0.6,
-    },
+    Default:    { toneFreq: 200, toneSweep: 80, toneDecay: 0.08, toneWave: "sine", noiseFreq: 1500, noiseDecay: 0.15, noiseSweep: 0, noiseMix: 0.6, buzz: 0.2, clapMode: false, volume: 1 },
+    "808":      { toneFreq: 180, toneSweep: 60, toneDecay: 0.12, toneWave: "sine", noiseFreq: 1200, noiseDecay: 0.2, noiseSweep: 0, noiseMix: 0.5, buzz: 0.15, clapMode: false, volume: 1 },
+    "909":      { toneFreq: 220, toneSweep: 100, toneDecay: 0.06, toneWave: "triangle", noiseFreq: 2000, noiseDecay: 0.12, noiseSweep: 0.4, noiseMix: 0.65, buzz: 0.3, clapMode: false, volume: 1 },
+    Tight:      { toneFreq: 250, toneSweep: 100, toneDecay: 0.04, toneWave: "triangle", noiseFreq: 2500, noiseDecay: 0.08, noiseSweep: 0.2, noiseMix: 0.7, buzz: 0.1, clapMode: false, volume: 1 },
+    Clap:       { toneFreq: 200, toneSweep: 50, toneDecay: 0.02, toneWave: "sine", noiseFreq: 1800, noiseDecay: 0.18, noiseSweep: 0, noiseMix: 0.95, buzz: 0, clapMode: true, volume: 0.9 },
+    Rim:        { toneFreq: 400, toneSweep: 150, toneDecay: 0.03, toneWave: "square", noiseFreq: 4000, noiseDecay: 0.04, noiseSweep: 0, noiseMix: 0.3, buzz: 0, clapMode: false, volume: 1 },
+    Industrial: { toneFreq: 150, toneSweep: 40, toneDecay: 0.15, toneWave: "square", noiseFreq: 800, noiseDecay: 0.25, noiseSweep: 0.6, noiseMix: 0.4, buzz: 0.4, clapMode: false, volume: 0.9 },
+    Brush:      { toneFreq: 180, toneSweep: 30, toneDecay: 0.03, toneWave: "sine", noiseFreq: 3000, noiseDecay: 0.35, noiseSweep: 0.3, noiseMix: 0.85, buzz: 0.5, clapMode: false, volume: 0.6 },
   };
 
   constructor(ctx, preset = "Default") {
@@ -112,12 +57,12 @@ export default class WebAudioPercSnare extends WebAudioInstrumentBase {
     const ctx = this.ctx;
     const t = atTime > 0 ? atTime : ctx.currentTime;
 
-    // ---- Tone body (pitched sine with fast sweep) ----
+    // ---- Tone body (oscillator with fast pitch sweep) ----
     const toneGain = 1 - this.noiseMix;
     if (toneGain > 0.01) {
       const osc = ctx.createOscillator();
       const amp = ctx.createGain();
-      osc.type = "sine";
+      osc.type = this.toneWave || "sine";
       osc.frequency.setValueAtTime(this.toneFreq, t);
       osc.frequency.exponentialRampToValueAtTime(Math.max(1, this.toneFreq - this.toneSweep), t + this.toneDecay * 0.5);
       amp.gain.setValueAtTime(velocity * toneGain, t);
@@ -131,7 +76,6 @@ export default class WebAudioPercSnare extends WebAudioInstrumentBase {
     // ---- Noise snap (filtered white noise) ----
     if (this.noiseMix > 0.01) {
       if (this.clapMode) {
-        // Clap: 3 micro-bursts with random timing offsets
         for (let i = 0; i < 3; i++) {
           const offset = i * (0.008 + Math.random() * 0.012);
           this._fireNoiseBurst(velocity * this.noiseMix * 0.8, t + offset);
@@ -139,6 +83,28 @@ export default class WebAudioPercSnare extends WebAudioInstrumentBase {
       } else {
         this._fireNoiseBurst(velocity * this.noiseMix, t);
       }
+    }
+
+    // ---- Snare buzz (narrow bandpass noise, longer tail) ----
+    if (this.buzz > 0.01) {
+      const buzzNoise = ctx.createBufferSource();
+      buzzNoise.buffer = this._noiseBuffer;
+
+      const buzzFilter = ctx.createBiquadFilter();
+      buzzFilter.type = "bandpass";
+      buzzFilter.frequency.value = 1800;
+      buzzFilter.Q.value = 3;
+
+      const buzzAmp = ctx.createGain();
+      const buzzDecay = this.noiseDecay * 2.5; // buzz sustains longer than snap
+      buzzAmp.gain.setValueAtTime(velocity * this.buzz * 0.5, t + 0.005); // slight delay
+      buzzAmp.gain.exponentialRampToValueAtTime(0.001, t + buzzDecay);
+
+      buzzNoise.connect(buzzFilter);
+      buzzFilter.connect(buzzAmp);
+      buzzAmp.connect(this._out);
+      buzzNoise.start(t);
+      buzzNoise.stop(t + buzzDecay + 0.05);
     }
 
     return this;
@@ -153,6 +119,14 @@ export default class WebAudioPercSnare extends WebAudioInstrumentBase {
     filter.type = "highpass";
     filter.frequency.value = this.noiseFreq;
     filter.Q.value = 0.7;
+
+    // Noise filter sweep: filter opens then closes during decay
+    const sweep = this.noiseSweep ?? 0;
+    if (sweep > 0) {
+      const peakFreq = this.noiseFreq * (1 + sweep * 3);
+      filter.frequency.setValueAtTime(peakFreq, t);
+      filter.frequency.exponentialRampToValueAtTime(Math.max(20, this.noiseFreq * 0.5), t + this.noiseDecay);
+    }
 
     const amp = ctx.createGain();
     amp.gain.setValueAtTime(gain, t);
@@ -171,49 +145,15 @@ export default class WebAudioPercSnare extends WebAudioInstrumentBase {
 
 export class WebAudioPercSnareControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    {
-      param: "toneFreq",
-      label: "Tone",
-      min: 80,
-      max: 500,
-      step: 1,
-      tooltip: "Tone body pitch in Hz. Higher = snappier, lower = thumpier.",
-    },
-    {
-      param: "toneSweep",
-      label: "Sweep",
-      min: 0,
-      max: 300,
-      step: 1,
-      tooltip: "Pitch drop amount. More = punchier attack transient.",
-    },
-    { param: "toneDecay", label: "T.Decay", min: 0.01, max: 0.3, step: 0.01, tooltip: "Tone body decay time." },
-    {
-      param: "noiseFreq",
-      label: "N.Freq",
-      min: 500,
-      max: 8000,
-      step: 1,
-      scale: "log",
-      tooltip: "Noise highpass filter frequency. Lower = fatter, higher = crackly.",
-    },
-    {
-      param: "noiseDecay",
-      label: "N.Decay",
-      min: 0.02,
-      max: 0.5,
-      step: 0.01,
-      tooltip: "Noise snap/rattle decay time.",
-    },
-    {
-      param: "noiseMix",
-      label: "Mix",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Balance between tone body (0) and noise snap (1).",
-    },
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
+    { param: "toneFreq",   label: "Tone",    min: 80,   max: 500,  step: 1,    tooltip: "Tone body pitch in Hz. Higher = snappier, lower = thumpier." },
+    { param: "toneSweep",  label: "Sweep",   min: 0,    max: 300,  step: 1,    tooltip: "Pitch drop amount. More = punchier attack transient." },
+    { param: "toneDecay",  label: "T.Decay", min: 0.01, max: 0.3,  step: 0.01, tooltip: "Tone body decay time." },
+    { param: "noiseFreq",  label: "N.Freq",  min: 500,  max: 8000, step: 1, scale: "log", tooltip: "Noise highpass filter frequency. Lower = fatter, higher = crackly." },
+    { param: "noiseDecay", label: "N.Decay", min: 0.02, max: 0.5,  step: 0.01, tooltip: "Noise snap/rattle decay time." },
+    { param: "noiseSweep", label: "N.Swp",   min: 0,    max: 1,    step: 0.01, tooltip: "Noise filter sweep. Opens then closes for movement." },
+    { param: "noiseMix",   label: "Mix",     min: 0,    max: 1,    step: 0.01, tooltip: "Balance between tone body (0) and noise snap (1)." },
+    { param: "buzz",       label: "Buzz",    min: 0,    max: 1,    step: 0.01, tooltip: "Snare wire buzz/rattle amount. Longer sustaining tail." },
+    { param: "volume",     label: "Vol",     min: 0,    max: 1,    step: 0.01 },
   ];
 
   static DEFAULT_PATTERN() {
@@ -248,6 +188,25 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
     const { el, controls: sec } = createSection("Snare");
     this._makePresetDropdown(WebAudioPercSnare.PRESETS, sec);
 
+    // Wave shape buttons (body oscillator type)
+    this._waveRow = document.createElement("div");
+    this._waveRow.className = "wac-wave-row";
+    for (const type of ["sine", "triangle", "square"]) {
+      const btn = document.createElement("button");
+      btn.className = "wac-wave-btn";
+      btn.textContent = type.slice(0, 3).toUpperCase();
+      btn.dataset.type = type;
+      if (this._instrument.toneWave === type) btn.classList.add("wac-wave-active");
+      btn.addEventListener("click", () => {
+        this._instrument.toneWave = type;
+        this._waveRow.querySelectorAll(".wac-wave-btn")
+          .forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === type));
+        this._emitChange();
+      });
+      this._waveRow.appendChild(btn);
+    }
+    sec.appendChild(this._waveRow);
+
     // Clap mode toggle
     const clapBtn = document.createElement("button");
     clapBtn.className = "wac-wave-btn";
@@ -261,12 +220,14 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
     this._clapBtn = clapBtn;
     sec.appendChild(clapBtn);
 
-    sec.appendChild(mkSlider({ param: "toneFreq", label: "Tone", min: 80, max: 500, step: 1 }));
-    sec.appendChild(mkSlider({ param: "toneSweep", label: "Sweep", min: 0, max: 300, step: 1 }));
-    sec.appendChild(mkSlider({ param: "toneDecay", label: "T.Decay", min: 0.01, max: 0.3, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "noiseFreq", label: "N.Freq", min: 500, max: 8000, step: 1, scale: "log" }));
-    sec.appendChild(mkSlider({ param: "noiseDecay", label: "N.Decay", min: 0.02, max: 0.5, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "noiseMix", label: "Mix", min: 0, max: 1, step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "toneFreq",   label: "Tone",    min: 80,   max: 500,  step: 1 }));
+    sec.appendChild(mkSlider({ param: "toneSweep",  label: "Sweep",   min: 0,    max: 300,  step: 1 }));
+    sec.appendChild(mkSlider({ param: "toneDecay",  label: "T.Decay", min: 0.01, max: 0.3,  step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "noiseFreq",  label: "N.Freq",  min: 500,  max: 8000, step: 1, scale: "log" }));
+    sec.appendChild(mkSlider({ param: "noiseDecay", label: "N.Decay", min: 0.02, max: 0.5,  step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "noiseSweep", label: "N.Swp",   min: 0,    max: 1,    step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "noiseMix",   label: "Mix",     min: 0,    max: 1,    step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "buzz",       label: "Buzz",    min: 0,    max: 1,    step: 0.01 }));
     controls.appendChild(el);
 
     // ---- Sequencer Speed ----
@@ -323,6 +284,10 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
   _syncExtraControls() {
     if (this._clapBtn && this._instrument) {
       this._clapBtn.classList.toggle("wac-wave-active", !!this._instrument.clapMode);
+    }
+    if (this._waveRow && this._instrument) {
+      this._waveRow.querySelectorAll(".wac-wave-btn")
+        .forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === this._instrument.toneWave));
     }
   }
 
@@ -419,6 +384,7 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
 
   _extraToJSON(params) {
     params.clapMode = this._instrument?.clapMode ?? false;
+    params.toneWave = this._instrument?.toneWave ?? "sine";
   }
 
   _extendJSON(obj) {
@@ -428,6 +394,9 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
   _restoreParam(key, val) {
     if (key === "clapMode") {
       this._instrument.clapMode = val;
+      this._syncExtraControls();
+    } else if (key === "toneWave") {
+      this._instrument.toneWave = val;
       this._syncExtraControls();
     } else {
       super._restoreParam(key, val);

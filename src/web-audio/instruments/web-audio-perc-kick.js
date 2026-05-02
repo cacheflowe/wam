@@ -4,11 +4,12 @@ import { STEP_WEIGHTS } from "../web-audio-scales.js";
 import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
 
 /**
- * WebAudioPercKick — 808-style kick via sine oscillator with pitch sweep.
+ * WebAudioPercKick — Enhanced kick drum with pitch sweep, click transient, and drive.
  *
- * A sine starts at a high frequency and rapidly drops to a low thump,
- * while the amplitude decays. Adjust startFreq/endFreq/sweepTime/decay
- * for different flavors (punchy, boomy, snappy).
+ * Layers:
+ *   1. Body — sine oscillator with exponential pitch sweep (classic 808/909)
+ *   2. Click — short noise/triangle burst for attack definition (909-style)
+ *   3. Drive — WaveShaperNode saturation for grit and presence
  *
  * Usage:
  *   const kick = new WebAudioPercKick(ctx);
@@ -17,15 +18,43 @@ import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.
  */
 export default class WebAudioPercKick extends WebAudioInstrumentBase {
   static PRESETS = {
-    Default: { startFreq: 150, endFreq: 40, sweepTime: 0.08, decay: 0.35, volume: 1 },
-    Punchy: { startFreq: 200, endFreq: 50, sweepTime: 0.05, decay: 0.25, volume: 1 },
-    Boomy: { startFreq: 100, endFreq: 30, sweepTime: 0.15, decay: 0.6, volume: 0.9 },
-    Snap: { startFreq: 300, endFreq: 60, sweepTime: 0.03, decay: 0.18, volume: 1 },
+    Default:  { startFreq: 150, endFreq: 40, sweepTime: 0.08, decay: 0.35, click: 0.3, drive: 0, volume: 1 },
+    "808":    { startFreq: 140, endFreq: 35, sweepTime: 0.1,  decay: 0.45, click: 0.1, drive: 0, volume: 1 },
+    "909":    { startFreq: 200, endFreq: 50, sweepTime: 0.05, decay: 0.28, click: 0.7, drive: 0.2, volume: 1 },
+    Punchy:   { startFreq: 200, endFreq: 50, sweepTime: 0.05, decay: 0.25, click: 0.5, drive: 0.1, volume: 1 },
+    Boomy:    { startFreq: 100, endFreq: 30, sweepTime: 0.15, decay: 0.6,  click: 0.1, drive: 0, volume: 0.9 },
+    Hard:     { startFreq: 250, endFreq: 45, sweepTime: 0.04, decay: 0.3,  click: 0.8, drive: 0.5, volume: 1 },
+    Distorted:{ startFreq: 180, endFreq: 40, sweepTime: 0.06, decay: 0.35, click: 0.4, drive: 0.8, volume: 0.9 },
+    Sub:      { startFreq: 80,  endFreq: 30, sweepTime: 0.2,  decay: 0.7,  click: 0,   drive: 0, volume: 1 },
   };
 
   constructor(ctx, preset = "Default") {
-    super(ctx, preset);
+    super(ctx, null);
+    // Build drive waveshaper (shared across triggers)
+    this._driveNode = ctx.createWaveShaper();
+    this._driveNode.connect(this._out);
+    this._updateDriveCurve(0);
+    this.applyPreset(preset);
   }
+
+  _updateDriveCurve(amount) {
+    // Soft-clip curve: tanh-based saturation
+    const samples = 256;
+    const curve = new Float32Array(samples);
+    const k = 1 + amount * 20; // 1 = clean, 21 = heavy distortion
+    for (let i = 0; i < samples; i++) {
+      const x = (i / (samples - 1)) * 2 - 1;
+      curve[i] = Math.tanh(k * x) / Math.tanh(k);
+    }
+    this._driveNode.curve = curve;
+    this._driveNode.oversample = amount > 0.3 ? "4x" : "none";
+  }
+
+  set drive(v) {
+    this._drive = v;
+    this._updateDriveCurve(v);
+  }
+  get drive() { return this._drive ?? 0; }
 
   /**
    * @param {number} [velocity]  0–1
@@ -34,7 +63,9 @@ export default class WebAudioPercKick extends WebAudioInstrumentBase {
   trigger(velocity = 1, atTime = 0) {
     const ctx = this.ctx;
     const t = atTime > 0 ? atTime : ctx.currentTime;
+    const dest = this._drive > 0 ? this._driveNode : this._out;
 
+    // ---- Body (sine with pitch sweep) ----
     const osc = ctx.createOscillator();
     const amp = ctx.createGain();
 
@@ -46,10 +77,49 @@ export default class WebAudioPercKick extends WebAudioInstrumentBase {
     amp.gain.exponentialRampToValueAtTime(0.001, t + this.decay);
 
     osc.connect(amp);
-    amp.connect(this._out);
+    amp.connect(dest);
 
     osc.start(t);
     osc.stop(t + this.decay + 0.05);
+
+    // ---- Click transient (short noise + triangle burst) ----
+    if (this.click > 0.01) {
+      const clickDur = 0.008; // 8ms click
+
+      // Noise click
+      const noiseLen = Math.floor(ctx.sampleRate * 0.02);
+      const noiseBuf = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+      const noiseData = noiseBuf.getChannelData(0);
+      for (let i = 0; i < noiseLen; i++) noiseData[i] = Math.random() * 2 - 1;
+      const noiseSrc = ctx.createBufferSource();
+      noiseSrc.buffer = noiseBuf;
+
+      const clickHpf = ctx.createBiquadFilter();
+      clickHpf.type = "highpass";
+      clickHpf.frequency.value = 2000;
+
+      const clickAmp = ctx.createGain();
+      clickAmp.gain.setValueAtTime(velocity * this.click * 0.6, t);
+      clickAmp.gain.exponentialRampToValueAtTime(0.001, t + clickDur);
+
+      noiseSrc.connect(clickHpf);
+      clickHpf.connect(clickAmp);
+      clickAmp.connect(dest);
+      noiseSrc.start(t);
+      noiseSrc.stop(t + clickDur + 0.01);
+
+      // Triangle burst (adds pitch definition to click)
+      const clickOsc = ctx.createOscillator();
+      clickOsc.type = "triangle";
+      clickOsc.frequency.value = this.startFreq * 3;
+      const clickOscAmp = ctx.createGain();
+      clickOscAmp.gain.setValueAtTime(velocity * this.click * 0.4, t);
+      clickOscAmp.gain.exponentialRampToValueAtTime(0.001, t + clickDur * 0.7);
+      clickOsc.connect(clickOscAmp);
+      clickOscAmp.connect(dest);
+      clickOsc.start(t);
+      clickOsc.stop(t + clickDur + 0.01);
+    }
 
     return this;
   }
@@ -59,11 +129,13 @@ export default class WebAudioPercKick extends WebAudioInstrumentBase {
 
 export class WebAudioPercKickControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "startFreq", label: "Start Freq", min: 50, max: 500, step: 1,    tooltip: "Starting pitch of the kick's pitch sweep in Hz." },
-    { param: "endFreq",   label: "End Freq",   min: 20, max: 200, step: 1,    tooltip: "Final pitch of the kick at the end of the sweep." },
-    { param: "sweepTime", label: "Sweep",      min: 0.01, max: 0.5, step: 0.01, tooltip: "Duration of the pitch sweep from start to end frequency." },
-    { param: "decay",     label: "Decay",      min: 0.05, max: 1.5, step: 0.01, tooltip: "Amplitude decay time. Longer = punchier, sustaining kick." },
-    { param: "volume",    label: "Vol",        min: 0,    max: 1,   step: 0.01 },
+    { param: "startFreq", label: "Start",  min: 50,  max: 500, step: 1,    tooltip: "Starting pitch of the pitch sweep." },
+    { param: "endFreq",   label: "End",    min: 20,  max: 200, step: 1,    tooltip: "Final pitch at end of sweep. Lower = deeper sub." },
+    { param: "sweepTime", label: "Sweep",  min: 0.01, max: 0.5, step: 0.01, tooltip: "Duration of the pitch drop." },
+    { param: "decay",     label: "Decay",  min: 0.05, max: 1.5, step: 0.01, tooltip: "Body decay time. Longer = sustaining thump." },
+    { param: "click",     label: "Click",  min: 0,    max: 1,   step: 0.01, tooltip: "Transient click amount. Adds 909-style attack definition." },
+    { param: "drive",     label: "Drive",  min: 0,    max: 1,   step: 0.01, tooltip: "Saturation/distortion amount. Adds grit and presence." },
+    { param: "volume",    label: "Vol",    min: 0,    max: 1,   step: 0.01 },
   ];
 
   static DEFAULT_PATTERN() {
@@ -78,8 +150,6 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
   constructor() {
     super();
     this._seq = null;
-
-    // Sequencer position tracking
     this._globalStep = 0;
     this._seqPosition = 0;
   }
@@ -93,10 +163,12 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
 
     const { el, controls: sec } = createSection("Kick");
     this._makePresetDropdown(WebAudioPercKick.PRESETS, sec);
-    sec.appendChild(mkSlider({ param: "startFreq", label: "Start Freq", min: 50, max: 500, step: 1 }));
-    sec.appendChild(mkSlider({ param: "endFreq", label: "End Freq", min: 20, max: 200, step: 1 }));
-    sec.appendChild(mkSlider({ param: "sweepTime", label: "Sweep", min: 0.01, max: 0.5, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.05, max: 1.5, step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "startFreq", label: "Start",  min: 50,  max: 500, step: 1 }));
+    sec.appendChild(mkSlider({ param: "endFreq",   label: "End",    min: 20,  max: 200, step: 1 }));
+    sec.appendChild(mkSlider({ param: "sweepTime", label: "Sweep",  min: 0.01, max: 0.5, step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "decay",     label: "Decay",  min: 0.05, max: 1.5, step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "click",     label: "Click",  min: 0,    max: 1,   step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "drive",     label: "Drive",  min: 0,    max: 1,   step: 0.01 }));
     controls.appendChild(el);
 
     // ---- Sequencer Speed ----
@@ -133,7 +205,7 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
     actionRow.appendChild(randBtn);
     expanded.appendChild(actionRow);
 
-    // Step sequencer (no note selection for percussion)
+    // Step sequencer
     this._seq = document.createElement("web-audio-step-seq");
     this._seq.init({
       steps: WebAudioPercKickControls.DEFAULT_PATTERN(),
@@ -156,13 +228,11 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
     const multiplier = this.speedMultiplier ?? 1;
     if (multiplier === 0.5 && index % 2 !== 0) return;
 
-    // Pattern parameters
     const patternParams = this._seq?.getPatternParams() ?? {};
     const playEvery = patternParams.playEvery ?? 1;
     const rotationOffset = patternParams.rotationOffset ?? 0;
     const rotationIntervalBars = patternParams.rotationIntervalBars ?? 1;
 
-    // Apply rotation physically when local sequencer completes a full cycle
     if (this._seqPosition > 0 && this._seqPosition % 16 === 0 && rotationOffset > 0) {
       const localBar = this._seqPosition / 16;
       if (localBar % rotationIntervalBars === 0) {
@@ -170,14 +240,12 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
       }
     }
 
-    // Bar density
     const currentBar = Math.floor(this._globalStep / 16);
     if (currentBar % playEvery !== 0) {
       this._globalStep++;
       return;
     }
 
-    // Advance sequencer position (2x = 2 steps per tick, offset in time)
     const stepsToAdvance = multiplier === 2 ? 2 : 1;
     const subStepDur = stepDurationSec / stepsToAdvance;
     for (let si = 0; si < stepsToAdvance; si++) {

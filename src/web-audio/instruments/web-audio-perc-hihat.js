@@ -4,33 +4,43 @@ import { STEP_WEIGHTS } from "../web-audio-scales.js";
 import { WebAudioControlsBase, createSection } from "../web-audio-controls-base.js";
 
 /**
- * WebAudioPercHihat — bandpass-filtered white noise with fast amplitude decay.
+ * WebAudioPercHihat — 909-style hi-hat with metallic oscillators + noise.
  *
- * A pre-generated noise buffer is reused across all triggers for efficiency.
- * Adjust filterFreq/filterQ for open vs closed character, decay for length.
+ * Combines 6 detuned square oscillators (metallic ring) with filtered noise,
+ * controlled by a mix knob. Supports open/closed modes with choke behavior
+ * (triggering a closed hat cuts any ringing open hat).
  *
  * Usage:
- *   const hihat = new WebAudioPercHihat(ctx, { decay: 0.04 }); // tight closed hat
+ *   const hihat = new WebAudioPercHihat(ctx);
  *   hihat.connect(ctx.destination);
- *   hihat.trigger(0.6, time);
+ *   hihat.trigger(0.7, time);        // uses current open/closed setting
+ *   hihat.trigger(0.7, time, true);   // force open
+ *   hihat.trigger(0.7, time, false);  // force closed (chokes open)
  */
 export default class WebAudioPercHihat extends WebAudioInstrumentBase {
+  // Metallic oscillator frequency ratios (909-inspired, relative to base tone)
+  static METAL_RATIOS = [1, 1.4471, 1.6170, 1.9265, 2.5028, 2.6637];
+
   static PRESETS = {
-    Default: { filterFreq: 8000, filterQ: 0.8, decay: 0.06, volume: 1 },
-    Open: { filterFreq: 7000, filterQ: 0.6, decay: 0.3, volume: 0.8 },
-    Tight: { filterFreq: 9000, filterQ: 1.2, decay: 0.03, volume: 1 },
-    Shaker: { filterFreq: 6000, filterQ: 0.5, decay: 0.12, volume: 0.7 },
+    Default:  { tone: 320, metalMix: 0.5, filterFreq: 8000, filterQ: 0.8, decay: 0.06, openDecay: 0.3, volume: 1 },
+    "909":    { tone: 330, metalMix: 0.7, filterFreq: 9000, filterQ: 1.0, decay: 0.05, openDecay: 0.35, volume: 1 },
+    "808":    { tone: 280, metalMix: 0.2, filterFreq: 7000, filterQ: 0.6, decay: 0.06, openDecay: 0.28, volume: 0.9 },
+    Bright:   { tone: 400, metalMix: 0.6, filterFreq: 12000, filterQ: 0.5, decay: 0.04, openDecay: 0.25, volume: 1 },
+    Dark:     { tone: 250, metalMix: 0.4, filterFreq: 5000, filterQ: 1.2, decay: 0.08, openDecay: 0.35, volume: 0.8 },
+    Shaker:   { tone: 280, metalMix: 0.1, filterFreq: 6000, filterQ: 0.5, decay: 0.12, openDecay: 0.2, volume: 0.7 },
+    Metallic: { tone: 360, metalMix: 0.9, filterFreq: 10000, filterQ: 1.5, decay: 0.05, openDecay: 0.4, volume: 0.9 },
   };
 
   constructor(ctx, preset = "Default") {
     super(ctx, null);
     this._noiseBuffer = this._buildNoiseBuffer();
+    this._activeGain = null; // for choke behavior
+    this.isOpen = false;
     this.applyPreset(preset);
   }
 
   _buildNoiseBuffer() {
     const ctx = this.ctx;
-    // Half-second of mono white noise, reused across all triggers
     const length = Math.floor(ctx.sampleRate * 0.5);
     const buf = ctx.createBuffer(1, length, ctx.sampleRate);
     const data = buf.getChannelData(0);
@@ -41,29 +51,70 @@ export default class WebAudioPercHihat extends WebAudioInstrumentBase {
   /**
    * @param {number} [velocity]  0–1
    * @param {number} [atTime]    AudioContext time
+   * @param {boolean} [open]     Force open (true) or closed (false). Uses this.isOpen if undefined.
    */
-  trigger(velocity = 1, atTime = 0) {
+  trigger(velocity = 1, atTime = 0, open) {
     const ctx = this.ctx;
     const t = atTime > 0 ? atTime : ctx.currentTime;
+    const isOpen = open !== undefined ? open : this.isOpen;
+    const decay = isOpen ? this.openDecay : this.decay;
 
-    const noise = ctx.createBufferSource();
-    noise.buffer = this._noiseBuffer;
+    // Choke: kill any previous ringing hat
+    if (this._activeGain) {
+      this._activeGain.gain.cancelScheduledValues(t);
+      this._activeGain.gain.setValueAtTime(this._activeGain.gain.value, t);
+      this._activeGain.gain.exponentialRampToValueAtTime(0.001, t + 0.005);
+      this._activeGain = null;
+    }
 
-    const filter = ctx.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.value = this.filterFreq;
-    filter.Q.value = this.filterQ;
-
+    // Master amp for this hit (shared by metal + noise layers)
     const amp = ctx.createGain();
     amp.gain.setValueAtTime(velocity, t);
-    amp.gain.exponentialRampToValueAtTime(0.001, t + this.decay);
-
-    noise.connect(filter);
-    filter.connect(amp);
+    amp.gain.exponentialRampToValueAtTime(0.001, t + decay);
     amp.connect(this._out);
+    this._activeGain = isOpen ? amp : null; // only track open hats for choke
 
-    noise.start(t);
-    noise.stop(t + this.decay + 0.05);
+    // Highpass on the output for brightness
+    const hpf = ctx.createBiquadFilter();
+    hpf.type = "highpass";
+    hpf.frequency.value = this.filterFreq;
+    hpf.Q.value = this.filterQ;
+    hpf.connect(amp);
+
+    // ---- Metallic oscillator layer ----
+    if (this.metalMix > 0.01) {
+      const metalGain = ctx.createGain();
+      metalGain.gain.value = this.metalMix;
+      metalGain.connect(hpf);
+
+      for (const ratio of WebAudioPercHihat.METAL_RATIOS) {
+        const osc = ctx.createOscillator();
+        osc.type = "square";
+        osc.frequency.value = this.tone * ratio;
+        osc.connect(metalGain);
+        osc.start(t);
+        osc.stop(t + decay + 0.05);
+      }
+    }
+
+    // ---- Noise layer ----
+    const noiseMix = 1 - this.metalMix;
+    if (noiseMix > 0.01) {
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.value = noiseMix;
+      noiseGain.connect(hpf);
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = this._noiseBuffer;
+      const bpf = ctx.createBiquadFilter();
+      bpf.type = "bandpass";
+      bpf.frequency.value = this.filterFreq;
+      bpf.Q.value = this.filterQ * 0.5;
+      noise.connect(bpf);
+      bpf.connect(noiseGain);
+      noise.start(t);
+      noise.stop(t + decay + 0.05);
+    }
 
     return this;
   }
@@ -73,10 +124,13 @@ export default class WebAudioPercHihat extends WebAudioInstrumentBase {
 
 export class WebAudioPercHihatControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "filterFreq", label: "Freq",  min: 2000, max: 16000, step: 1,   scale: "log", tooltip: "Bandpass filter center frequency. Lower = closed, higher = bright." },
-    { param: "filterQ",    label: "Q",     min: 0.1,  max: 5,     step: 0.1,               tooltip: "Filter sharpness. Higher = more metallic, focused tone." },
-    { param: "decay",      label: "Decay", min: 0.01, max: 0.5,   step: 0.01,              tooltip: "Amplitude decay time. Shorter = tighter, ticking hat." },
-    { param: "volume",     label: "Vol",   min: 0,    max: 1,     step: 0.01 },
+    { param: "tone",       label: "Tone",    min: 150, max: 600,   step: 1,    tooltip: "Base frequency for metallic oscillators. Tunes the hat's pitch." },
+    { param: "metalMix",   label: "Metal",   min: 0,   max: 1,     step: 0.01, tooltip: "Balance between metallic oscillators (1) and noise (0)." },
+    { param: "filterFreq", label: "Freq",    min: 2000, max: 16000, step: 1, scale: "log", tooltip: "Highpass filter frequency. Higher = brighter, thinner." },
+    { param: "filterQ",    label: "Q",       min: 0.1,  max: 5,     step: 0.1, tooltip: "Filter resonance. Higher = more ringing, focused." },
+    { param: "decay",      label: "Closed",  min: 0.01, max: 0.2,   step: 0.01, tooltip: "Closed hat decay time." },
+    { param: "openDecay",  label: "Open",    min: 0.05, max: 0.8,   step: 0.01, tooltip: "Open hat decay time. Open hats are choked by closed hits." },
+    { param: "volume",     label: "Vol",     min: 0,    max: 1,     step: 0.01 },
   ];
 
   static DEFAULT_PATTERN() {
@@ -85,14 +139,13 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
       probability: 1,
       ratchet: 1,
       conditions: "off",
+      open: false,
     }));
   }
 
   constructor() {
     super();
     this._seq = null;
-
-    // Sequencer position tracking
     this._globalStep = 0;
     this._seqPosition = 0;
   }
@@ -106,9 +159,12 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
 
     const { el, controls: sec } = createSection("Hi-Hat");
     this._makePresetDropdown(WebAudioPercHihat.PRESETS, sec);
-    sec.appendChild(mkSlider({ param: "filterFreq", label: "Freq",  min: 2000, max: 16000, step: 1,   scale: "log" }));
-    sec.appendChild(mkSlider({ param: "filterQ",    label: "Q",     min: 0.1,  max: 5,     step: 0.1 }));
-    sec.appendChild(mkSlider({ param: "decay",      label: "Decay", min: 0.01, max: 0.5,   step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "tone",       label: "Tone",   min: 150, max: 600,   step: 1 }));
+    sec.appendChild(mkSlider({ param: "metalMix",   label: "Metal",  min: 0,   max: 1,     step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "filterFreq", label: "Freq",   min: 2000, max: 16000, step: 1, scale: "log" }));
+    sec.appendChild(mkSlider({ param: "filterQ",    label: "Q",      min: 0.1,  max: 5,     step: 0.1 }));
+    sec.appendChild(mkSlider({ param: "decay",      label: "Closed", min: 0.01, max: 0.2,   step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "openDecay",  label: "Open",   min: 0.05, max: 0.8,   step: 0.01 }));
     controls.appendChild(el);
 
     // ---- Sequencer Speed ----
@@ -145,7 +201,7 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
     actionRow.appendChild(randBtn);
     expanded.appendChild(actionRow);
 
-    // Step sequencer (no note selection for percussion)
+    // Step sequencer with open/closed hat support
     this._seq = document.createElement("web-audio-step-seq");
     this._seq.init({
       steps: WebAudioPercHihatControls.DEFAULT_PATTERN(),
@@ -153,6 +209,7 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
       ratchet: true,
       conditions: true,
       patternControls: true,
+      openClose: true,
       color,
     });
     expanded.appendChild(this._seq);
@@ -201,13 +258,14 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
             const ratchet = s.ratchet ?? 1;
+            const isOpen = s.open ?? false;
             if (ratchet > 1) {
               const ratchetDuration = subStepDur / ratchet;
               for (let i = 0; i < ratchet; i++) {
-                this._instrument.trigger(0.7, subTime + i * ratchetDuration);
+                this._instrument.trigger(0.7, subTime + i * ratchetDuration, isOpen);
               }
             } else {
-              this._instrument.trigger(0.7, subTime);
+              this._instrument.trigger(0.7, subTime, isOpen);
             }
           }
         }
@@ -239,6 +297,7 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
       probability: 1,
       ratchet: 1,
       conditions: "off",
+      open: Math.random() < 0.15, // occasional open hats
     }));
     if (this._seq) this._seq.steps = newSteps;
     this._emitChange();
