@@ -1,8 +1,8 @@
-import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
-import { loadSample, buildReverseBuffer } from "../global/wam-sample-utils.js";
-import { STEP_WEIGHTS, scaleNoteOptions, buildChordFromScale } from "../global/wam-scales.js";
-import "../ui/wam-step-seq.js";
-import { WebAudioControlsBase, createSection, createCtrl } from "../ui/wam-controls-base.js";
+import WebAudioInstrumentBase from "../global/instrument-base.js";
+import { loadSample, buildReverseBuffer } from "../global/sample-utils.js";
+import { STEP_WEIGHTS, scaleNoteOptions, buildChordFromScale } from "../global/scales.js";
+import "../ui/step-seq.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
 
 /**
  * WebAudioSamplePlayer — one-shot sample player with ADSR, pitch, and reverse.

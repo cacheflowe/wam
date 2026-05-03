@@ -1,7 +1,7 @@
-import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
-import "../ui/wam-step-seq.js";
-import { scaleNoteOptions, STEP_WEIGHTS } from "../global/wam-scales.js";
-import { WebAudioControlsBase, createSection, createCtrl } from "../ui/wam-controls-base.js";
+import WebAudioInstrumentBase from "../global/instrument-base.js";
+import "../ui/step-seq.js";
+import { scaleNoteOptions, STEP_WEIGHTS } from "../global/scales.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
 
 export default class WebAudioSynthMono extends WebAudioInstrumentBase {
   static PRESETS = {

@@ -1,15 +1,15 @@
-import WebAudioSynthMono from "../web-audio/instruments/wam-synth-mono.js";
-import WebAudioSynthPad from "../web-audio/instruments/wam-synth-pad.js";
-import WebAudioSynthFM from "../web-audio/instruments/wam-synth-fm.js";
-import WebAudioFxReverb from "../web-audio/fx/wam-fx-reverb.js";
-import WebAudioFxDelay from "../web-audio/fx/wam-fx-delay.js";
-import WebAudioFxChorus from "../web-audio/fx/wam-fx-chorus.js";
-import "../web-audio/ui/wam-slider.js";
-import "../web-audio/fx/wam-fx-unit.js";
-import "../web-audio/ui/wam-waveform.js";
-import "../web-audio/ui/wam-plant-visualizer.js";
-import WebAudioSequencer from "../web-audio/global/wam-sequencer.js";
-import { SCALES_ORDERED as SCALES, buildChordFromScale } from "../web-audio/global/wam-scales.js";
+import WebAudioSynthMono from "../web-audio/instruments/synth-mono.js";
+import WebAudioSynthPad from "../web-audio/instruments/synth-pad.js";
+import WebAudioSynthFM from "../web-audio/instruments/synth-fm.js";
+import WebAudioFxReverb from "../web-audio/fx/fx-reverb.js";
+import WebAudioFxDelay from "../web-audio/fx/fx-delay.js";
+import WebAudioFxChorus from "../web-audio/fx/fx-chorus.js";
+import "../web-audio/ui/slider.js";
+import "../web-audio/fx/fx-unit.js";
+import "../web-audio/ui/waveform.js";
+import "../web-audio/ui/plant-visualizer.js";
+import WebAudioSequencer from "../web-audio/global/sequencer.js";
+import { SCALES_ORDERED as SCALES, buildChordFromScale } from "../web-audio/global/scales.js";
 
 const ROOT_MIDI = 36; // C2 — lower root for ambient
 

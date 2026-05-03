@@ -20,13 +20,13 @@
  *   fx.bpm = 140; // live BPM update
  */
 
-import WebAudioFxReverb from "./wam-fx-reverb.js";
-import WebAudioFxDelay from "./wam-fx-delay.js";
-import WebAudioFxChorus from "./wam-fx-chorus.js";
-import WebAudioFxFilter from "./wam-fx-filter.js";
-import "../ui/wam-slider.js";
-import "../ui/wam-filter-sweep.js";
-import { injectControlsCSS, createSection, createCtrl } from "../ui/wam-slider.js";
+import WebAudioFxReverb from "./fx-reverb.js";
+import WebAudioFxDelay from "./fx-delay.js";
+import WebAudioFxChorus from "./fx-chorus.js";
+import WebAudioFxFilter from "./fx-filter.js";
+import "../ui/slider.js";
+import "../ui/filter-sweep.js";
+import { injectControlsCSS, createSection, createCtrl } from "../ui/slider.js";
 
 export default class WebAudioFxUnit extends HTMLElement {
   static #cssInjected = false;

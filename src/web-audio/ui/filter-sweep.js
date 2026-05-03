@@ -10,11 +10,11 @@
  * Dispatches: slider-input { param, value: -1..1 }
  *
  * Usage:
- *   <wam-filter-sweep param="filterSweep" label="Filter"></wam-filter-sweep>
+ *   <wam-filter-sweep param="filterSweep" label="Filter"></filter-sweep>
  */
 
-import WebAudioSlider from "./wam-slider.js";
-import { sweepToLpFreq, sweepToHpFreq } from "../fx/wam-fx-filter.js";
+import WebAudioSlider from "./slider.js";
+import { sweepToLpFreq, sweepToHpFreq } from "../fx/fx-filter.js";
 
 function fmtFreq(hz) {
   if (hz >= 9950) return "20k";

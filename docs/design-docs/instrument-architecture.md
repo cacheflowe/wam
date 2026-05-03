@@ -9,7 +9,7 @@ Early versions mixed audio logic and DOM manipulation inside the same class. Thi
 ## Options Considered
 
 1. **Single class with optional UI**: One class, `buildUI()` method that's only called when needed.
-2. **Separate files**: Audio class in `wam-synth-acid.js`, UI component in a separate `wam-synth-acid-controls.js`.
+2. **Separate files**: Audio class in `synth-acid.js`, UI component in a separate `synth-acid-controls.js`.
 3. **Co-located in one file, two exports**: Audio class as `export default`, UI as `export class *Controls`. Both live in the same file but are separate classes.
 
 ## Decision

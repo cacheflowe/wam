@@ -1,8 +1,8 @@
-import "../ui/wam-slider.js";
-import "../ui/wam-step-seq.js";
-import { scaleNoteOptions, STEP_WEIGHTS } from "../global/wam-scales.js";
-import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
-import { WebAudioControlsBase, createSection } from "../ui/wam-controls-base.js";
+import "../ui/slider.js";
+import "../ui/step-seq.js";
+import { scaleNoteOptions, STEP_WEIGHTS } from "../global/scales.js";
+import WebAudioInstrumentBase from "../global/instrument-base.js";
+import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 
 /**
  * WebAudioSynth808 — pitched 808-style sub-bass synthesizer.

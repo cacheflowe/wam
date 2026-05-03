@@ -1,4 +1,4 @@
-import "./wam-level-meter.js";
+import "./level-meter.js";
 
 // Set to false to start all channel strips expanded by default.
 export const CHANNEL_STRIP_COLLAPSED_DEFAULT = true;
@@ -11,11 +11,11 @@ export const CHANNEL_STRIP_COLLAPSED_DEFAULT = true;
  *
  * Usage:
  *   <wam-slider label="Cutoff" param="cutoff"
- *     min="50" max="10000" step="1" value="600"></wam-slider>
+ *     min="50" max="10000" step="1" value="600"></slider>
  *
  * Logarithmic scale (ideal for frequency controls):
  *   <wam-slider label="LPF" param="lpFreq"
- *     min="80" max="20000" step="1" scale="log" value="20000"></wam-slider>
+ *     min="80" max="20000" step="1" scale="log" value="20000"></slider>
  *
  * Color theming (in priority order):
  *   1. `color` attribute on the element

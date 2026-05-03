@@ -1,30 +1,30 @@
-import WebAudioSequencer from "../web-audio/global/wam-sequencer.js";
+import WebAudioSequencer from "../web-audio/global/sequencer.js";
 
 // Import all instrument modules (registers custom elements as a side-effect)
-import "../web-audio/instruments/wam-perc-kick.js";
-import "../web-audio/instruments/wam-perc-hihat.js";
-import "../web-audio/instruments/wam-perc-snare.js";
-import "../web-audio/instruments/wam-synth-acid.js";
-import "../web-audio/instruments/wam-synth-808.js";
-import "../web-audio/instruments/wam-synth-fm.js";
-import "../web-audio/instruments/wam-synth-mono.js";
-import "../web-audio/instruments/wam-synth-pad.js";
-import "../web-audio/instruments/wam-synth-blipfx.js";
-import "../web-audio/instruments/wam-break-player.js";
-import "../web-audio/instruments/wam-sample-player.js";
-import "../web-audio/ui/wam-transport.js";
+import "../web-audio/instruments/perc-kick.js";
+import "../web-audio/instruments/perc-hihat.js";
+import "../web-audio/instruments/perc-snare.js";
+import "../web-audio/instruments/synth-acid.js";
+import "../web-audio/instruments/synth-808.js";
+import "../web-audio/instruments/synth-fm.js";
+import "../web-audio/instruments/synth-mono.js";
+import "../web-audio/instruments/synth-pad.js";
+import "../web-audio/instruments/synth-blipfx.js";
+import "../web-audio/instruments/break-player.js";
+import "../web-audio/instruments/sample-player.js";
+import "../web-audio/ui/transport.js";
 
-import WebAudioPercKick from "../web-audio/instruments/wam-perc-kick.js";
-import WebAudioPercHihat from "../web-audio/instruments/wam-perc-hihat.js";
-import WebAudioPercSnare from "../web-audio/instruments/wam-perc-snare.js";
-import WebAudioSynthAcid from "../web-audio/instruments/wam-synth-acid.js";
-import WebAudioSynth808 from "../web-audio/instruments/wam-synth-808.js";
-import WebAudioSynthFM from "../web-audio/instruments/wam-synth-fm.js";
-import WebAudioSynthMono from "../web-audio/instruments/wam-synth-mono.js";
-import WebAudioSynthPad from "../web-audio/instruments/wam-synth-pad.js";
-import WebAudioSynthBlipFX from "../web-audio/instruments/wam-synth-blipfx.js";
-import WebAudioBreakPlayer from "../web-audio/instruments/wam-break-player.js";
-import WebAudioSamplePlayer from "../web-audio/instruments/wam-sample-player.js";
+import WebAudioPercKick from "../web-audio/instruments/perc-kick.js";
+import WebAudioPercHihat from "../web-audio/instruments/perc-hihat.js";
+import WebAudioPercSnare from "../web-audio/instruments/perc-snare.js";
+import WebAudioSynthAcid from "../web-audio/instruments/synth-acid.js";
+import WebAudioSynth808 from "../web-audio/instruments/synth-808.js";
+import WebAudioSynthFM from "../web-audio/instruments/synth-fm.js";
+import WebAudioSynthMono from "../web-audio/instruments/synth-mono.js";
+import WebAudioSynthPad from "../web-audio/instruments/synth-pad.js";
+import WebAudioSynthBlipFX from "../web-audio/instruments/synth-blipfx.js";
+import WebAudioBreakPlayer from "../web-audio/instruments/break-player.js";
+import WebAudioSamplePlayer from "../web-audio/instruments/sample-player.js";
 
 const BASE_PATH = "/audio/breaks/";
 const BREAK_FILES = [

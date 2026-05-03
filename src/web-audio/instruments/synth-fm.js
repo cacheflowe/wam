@@ -1,8 +1,8 @@
-import "../ui/wam-slider.js";
-import "../ui/wam-step-seq.js";
-import { buildChordFromScale, scaleNotesInRange, scaleNoteOptions } from "../global/wam-scales.js";
-import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
-import { WebAudioControlsBase, createSection, createCtrl } from "../ui/wam-controls-base.js";
+import "../ui/slider.js";
+import "../ui/step-seq.js";
+import { buildChordFromScale, scaleNotesInRange, scaleNoteOptions } from "../global/scales.js";
+import WebAudioInstrumentBase from "../global/instrument-base.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
 
 /**
  * WebAudioSynthFM — polyphonic 2-operator FM synthesizer.

@@ -1,8 +1,8 @@
-import WebAudioVocoder from "../web-audio/instruments/wam-vocoder.js";
-import WebAudioSynthFM from "../web-audio/instruments/wam-synth-fm.js";
-import WebAudioSynthMono from "../web-audio/instruments/wam-synth-mono.js";
-import "../web-audio/ui/wam-waveform.js";
-import "../web-audio/ui/wam-level-meter.js";
+import WebAudioVocoder from "../web-audio/instruments/vocoder.js";
+import WebAudioSynthFM from "../web-audio/instruments/synth-fm.js";
+import WebAudioSynthMono from "../web-audio/instruments/synth-mono.js";
+import "../web-audio/ui/waveform.js";
+import "../web-audio/ui/level-meter.js";
 
 // QWERTY piano — two rows covering C3 to E4
 const KEY_NOTE_MAP = {
@@ -252,7 +252,7 @@ class VocoderApp extends HTMLElement {
           <h2>🎙 Vocoder</h2>
           <div class="vc-transport">
             <button class="vc-btn vc-mic-btn" id="micBtn">🎤 Connect Mic</button>
-            <wam-level-meter id="micMeter"></wam-level-meter>
+            <wam-level-meter id="micMeter"></level-meter>
             <span class="vc-mic-status" id="micStatus">Mic off</span>
             <button class="vc-btn vc-play-btn" id="playBtn">▶ Play</button>
           </div>
@@ -347,7 +347,7 @@ class VocoderApp extends HTMLElement {
         <!-- External carrier instrument controls (shown when FM / MONO selected) -->
         <div id="extCarrierPanel" style="display:none"></div>
 
-        <wam-waveform id="waveform" class="vc-waveform"></wam-waveform>
+        <wam-waveform id="waveform" class="vc-waveform"></waveform>
       </div>
     `;
 

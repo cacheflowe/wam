@@ -40,7 +40,7 @@ export default class WebAudioPitchShift {
   }
 
   async _init() {
-    const url = new URL("./wam-pitch-shift.worklet.js", import.meta.url);
+    const url = new URL("./pitch-shift.worklet.js", import.meta.url);
     await this.ctx.audioWorklet.addModule(url);
 
     this._node = new AudioWorkletNode(this.ctx, "pitch-shift-processor", {

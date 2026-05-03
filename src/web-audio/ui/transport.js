@@ -1,8 +1,8 @@
-import "./wam-slider.js";
-import "./wam-waveform.js";
-import "../fx/wam-fx-unit.js";
-import { injectControlsCSS, createChannelStrip, createCtrl } from "./wam-slider.js";
-import { NOTE_NAMES, SCALES } from "../global/wam-scales.js";
+import "./slider.js";
+import "./waveform.js";
+import "../fx/fx-unit.js";
+import { injectControlsCSS, createChannelStrip, createCtrl } from "./slider.js";
+import { NOTE_NAMES, SCALES } from "../global/scales.js";
 
 /**
  * WebAudioTransportControls — master transport panel as a Web Component.

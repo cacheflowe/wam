@@ -8,10 +8,10 @@ All UI is built with vanilla Web Components (`HTMLElement` subclasses). No Shado
 
 | Component | Tag | File | Purpose |
 |---|---|---|---|
-| `WebAudioSlider` | `<wam-slider>` | `wam-slider.js` | Range input with linear/log scale, accent color |
-| `WebAudioStepSeq` | `<wam-step-seq>` | `wam-step-seq.js` | 16-step pattern grid with note select and accent toggles |
-| `WebAudioWaveform` | `<wam-waveform>` | `wam-waveform.js` | Click-to-cycle visualizer: oscilloscope → spectrogram waterfall → FFT bars |
-| `WebAudioFxUnit` | `<wam-fx-unit>` | `wam-fx-unit.js` | Composed FX Web Component (reverb + delay + chorus + filter) |
+| `WebAudioSlider` | `<wam-slider>` | `slider.js` | Range input with linear/log scale, accent color |
+| `WebAudioStepSeq` | `<wam-step-seq>` | `step-seq.js` | 16-step pattern grid with note select and accent toggles |
+| `WebAudioWaveform` | `<wam-waveform>` | `waveform.js` | Click-to-cycle visualizer: oscilloscope → spectrogram waterfall → FFT bars |
+| `WebAudioFxUnit` | `<wam-fx-unit>` | `fx-unit.js` | Composed FX Web Component (reverb + delay + chorus + filter) |
 | `*Controls` | various | per-instrument files | UI panel for each instrument; wraps instrument + analyser + FxUnit + waveform |
 
 ## Controls Companion Pattern
@@ -40,7 +40,7 @@ Every Controls component includes a permanent channel strip (always visible, not
 - **Mute** — toggles `_out.gain` to 0 / restores pre-mute volume
 - **VU meter** — peak level via a dedicated `AnalyserNode`
 
-The strip is created by `createChannelStrip()` (exported from `wam-slider.js`).
+The strip is created by `createChannelStrip()` (exported from `slider.js`).
 
 ## CSS Architecture
 
@@ -59,7 +59,7 @@ static _injectCSS() {
 }
 ```
 
-`injectControlsCSS()` (exported from `wam-slider.js`) injects shared `.wam-*` class styles used by all controls components.
+`injectControlsCSS()` (exported from `slider.js`) injects shared `.wam-*` class styles used by all controls components.
 
 ### Theming
 
@@ -150,10 +150,10 @@ sec.appendChild(mkSlider({ param: "cutoff", label: "Cutoff", tooltip: "Low-pass 
 
 ### Selects and Buttons: `createCtrl()`
 
-Any non-slider control (a `<select>`, a `<button>`, a number input) must be wrapped with `createCtrl()` from `wam-slider.js`. This creates a `div.wam-ctrl` containing a `<label>` (with optional PicoCSS tooltip) and appends the control as a child:
+Any non-slider control (a `<select>`, a `<button>`, a number input) must be wrapped with `createCtrl()` from `slider.js`. This creates a `div.wam-ctrl` containing a `<label>` (with optional PicoCSS tooltip) and appends the control as a child:
 
 ```js
-import { createCtrl } from "../ui/wam-slider.js";
+import { createCtrl } from "../ui/slider.js";
 
 // Select
 const mySelect = document.createElement("select");
@@ -202,7 +202,7 @@ static SLIDER_DEFS = [
 
 ## Controls Layout: `createSection()`
 
-All instrument-specific parameter groups use `createSection(label)` from `wam-slider.js`:
+All instrument-specific parameter groups use `createSection(label)` from `slider.js`:
 
 ```js
 const { el, controls } = createSection("Envelope");

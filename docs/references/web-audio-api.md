@@ -81,7 +81,7 @@ A4 = MIDI 69 = 440 Hz. Middle C = MIDI 60 = ~261.6 Hz.
 ```js
 // Registration (once per context, after user gesture)
 await ctx.audioWorklet.addModule(
-  new URL("./wam-pitch-shift.worklet.js", import.meta.url).href
+  new URL("./pitch-shift.worklet.js", import.meta.url).href
 );
 
 // Instantiation

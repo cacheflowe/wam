@@ -72,7 +72,7 @@ Build a library of browser-based instruments that are:
 | **Channel strip section toggles** | ~~Medium~~ | ~~Independent Controls / Sequencer / FX toggle buttons~~ — **Done 2026-05-03** |
 | **Double-click/tap reset to default** | Medium | Double-click (or double-tap) any UI control (sliders, knobs, dropdowns, toggles) resets it to its default value |
 | **Knob controls / compact UI** | Medium | Replace sliders with compact knob controls for VST-like density; see **UI Direction** section below |
-| **Parametric EQ** | Medium | 3-4 band EQ as first effect in FX unit chain; new `wam-eq.js` with engine + UI; see **New Effects** section below |
+| **Parametric EQ** | Medium | 3-4 band EQ as first effect in FX unit chain; new `eq.js` with engine + UI; see **New Effects** section below |
 | **MediaRecorder video+audio capture** | Medium | Record window/interface as video+audio; transport-aware loop recording; see **MediaRecorder Recording** section below |
 | Responsive volume / overload protection | Medium | See **Responsive Volume** section below |
 | Acid-breaks UI grid layout | Medium | Container queries for responsive panel grid; see **Layout** section below |
@@ -149,7 +149,7 @@ Goal: a lightweight dev environment where instruments can be instantiated, tweak
 
 | Was | Now |
 |---|---|
-| `web-audio-synth-acid.js` | `wam-synth-acid.js` |
+| `web-audio-synth-acid.js` | `synth-acid.js` |
 | `<web-audio-slider>` | `<wam-slider>` |
 | `.wac-section` / `.was-range` | `.wam-section` / `.wam-range` |
 
@@ -185,7 +185,7 @@ Planned tools:
 - **Accent migration**: move accents to neighboring steps
 - **Morph target**: set a target pattern and interpolate toward it over X bars
 
-These would live in a `wam-evolution.js` module, usable independently of the step sequencer UI.
+These would live in a `evolution.js` module, usable independently of the step sequencer UI.
 
 ## Loop Player
 
@@ -203,7 +203,7 @@ Goal: evolve `WebAudioBreakPlayer` into a general-purpose BPM-synced loop player
 - Sampler = one-shot trigger → ADSR → done (fire-and-forget voices)
 - Loop player = continuous BPM-synced playback with time-stretch and beat-locked looping
 
-They share `wam-sample-utils.js` for loading and the Vite glob pattern for file discovery, but the audio engines have nothing in common.
+They share `sample-utils.js` for loading and the Vite glob pattern for file discovery, but the audio engines have nothing in common.
 
 **Implementation phases**:
 1. Refactor break player to accept `files` + `basePath` via options (like sampler does) instead of hardcoded manifest
@@ -261,7 +261,7 @@ Goal: make sequenced patterns feel more organic and less machine-rigid.
 
 | Effect | Notes |
 |---|---|
-| **Parametric EQ** | 3–4 band parametric EQ (low shelf, mid peaking, high shelf + optional mid 2) using `BiquadFilterNode`; new `wam-eq.js` with audio engine + UI controls; first effect in FX unit chain so it shapes tone before reverb/delay/etc. |
+| **Parametric EQ** | 3–4 band parametric EQ (low shelf, mid peaking, high shelf + optional mid 2) using `BiquadFilterNode`; new `eq.js` with audio engine + UI controls; first effect in FX unit chain so it shapes tone before reverb/delay/etc. |
 | **Sidechain Compressor** | Duck one instrument based on another's amplitude (envelope follower → gain modulation) |
 | **Phaser** | Multi-stage all-pass filter sweep; LFO-modulated; stereo |
 | **Compressor** | Wrapper + UI around `DynamicsCompressorNode` |

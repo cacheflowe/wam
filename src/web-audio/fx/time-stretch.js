@@ -17,8 +17,8 @@
  *   ts.seek(0.5);          // jump to 50% through buffer
  */
 
-import "../ui/wam-slider.js";
-import { injectControlsCSS, createSection, createCtrl } from "../ui/wam-slider.js";
+import "../ui/slider.js";
+import { injectControlsCSS, createSection, createCtrl } from "../ui/slider.js";
 
 export default class WebAudioTimeStretch {
   /**
@@ -43,7 +43,7 @@ export default class WebAudioTimeStretch {
   }
 
   async _init() {
-    const url = new URL("./wam-time-stretch.worklet.js", import.meta.url);
+    const url = new URL("./time-stretch.worklet.js", import.meta.url);
     await this.ctx.audioWorklet.addModule(url);
 
     this._node = new AudioWorkletNode(this.ctx, "time-stretch-processor", {

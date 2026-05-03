@@ -33,15 +33,15 @@ class WebAudioSynthAcid {
 
 | Class | File | Type | Notable Features |
 |---|---|---|---|
-| `WebAudioSynthAcid` | `wam-synth-acid.js` | Mono bass | Filter sweep, portamento, unison, distortion |
-| `WebAudioSynth808` | `wam-synth-808.js` | Pitched bass | Pitch sweep, click transient, sub oscillator |
-| `WebAudioSynthFM` | `wam-synth-fm.js` | Poly FM | 2-op FM, mod envelope, BPM-synced filter LFO, chord mode |
-| `WebAudioSynthMono` | `wam-synth-mono.js` | Mono | Saw/square/tri, ADSR, filter envelope, sub osc |
-| `WebAudioSynthPad` | `wam-synth-pad.js` | Poly pad | Chord voicing, constant-power voice scaling |
-| `WebAudioSynthBlipFX` | `wam-synth-blipfx.js` | SFX | 6 waveforms, FM, bit-crush, randomization |
-| `WebAudioPercKick` | `wam-perc-kick.js` | Percussion | Sine sweep, pitch envelope |
-| `WebAudioPercHihat` | `wam-perc-hihat.js` | Percussion | Bandpass noise, open/closed character |
-| `WebAudioBreakPlayer` | `wam-break-player.js` | Sampler | Loop playback, time-stretch, reverse, random jumps |
+| `WebAudioSynthAcid` | `synth-acid.js` | Mono bass | Filter sweep, portamento, unison, distortion |
+| `WebAudioSynth808` | `synth-808.js` | Pitched bass | Pitch sweep, click transient, sub oscillator |
+| `WebAudioSynthFM` | `synth-fm.js` | Poly FM | 2-op FM, mod envelope, BPM-synced filter LFO, chord mode |
+| `WebAudioSynthMono` | `synth-mono.js` | Mono | Saw/square/tri, ADSR, filter envelope, sub osc |
+| `WebAudioSynthPad` | `synth-pad.js` | Poly pad | Chord voicing, constant-power voice scaling |
+| `WebAudioSynthBlipFX` | `synth-blipfx.js` | SFX | 6 waveforms, FM, bit-crush, randomization |
+| `WebAudioPercKick` | `perc-kick.js` | Percussion | Sine sweep, pitch envelope |
+| `WebAudioPercHihat` | `perc-hihat.js` | Percussion | Bandpass noise, open/closed character |
+| `WebAudioBreakPlayer` | `break-player.js` | Sampler | Loop playback, time-stretch, reverse, random jumps |
 
 ### Fire-and-Forget Voice Architecture
 
@@ -76,12 +76,12 @@ All effects expose the same `connect()` / `input` interface as instruments.
 
 | Class | File | Dry/Wet | Notes |
 |---|---|---|---|
-| `WebAudioFxReverb` | `wam-fx-reverb.js` | Yes | Synthesized IR, convolution reverb |
-| `WebAudioFxDelay` | `wam-fx-delay.js` | Yes | BPM-synced, LP feedback filter, LFO |
-| `WebAudioFxChorus` | `wam-fx-chorus.js` | Yes | 1–6 voices, stereo spread, feedback |
-| `WebAudioFxFilter` | `wam-fx-filter.js` | No (always inline) | Series HP → LP, shared Q |
-| `WebAudioFxDistortion` | `wam-fx-distortion.js` | Yes | Soft-clip waveshaper |
-| `WebAudioFxUnit` | `wam-fx-unit.js` | Per-effect | Web Component composing all above |
+| `WebAudioFxReverb` | `fx-reverb.js` | Yes | Synthesized IR, convolution reverb |
+| `WebAudioFxDelay` | `fx-delay.js` | Yes | BPM-synced, LP feedback filter, LFO |
+| `WebAudioFxChorus` | `fx-chorus.js` | Yes | 1–6 voices, stereo spread, feedback |
+| `WebAudioFxFilter` | `fx-filter.js` | No (always inline) | Series HP → LP, shared Q |
+| `WebAudioFxDistortion` | `fx-distortion.js` | Yes | Soft-clip waveshaper |
+| `WebAudioFxUnit` | `fx-unit.js` | Per-effect | Web Component composing all above |
 
 ### FxUnit Internal Routing
 
@@ -95,20 +95,20 @@ input → WebAudioFxChorus  (parallel) ─┘
 
 | File | Purpose |
 |---|---|
-| `wam-pitch-shift.worklet.js` | Granular overlap-add pitch shift (loaded by `WebAudioPitchShift`) |
-| `wam-time-stretch.worklet.js` | Granular time-stretch with independent speed/pitch (loaded by `WebAudioTimeStretch`) |
+| `pitch-shift.worklet.js` | Granular overlap-add pitch shift (loaded by `WebAudioPitchShift`) |
+| `time-stretch.worklet.js` | Granular time-stretch with independent speed/pitch (loaded by `WebAudioTimeStretch`) |
 
 Worklets must be registered before use:
 
 ```js
 await ctx.audioWorklet.addModule(
-  new URL("./wam-pitch-shift.worklet.js", import.meta.url).href
+  new URL("./pitch-shift.worklet.js", import.meta.url).href
 );
 ```
 
 ## Sequencer
 
-`WebAudioSequencer` (in `wam-sequencer.js`) implements the Chris Wilson lookahead technique:
+`WebAudioSequencer` (in `sequencer.js`) implements the Chris Wilson lookahead technique:
 
 - `setInterval` fires every 25ms
 - Each tick pre-schedules steps within the next 100ms window
@@ -125,7 +125,7 @@ seq.bpm = 140; // live tempo change
 
 ## Music Theory Utilities
 
-`wam-scales.js` exports:
+`scales.js` exports:
 
 | Export | Description |
 |---|---|

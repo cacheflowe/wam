@@ -1,10 +1,10 @@
-import "../ui/wam-slider.js";
-import "../fx/wam-fx-unit.js";
-import "../ui/wam-waveform.js";
-import "../fx/wam-pitch-shift.js";
-import "../fx/wam-time-stretch.js";
-import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
-import { WebAudioControlsBase, createSection, createCtrl } from "../ui/wam-controls-base.js";
+import "../ui/slider.js";
+import "../fx/fx-unit.js";
+import "../ui/waveform.js";
+import "../fx/pitch-shift.js";
+import "../fx/time-stretch.js";
+import WebAudioInstrumentBase from "../global/instrument-base.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
 
 /**
  * WebAudioBreakPlayer — loads a drum loop, time-stretches it to the target
@@ -102,7 +102,7 @@ export default class WebAudioBreakPlayer extends WebAudioInstrumentBase {
 
     // Initialize pitch-shift effect node (lazy — only on first load when enabled)
     if (this._useTimeStretch && !this._pitchShiftNode) {
-      const { default: WebAudioPitchShift } = await import("../fx/wam-pitch-shift.js");
+      const { default: WebAudioPitchShift } = await import("../fx/pitch-shift.js");
       this._pitchShiftNode = new WebAudioPitchShift(this.ctx);
       await this._pitchShiftNode.ready;
       this._pitchShiftNode.connect(this._out);

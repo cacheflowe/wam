@@ -1,5 +1,5 @@
-import "./wam-slider.js";
-import { injectControlsCSS, createChannelStrip, createSection, createCtrl } from "./wam-slider.js";
+import "./slider.js";
+import { injectControlsCSS, createChannelStrip, createSection, createCtrl } from "./slider.js";
 
 /**
  * WebAudioControlsBase — shared foundation for all instrument control panels.
