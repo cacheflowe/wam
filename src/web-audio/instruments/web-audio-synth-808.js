@@ -110,6 +110,8 @@ export default class WebAudioSynth808 extends WebAudioInstrumentBase {
       cd[i] = (Math.random() * 2 - 1) * (1 - i / clickSamples);
     }
 
+    this.octaveOffset = 0;
+    this.octaveJumpProb = 0;
     this.applyPreset(preset);
   }
 
@@ -155,7 +157,8 @@ export default class WebAudioSynth808 extends WebAudioInstrumentBase {
    */
   trigger(midi, stepDurSec, atTime) {
     const ctx = this.ctx;
-    const targetFreq = WebAudioInstrumentBase._midiToFreq(midi);
+    const shifted = midi + this.octaveOffset * 12 + (Math.random() < this.octaveJumpProb ? 12 : 0);
+    const targetFreq = WebAudioInstrumentBase._midiToFreq(shifted);
     const startFreq = targetFreq * Math.pow(2, this.pitchSweepSemitones / 12);
 
     const osc = ctx.createOscillator();
@@ -283,6 +286,8 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
       scale: "log",
       tooltip: "Tone filter cutoff. Lower = rounder, darker bass.",
     },
+    { param: "octaveOffset",   label: "Octave",   min: -2, max: 2, step: 1,    tooltip: "Shift all notes up or down by octaves." },
+    { param: "octaveJumpProb", label: "Oct Jump", min: 0,  max: 1, step: 0.01, tooltip: "Probability of randomly jumping an octave on each note." },
   ];
 
   static DEFAULT_PATTERN() {
@@ -346,39 +351,14 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
     charCtrl.appendChild(mkSlider({ param: "subOscMix", label: "Sub Mix", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(charEl);
 
-    // ---- Sequencer Speed ----
-    const { el: speedEl, controls: speedCtrl } = createSection("Sequencer");
-    const speedSelect = document.createElement("select");
-    speedSelect.className = "wac-select";
-    [0.5, 1, 2].forEach((val) => {
-      const opt = document.createElement("option");
-      opt.value = val;
-      opt.textContent = val === 0.5 ? "0.5x" : val === 1 ? "1x (Normal)" : "2x";
-      if (val === 1) opt.selected = true;
-      speedSelect.appendChild(opt);
-    });
-    speedSelect.addEventListener("change", () => {
-      this.speedMultiplier = parseFloat(speedSelect.value);
-      this._emitChange();
-    });
-    const speedLabel = document.createElement("label");
-    speedLabel.style.display = "flex";
-    speedLabel.style.gap = "6px";
-    speedLabel.style.alignItems = "center";
-    speedLabel.appendChild(document.createTextNode("Speed:"));
-    speedLabel.appendChild(speedSelect);
-    speedCtrl.appendChild(speedLabel);
-    controls.appendChild(speedEl);
+    // ---- Octave ----
+    const { el: octEl, controls: octCtrl } = createSection("Octave");
+    octCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Offset",    min: -2, max: 2, step: 1 }));
+    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0,  max: 1, step: 0.01 }));
+    controls.appendChild(octEl);
 
-    // Randomize button
-    const actionRow = document.createElement("div");
-    actionRow.className = "wac-action-row";
-    const randBtn = document.createElement("button");
-    randBtn.textContent = "\u2684 Randomize";
-    randBtn.className = "wac-action-btn";
-    randBtn.addEventListener("click", () => this.randomize());
-    actionRow.appendChild(randBtn);
-    expanded.appendChild(actionRow);
+    // ---- Sequencer ----
+    this._buildSequencerSection(controls, { onRandomize: () => this.randomize() });
 
     // Step sequencer
     this._seq = document.createElement("web-audio-step-seq");
@@ -389,7 +369,6 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
       probability: true,
       ratchet: true,
       conditions: true,
-      patternControls: true,
       color,
     });
     expanded.appendChild(this._seq);
@@ -462,6 +441,12 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
         return true;
       case "1:2":
         return barIndex % 2 === 0;
+      case "1:3":
+        return barIndex % 3 === 0;
+      case "1:4":
+        return barIndex % 4 === 0;
+      case "2:4":
+        return barIndex % 4 === 1;
       case "3:4":
         return barIndex % 4 === 2;
       case "fill":

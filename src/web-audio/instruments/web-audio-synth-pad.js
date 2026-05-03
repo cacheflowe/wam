@@ -78,6 +78,8 @@ export default class WebAudioSynthPad extends WebAudioInstrumentBase {
     this.filterEnvAmt = 0; this.filterAttack = 0.5; this.filterDecay = 0.4; this.filterSustain = 0;
     this.lfoRate = 2; this.lfoDepth = 0; this.lfoShape = "sine"; this.lfoDest = "filter";
     this.voiceLimit = 12; this.velToFilter = 0;
+    this.octaveOffset = 0;
+    this.octaveJumpProb = 0;
 
     this.applyPreset(preset);
   }
@@ -105,7 +107,8 @@ export default class WebAudioSynthPad extends WebAudioInstrumentBase {
   trigger(midiNotes, durationSec, velocity = 1, atTime = 0) {
     const ctx = this.ctx;
     const t = atTime > 0 ? atTime : ctx.currentTime;
-    const notes = Array.isArray(midiNotes) ? midiNotes : [midiNotes];
+    const shift = this.octaveOffset * 12 + (Math.random() < this.octaveJumpProb ? 12 : 0);
+    const notes = (Array.isArray(midiNotes) ? midiNotes : [midiNotes]).map((n) => n + shift);
     const perVoice = velocity / Math.sqrt(notes.length);
     const mixerGain = this.detune2 > 0 ? 0.7 : 1;
     const noteStopTime = t + durationSec + this.release + 0.1;
@@ -220,9 +223,11 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     { param: "filterDecay",   label: "F.Dec",     min: 0.01, max: 4,     step: 0.01,  tooltip: "Filter envelope decay time." },
     { param: "filterSustain", label: "F.Sus",     min: 0,    max: 1,     step: 0.01,  tooltip: "Filter sustain level (0 = full decay back to base)." },
     { param: "detune2",       label: "Spread",    min: 0,    max: 60,    step: 1,     tooltip: "Dual-oscillator spread in cents for chorus-like thickness." },
-    { param: "lfoRate",       label: "LFO Rate",  min: 0.01, max: 20,    step: 0.01,  tooltip: "LFO speed in Hz." },
-    { param: "lfoDepth",      label: "LFO Depth", min: 0,    max: 1,     step: 0.01,  tooltip: "LFO modulation depth (0 = off)." },
-    { param: "voiceLimit",    label: "V.Limit",   min: 0,    max: 16,    step: 1,     tooltip: "Max simultaneous voices. Oldest voice stolen when exceeded. 0 = unlimited." },
+    { param: "lfoRate",        label: "LFO Rate",  min: 0.01, max: 20,    step: 0.01,  tooltip: "LFO speed in Hz." },
+    { param: "lfoDepth",       label: "LFO Depth", min: 0,    max: 1,     step: 0.01,  tooltip: "LFO modulation depth (0 = off)." },
+    { param: "octaveOffset",   label: "Octave",    min: -2,   max: 2,     step: 1,     tooltip: "Shift all notes up or down by octaves." },
+    { param: "octaveJumpProb", label: "Oct Jump",  min: 0,    max: 1,     step: 0.01,  tooltip: "Probability of randomly jumping an octave on each note." },
+    { param: "voiceLimit",     label: "V.Limit",   min: 0,    max: 16,    step: 1,     tooltip: "Max simultaneous voices. Oldest voice stolen when exceeded. 0 = unlimited." },
     { param: "velToFilter",   label: "Vel→Flt",   min: 0,    max: 1,     step: 0.01,  tooltip: "Velocity modulates filter cutoff (0–2 octaves at max)." },
     { param: "volume",        label: "Vol",       min: 0,    max: 1,     step: 0.01 },
   ];
@@ -259,7 +264,7 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
     this._makePresetDropdown(WebAudioSynthPad.PRESETS, toneCtrl);
-    this._makeWaveRow(["sine", "triangle", "sawtooth", "square"], toneCtrl);
+    this._makeWaveSelect(["sine", "triangle", "sawtooth", "square"], toneCtrl);
     toneCtrl.appendChild(mkSlider({ param: "detune2", label: "Spread", min: 0, max: 60, step: 1 }));
     controls.appendChild(toneEl);
 
@@ -294,67 +299,37 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     lfoCtrl.appendChild(this._makeLfoDestSelect());
     controls.appendChild(lfoEl);
 
+    // ---- Octave ----
+    const { el: octEl, controls: octCtrl } = createSection("Octave");
+    octCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Offset",    min: -2, max: 2, step: 1 }));
+    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0,  max: 1, step: 0.01 }));
+    controls.appendChild(octEl);
+
     // ---- Voice ----
     const { el: voiceEl, controls: voiceCtrl } = createSection("Voice");
     voiceCtrl.appendChild(mkSlider({ param: "voiceLimit",  label: "V.Limit", min: 0,   max: 16, step: 1 }));
     voiceCtrl.appendChild(mkSlider({ param: "velToFilter", label: "Vel→Flt", min: 0,   max: 1,  step: 0.01 }));
     controls.appendChild(voiceEl);
 
-    // ---- Sequencer Speed ----
-    const { el: speedEl, controls: speedCtrl } = createSection("Sequencer");
-    const speedSelect = document.createElement("select");
-    speedSelect.className = "wac-select";
-    [0.5, 1, 2].forEach((val) => {
-      const opt = document.createElement("option");
-      opt.value = val;
-      opt.textContent = val === 0.5 ? "0.5x" : val === 1 ? "1x (Normal)" : "2x";
-      if (val === 1) opt.selected = true;
-      speedSelect.appendChild(opt);
-    });
-    speedSelect.addEventListener("change", () => {
-      this.speedMultiplier = parseFloat(speedSelect.value);
-      this._emitChange();
-    });
-    const speedLabel = document.createElement("label");
-    speedLabel.style.display = "flex";
-    speedLabel.style.gap = "6px";
-    speedLabel.style.alignItems = "center";
-    speedLabel.appendChild(document.createTextNode("Speed:"));
-    speedLabel.appendChild(speedSelect);
-    speedCtrl.appendChild(speedLabel);
+    // ---- Sequencer ----
+    const { controls: seqCtrl } = this._buildSequencerSection(controls, { onRandomize: () => this.randomize() });
 
-    const chordSizeSelect = document.createElement("select");
-    chordSizeSelect.className = "wac-select";
-    this._chordSizeSelect = chordSizeSelect;
-    [2, 3, 4].forEach((n) => {
+    const chordWrap = createCtrl("Chord", { tooltip: "Number of notes per step trigger." });
+    this._chordSizeSelect = document.createElement("select");
+    this._chordSizeSelect.className = "wac-select";
+    [1, 2, 3, 4].forEach((n) => {
       const opt = document.createElement("option");
       opt.value = n;
-      opt.textContent = `${n} notes`;
+      opt.textContent = n === 1 ? "1 note" : `${n} notes`;
       if (n === this._chordSize) opt.selected = true;
-      chordSizeSelect.appendChild(opt);
+      this._chordSizeSelect.appendChild(opt);
     });
-    chordSizeSelect.addEventListener("change", () => {
-      this._chordSize = parseInt(chordSizeSelect.value);
+    this._chordSizeSelect.addEventListener("change", () => {
+      this._chordSize = parseInt(this._chordSizeSelect.value);
       this._emitChange();
     });
-    const chordLabel = document.createElement("label");
-    chordLabel.style.display = "flex";
-    chordLabel.style.gap = "6px";
-    chordLabel.style.alignItems = "center";
-    chordLabel.appendChild(document.createTextNode("Chord:"));
-    chordLabel.appendChild(chordSizeSelect);
-    speedCtrl.appendChild(chordLabel);
-    controls.appendChild(speedEl);
-
-    // Randomize button
-    const actionRow = document.createElement("div");
-    actionRow.className = "wac-action-row";
-    const randBtn = document.createElement("button");
-    randBtn.textContent = "\u2684 Randomize";
-    randBtn.className = "wac-action-btn";
-    randBtn.addEventListener("click", () => this.randomize());
-    actionRow.appendChild(randBtn);
-    expanded.appendChild(actionRow);
+    chordWrap.appendChild(this._chordSizeSelect);
+    seqCtrl.appendChild(chordWrap);
 
     // Step sequencer
     this._seq = document.createElement("web-audio-step-seq");
@@ -365,7 +340,6 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
       probability: true,
       ratchet: true,
       conditions: true,
-      patternControls: true,
       color,
     });
     expanded.appendChild(this._seq);
@@ -413,7 +387,7 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
-            const chord = buildChordFromScale(s.note, this._scaleName, this._chordSize);
+            const chord = this._chordSize === 1 ? s.note : buildChordFromScale(s.note, this._scaleName, this._chordSize);
             const ratchet = s.ratchet ?? 1;
             if (ratchet > 1) {
               const ratchetDuration = subStepDur / ratchet;
@@ -437,6 +411,9 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     switch (condition) {
       case "off": return true;
       case "1:2": return barIndex % 2 === 0;
+      case "1:3": return barIndex % 3 === 0;
+      case "1:4": return barIndex % 4 === 0;
+      case "2:4": return barIndex % 4 === 1;
       case "3:4": return barIndex % 4 === 2;
       case "fill": return barIndex % 4 === 3;
       default: return true;
@@ -541,7 +518,7 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     switch (key) {
       case "oscType":
         this._instrument.oscType = val;
-        this._syncWaveRow();
+        this._syncWaveSelect();
         break;
       case "filterType":
         this._instrument.filterType = val;
@@ -569,7 +546,7 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
   }
 
   _syncExtraControls() {
-    this._syncWaveRow();
+    this._syncWaveSelect();
     if (this._filterTypeSelect && this._instrument) this._filterTypeSelect.value = this._instrument.filterType;
     if (this._lfoShapeSelect && this._instrument) this._lfoShapeSelect.value = this._instrument.lfoShape;
     if (this._lfoDestSelect && this._instrument) this._lfoDestSelect.value = this._instrument.lfoDest;

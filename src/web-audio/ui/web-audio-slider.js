@@ -157,6 +157,9 @@ export default class WebAudioSlider extends HTMLElement {
 
     this._setDisplayValue(parseFloat(value));
 
+    // Return focus to document after dragging so spacebar/key commands aren't swallowed
+    this._range.addEventListener("pointerup", () => { this._range.blur(); });
+
     // User interaction only — dispatches slider-input event
     this._range.addEventListener("input", () => {
       const raw = parseFloat(this._range.value);
@@ -430,6 +433,18 @@ export function injectControlsCSS() {
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
+    .wac-num-input {
+      font-family: monospace;
+      font-size: 0.82em;
+      height: 22px;
+      padding: 0 4px;
+      box-sizing: border-box;
+      background: #1a1a1a;
+      color: #aaa;
+      border: 1px solid #333;
+      border-radius: 3px;
+      width: 52px;
+    }
     .wac-mute-btn {
       font-family: monospace;
       font-size: 0.7em;
@@ -448,6 +463,24 @@ export function injectControlsCSS() {
       background: #a00;
       color: #fff;
       border-color: #a00;
+    }
+    .wac-jam-btn {
+      font-family: monospace;
+      font-size: 0.7em;
+      height: 22px;
+      padding: 0 10px;
+      box-sizing: border-box;
+      background: color-mix(in srgb, var(--slider-accent, #0f0) 10%, #111);
+      color: var(--slider-accent, #0f0);
+      border: 1px solid var(--slider-accent, #0f0);
+      border-radius: 3px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .wac-jam-btn:hover {
+      background: var(--slider-accent, #0f0);
+      color: #000;
     }
     /* ---- Channel strip ---- */
     .wac-channel-strip {
@@ -481,6 +514,15 @@ export function injectControlsCSS() {
       line-height: 1;
     }
     [data-collapsed] > .wac-channel-strip .wac-strip-chevron { transform: rotate(-90deg); }
+    .wac-channel-strip web-audio-waveform {
+      flex: 1 1 60px;
+      max-width: 100px;
+      height: 36px;
+      min-width: 50px;
+      background: #080808;
+      border-radius: 2px;
+      border: none;
+    }
     .wac-channel-strip web-audio-slider {
       flex: 1 1 80px;
       max-width: 160px;
@@ -639,6 +681,7 @@ export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1
   });
 
   return {
+    strip,
     volSlider,
     panSlider,
     meter,

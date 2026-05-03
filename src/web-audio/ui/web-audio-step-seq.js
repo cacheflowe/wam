@@ -7,7 +7,7 @@
  *   • Optional accent checkbox per step (enable with accent: true in init)
  *   • Optional probability slider per step (0–1; enable with probability: true in init)
  *   • Optional ratchet selector per step (1/2/3; enable with ratchet: true in init)
- *   • Optional conditions selector per step (off/1:2/3:4/fill; enable with conditions: true in init)
+ *   • Optional conditions selector per step (off/1:2/1:3/1:4/2:4/3:4/fill; enable with conditions: true in init)
  *   • Pattern-level controls: bar density (playEvery), rotation (rotationOffset, rotationIntervalBars)
  *   • Active-step highlight (call setActiveStep(i) each tick)
  *   • Dispatches "step-change" CustomEvent when any step is edited
@@ -173,6 +173,28 @@ export default class WebAudioStepSeq extends HTMLElement {
         border: 1px solid #444;
         border-radius: 2px;
       }
+      web-audio-step-seq .wass-rand-btn {
+        font-family: monospace;
+        font-size: 0.65rem;
+        padding: 2px 8px;
+        height: 20px;
+        box-sizing: border-box;
+        background: #222;
+        color: var(--seq-color, #0f0);
+        border: 1px solid var(--seq-color, #0f0);
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      web-audio-step-seq .wass-rand-btn:hover {
+        background: var(--seq-color, #0f0);
+        color: #000;
+      }
+      web-audio-step-seq .wass-rand-row {
+        grid-column: 1 / -1;
+        display: flex;
+        padding: 6px 4px;
+        border-top: 1px solid #333;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -236,6 +258,7 @@ export default class WebAudioStepSeq extends HTMLElement {
     ratchet = false,
     conditions = false,
     patternControls = false,
+    onRandomize = null,
     color,
     stepClass,
   } = {}) {
@@ -253,6 +276,7 @@ export default class WebAudioStepSeq extends HTMLElement {
     this._hasRatchet = ratchet;
     this._hasConditions = conditions;
     this._patternControls = patternControls;
+    this._onRandomize = onRandomize;
     if (color) this.style.setProperty("--seq-color", color);
     if (stepClass) this._stepClass = stepClass;
     this._initialized = true;
@@ -375,7 +399,7 @@ export default class WebAudioStepSeq extends HTMLElement {
         const condSelect = document.createElement("select");
         condSelect.className = "wass-conditions";
         condSelect.title = "Conditions — gate by bar cycle";
-        ["off", "1:2", "3:4", "fill"].forEach((val) => {
+        ["off", "1:2", "1:3", "1:4", "2:4", "3:4", "fill"].forEach((val) => {
           const opt = document.createElement("option");
           opt.value = val;
           opt.textContent = val === "off" ? "—" : val;
@@ -454,7 +478,24 @@ export default class WebAudioStepSeq extends HTMLElement {
       rotationDiv.appendChild(rotationBars);
       controlsDiv.appendChild(rotationDiv);
 
+      if (this._onRandomize) {
+        const randBtn = document.createElement("button");
+        randBtn.textContent = "⚄ Rand";
+        randBtn.className = "wass-rand-btn";
+        randBtn.addEventListener("click", () => this._onRandomize());
+        controlsDiv.appendChild(randBtn);
+      }
+
       this.appendChild(controlsDiv);
+    } else if (this._onRandomize) {
+      const randRow = document.createElement("div");
+      randRow.className = "wass-rand-row";
+      const randBtn = document.createElement("button");
+      randBtn.textContent = "⚄ Rand";
+      randBtn.className = "wass-rand-btn";
+      randBtn.addEventListener("click", () => this._onRandomize());
+      randRow.appendChild(randBtn);
+      this.appendChild(randRow);
     }
   }
 
@@ -520,9 +561,14 @@ export default class WebAudioStepSeq extends HTMLElement {
    * @param {Array<[string, number]>} opts  [[name, midi], ...]
    */
   setNoteOptions(opts) {
+    if (!opts || !opts.length) {
+      // Hide note selects when no options (e.g. drum mode)
+      this._noteSelects.forEach((sel) => { sel.style.display = "none"; });
+      return;
+    }
     const vals = opts.map(([, m]) => m);
-    if (!vals.length) return;
     this._noteSelects.forEach((sel, i) => {
+      sel.style.display = "";
       const prev = parseInt(sel.value);
       sel.innerHTML = "";
       opts.forEach(([name, midi]) => {

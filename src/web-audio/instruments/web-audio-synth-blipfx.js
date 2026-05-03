@@ -1,6 +1,6 @@
 import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
 import "../ui/web-audio-step-seq.js";
-import { WebAudioControlsBase, createSection } from "../ui/web-audio-controls-base.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../ui/web-audio-controls-base.js";
 
 /**
  * WebAudioSynthBlipFX — procedural sound effect synthesizer.
@@ -631,6 +631,8 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     super();
     this._shapeSelect = null;
     this._chance = 0.15;
+    this._locked = false;
+    this._lockBtn = null;
     this._lastStep = -1;
     this._seq = null;
 
@@ -644,6 +646,15 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
   _defaultColor() { return "#c0f"; }
   _defaultTitle() { return "BlipFX Sound Effects"; }
   _fxTitle() { return "SFX FX"; }
+
+  _buildStripActions(strip) {
+    const btn = document.createElement("button");
+    btn.textContent = "▶";
+    btn.className = "wac-jam-btn";
+    btn.title = "Trigger sound [V]";
+    btn.addEventListener("click", () => this.triggerNow());
+    strip.appendChild(btn);
+  }
 
   // ---- Bind override to capture chance from options ----
 
@@ -659,6 +670,7 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
     this._makePresetDropdown(WebAudioSynthBlipFX.PRESETS, toneCtrl);
 
+    const shapeWrap = createCtrl("Shape", { tooltip: "Oscillator waveform shape." });
     this._shapeSelect = document.createElement("select");
     this._shapeSelect.className = "wac-select";
     WebAudioSynthBlipFX.SHAPES.forEach((name, i) => {
@@ -672,11 +684,25 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
       this._instrument.shape = parseInt(this._shapeSelect.value);
       this._emitChange();
     });
-    toneCtrl.appendChild(this._shapeSelect);
+    shapeWrap.appendChild(this._shapeSelect);
+    toneCtrl.appendChild(shapeWrap);
     toneCtrl.appendChild(mkSlider({ param: "frequency", label: "Freq", min: 20, max: 2000, step: 1, scale: "log" }));
     const chanceSlider = mkSlider({ param: "chance", label: "Chance", min: 0, max: 1, step: 0.01 });
     chanceSlider.value = this._chance;
     toneCtrl.appendChild(chanceSlider);
+
+    const randPresetWrap = createCtrl("Rand Preset", { tooltip: "Load a random preset." });
+    const randPresetBtn = document.createElement("button");
+    randPresetBtn.textContent = "⚄";
+    randPresetBtn.className = "wac-action-btn";
+    randPresetBtn.addEventListener("click", () => {
+      const names = Object.keys(WebAudioSynthBlipFX.PRESETS);
+      const name = names[Math.floor(Math.random() * names.length)];
+      this.applyPreset(name);
+      this._emitChange();
+    });
+    randPresetWrap.appendChild(randPresetBtn);
+    toneCtrl.appendChild(randPresetWrap);
     controls.appendChild(toneEl);
 
     // ---- Envelope ----
@@ -717,21 +743,11 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     const actionRow = document.createElement("div");
     actionRow.className = "wac-action-row";
 
-    const randPresetBtn = document.createElement("button");
-    randPresetBtn.textContent = "\u2684 Rand Preset";
-    randPresetBtn.className = "wac-action-btn";
-    randPresetBtn.addEventListener("click", () => {
-      const names = Object.keys(WebAudioSynthBlipFX.PRESETS);
-      const name = names[Math.floor(Math.random() * names.length)];
-      this.applyPreset(name);
-      this._emitChange();
-    });
-    actionRow.appendChild(randPresetBtn);
-
     const newBtn = document.createElement("button");
     newBtn.textContent = "\u2684 Randomize";
     newBtn.className = "wac-action-btn";
     newBtn.addEventListener("click", () => {
+      if (this._locked) return;
       this._instrument.randomize();
       this._syncSliders();
       this._syncExtraControls();
@@ -739,38 +755,23 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     });
     actionRow.appendChild(newBtn);
 
-    const playBtn = document.createElement("button");
-    playBtn.textContent = "\u25B6 Play [V]";
-    playBtn.className = "wac-action-btn";
-    playBtn.addEventListener("click", () => this.triggerNow());
-    actionRow.appendChild(playBtn);
+    this._lockBtn = document.createElement("button");
+    this._lockBtn.textContent = "\uD83D\uDD13 Lock";
+    this._lockBtn.className = "wac-action-btn";
+    this._lockBtn.addEventListener("click", () => {
+      this._locked = !this._locked;
+      this._lockBtn.textContent = this._locked ? "\uD83D\uDD12 Locked" : "\uD83D\uDD13 Lock";
+      this._lockBtn.style.opacity = this._locked ? "1" : "0.6";
+      this._emitChange();
+    });
+    this._lockBtn.style.opacity = "0.6";
+    actionRow.appendChild(this._lockBtn);
 
     expanded.appendChild(actionRow);
 
-    // ---- Sequencer Speed ----
+    // ---- Sequencer ----
     const color = options.color || this._defaultColor();
-    const { el: speedEl, controls: speedCtrl } = createSection("Sequencer");
-    const speedSelect = document.createElement("select");
-    speedSelect.className = "wac-select";
-    [0.5, 1, 2].forEach((val) => {
-      const opt = document.createElement("option");
-      opt.value = val;
-      opt.textContent = val === 0.5 ? "0.5x" : val === 1 ? "1x (Normal)" : "2x";
-      if (val === 1) opt.selected = true;
-      speedSelect.appendChild(opt);
-    });
-    speedSelect.addEventListener("change", () => {
-      this.speedMultiplier = parseFloat(speedSelect.value);
-      this._emitChange();
-    });
-    const speedLabel = document.createElement("label");
-    speedLabel.style.display = "flex";
-    speedLabel.style.gap = "6px";
-    speedLabel.style.alignItems = "center";
-    speedLabel.appendChild(document.createTextNode("Speed:"));
-    speedLabel.appendChild(speedSelect);
-    speedCtrl.appendChild(speedLabel);
-    controls.appendChild(speedEl);
+    this._buildSequencerSection(controls);
 
     // Step sequencer (no note selection — probability controls when blips fire)
     this._seq = document.createElement("web-audio-step-seq");
@@ -779,7 +780,6 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
       probability: true,
       ratchet: true,
       conditions: true,
-      patternControls: true,
       color,
     });
     expanded.appendChild(this._seq);
@@ -830,9 +830,11 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
       if (index === this._lastStep) return;
       this._lastStep = index;
       if (Math.random() < this._chance) {
-        this._instrument.randomize();
-        this._syncSliders();
-        this._syncExtraControls();
+        if (!this._locked) {
+          this._instrument.randomize();
+          this._syncSliders();
+          this._syncExtraControls();
+        }
         this._instrument.trigger(time);
       }
       return;
@@ -873,10 +875,11 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
-            // Randomize sound on each trigger
-            this._instrument.randomize();
-            this._syncSliders();
-            this._syncExtraControls();
+            if (!this._locked) {
+              this._instrument.randomize();
+              this._syncSliders();
+              this._syncExtraControls();
+            }
 
             const ratchet = s.ratchet ?? 1;
             if (ratchet > 1) {
@@ -901,6 +904,9 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     switch (condition) {
       case "off": return true;
       case "1:2": return barIndex % 2 === 0;
+      case "1:3": return barIndex % 3 === 0;
+      case "1:4": return barIndex % 4 === 0;
+      case "2:4": return barIndex % 4 === 1;
       case "3:4": return barIndex % 4 === 2;
       case "fill": return barIndex % 4 === 3;
       default: return true;
@@ -914,12 +920,14 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     /* no-op — blipfx doesn't use note data */
   }
 
-  /** Trigger a new random sound immediately. */
+  /** Trigger the current sound immediately (randomizes first unless locked). */
   triggerNow() {
     if (!this._instrument || !this._ctx) return;
-    this._instrument.randomize();
-    this._syncSliders();
-    this._syncExtraControls();
+    if (!this._locked) {
+      this._instrument.randomize();
+      this._syncSliders();
+      this._syncExtraControls();
+    }
     this._instrument.trigger(this._ctx.currentTime);
   }
 
@@ -928,12 +936,15 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
   _extraToJSON(params) {
     params.chance = this._chance;
     params.shape = this._instrument.shape;
+    params.locked = this._locked;
   }
 
   _restoreParam(key, val) {
     if (key === "chance") {
       this._chance = val;
       if (this._sliders[key]) this._sliders[key].value = val;
+    } else if (key === "locked") {
+      // handled in _restoreExtra
     } else {
       this._instrument[key] = val;
       if (this._sliders[key]) this._sliders[key].value = val;
@@ -943,6 +954,11 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
   _restoreExtra(obj) {
     if (obj.params?.shape != null && this._shapeSelect) {
       this._shapeSelect.value = obj.params.shape;
+    }
+    if (obj.params?.locked != null && this._lockBtn) {
+      this._locked = !!obj.params.locked;
+      this._lockBtn.textContent = this._locked ? "🔒 Locked" : "🔓 Lock";
+      this._lockBtn.style.opacity = this._locked ? "1" : "0.6";
     }
     if (obj.steps && this._seq) this._seq.steps = obj.steps;
   }

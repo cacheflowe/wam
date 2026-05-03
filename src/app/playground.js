@@ -11,26 +11,52 @@ import "../web-audio/instruments/web-audio-synth-mono.js";
 import "../web-audio/instruments/web-audio-synth-pad.js";
 import "../web-audio/instruments/web-audio-synth-blipfx.js";
 import "../web-audio/instruments/web-audio-break-player.js";
+import "../web-audio/instruments/web-audio-sample-player.js";
 import "../web-audio/ui/web-audio-transport.js";
 
-import WebAudioPercKick    from "../web-audio/instruments/web-audio-perc-kick.js";
-import WebAudioPercHihat   from "../web-audio/instruments/web-audio-perc-hihat.js";
-import WebAudioPercSnare   from "../web-audio/instruments/web-audio-perc-snare.js";
-import WebAudioSynthAcid   from "../web-audio/instruments/web-audio-synth-acid.js";
-import WebAudioSynth808    from "../web-audio/instruments/web-audio-synth-808.js";
-import WebAudioSynthFM     from "../web-audio/instruments/web-audio-synth-fm.js";
-import WebAudioSynthMono   from "../web-audio/instruments/web-audio-synth-mono.js";
-import WebAudioSynthPad    from "../web-audio/instruments/web-audio-synth-pad.js";
+import WebAudioPercKick from "../web-audio/instruments/web-audio-perc-kick.js";
+import WebAudioPercHihat from "../web-audio/instruments/web-audio-perc-hihat.js";
+import WebAudioPercSnare from "../web-audio/instruments/web-audio-perc-snare.js";
+import WebAudioSynthAcid from "../web-audio/instruments/web-audio-synth-acid.js";
+import WebAudioSynth808 from "../web-audio/instruments/web-audio-synth-808.js";
+import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
+import WebAudioSynthMono from "../web-audio/instruments/web-audio-synth-mono.js";
+import WebAudioSynthPad from "../web-audio/instruments/web-audio-synth-pad.js";
 import WebAudioSynthBlipFX from "../web-audio/instruments/web-audio-synth-blipfx.js";
 import WebAudioBreakPlayer from "../web-audio/instruments/web-audio-break-player.js";
+import WebAudioSamplePlayer from "../web-audio/instruments/web-audio-sample-player.js";
 
 const BASE_PATH = "/audio/breaks/";
 const BREAK_FILES = [
   { label: "FunkyDrum (8 bars)", file: "0032-break-FUNKYDRUM_loop_8_.wav" },
   { label: "Shackup (16 bars)", file: "0033-break-shackup_loop_16_.wav" },
-  { label: "Think (4 bars)",    file: "0034-break-think.badsister_loop_4_.wav" },
+  { label: "Think (4 bars)", file: "0034-break-think.badsister_loop_4_.wav" },
   { label: "Hotpants (4 bars)", file: "0037_SamplepackHotpants_loop_4_.wav" },
 ];
+
+// Auto-discover sample files via Vite glob.
+// Uses { eager: false } on src-relative paths and extracts only the keys (paths).
+// Since files live in public/, Vite serves them at the root — we just strip the prefix.
+function globSamples(paths) {
+  return paths.map((path) => {
+    const file = path.split("/").pop();
+    const label = file.replace(/\.(wav|mp3|ogg|flac)$/i, "").replace(/[-_]/g, " ");
+    // Convert /public/audio/... → /audio/... (Vite serves public/ at root)
+    const url = path.replace(/^\/public/, "");
+    return { label, file: url };
+  });
+}
+
+// Extract just the path keys — we never actually import these files (they're in public/)
+const SAMPLE_FILES_KICKS = globSamples(
+  Object.keys(import.meta.glob("/public/audio/samples/kicks/*.wav")),
+);
+const SAMPLE_FILES_SNARES = globSamples(
+  Object.keys(import.meta.glob("/public/audio/samples/snares/*.wav")),
+);
+const SAMPLE_FILES_HITS = globSamples(
+  Object.keys(import.meta.glob("/public/audio/samples/hits/*.wav")),
+);
 
 /**
  * Registry of available instrument types.
@@ -39,75 +65,137 @@ const BREAK_FILES = [
  */
 const INSTRUMENT_TYPES = [
   {
-    id: "kick",    label: "Kick",        color: "#f44",
+    id: "kick",
+    label: "Kick",
+    color: "#f44",
     make: (ctx) => new WebAudioPercKick(ctx),
     tag: "web-audio-perc-kick-controls",
     bindOpts: (bpm) => ({ color: "#f44", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
-    id: "hihat",   label: "Hi-Hat",      color: "#ff0",
+    id: "hihat",
+    label: "Hi-Hat",
+    color: "#ff0",
     make: (ctx) => new WebAudioPercHihat(ctx),
     tag: "web-audio-perc-hihat-controls",
     bindOpts: (bpm) => ({ color: "#ff0", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
-    id: "snare",   label: "Snare",       color: "#f80",
+    id: "snare",
+    label: "Snare",
+    color: "#f80",
     make: (ctx) => new WebAudioPercSnare(ctx),
     tag: "web-audio-perc-snare-controls",
     bindOpts: (bpm) => ({ color: "#f80", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
-    id: "acid",    label: "Acid",        color: "#8f0",
+    id: "acid",
+    label: "Acid",
+    color: "#8f0",
     make: (ctx) => new WebAudioSynthAcid(ctx),
     tag: "web-audio-synth-acid-controls",
-    bindOpts: (bpm) => ({ color: "#8f0", fx: { bpm, reverbWet: 0.15, delayInterval: 0.75, delayFeedback: 0.35, delayMix: 0 } }),
+    bindOpts: (bpm) => ({
+      color: "#8f0",
+      fx: { bpm, reverbWet: 0.15, delayInterval: 0.75, delayFeedback: 0.35, delayMix: 0 },
+    }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
-    id: "bass808", label: "808 Bass",    color: "#f04",
+    id: "bass808",
+    label: "808 Bass",
+    color: "#f04",
     make: (ctx) => new WebAudioSynth808(ctx),
     tag: "web-audio-synth-808-controls",
     bindOpts: (bpm) => ({ color: "#f04", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
-    id: "fm",      label: "FM Synth",    color: "#4df",
+    id: "fm",
+    label: "FM Synth",
+    color: "#4df",
     make: (ctx) => new WebAudioSynthFM(ctx),
     tag: "web-audio-synth-fm-controls",
-    bindOpts: (bpm) => ({ color: "#4df", fx: { bpm, reverbWet: 0.2, delayInterval: 0.5, delayFeedback: 0.4, delayMix: 0.1 } }),
+    bindOpts: (bpm) => ({
+      color: "#4df",
+      fx: { bpm, reverbWet: 0.2, delayInterval: 0.5, delayFeedback: 0.4, delayMix: 0.1 },
+    }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
-    id: "mono",    label: "Mono Synth",  color: "#6df",
+    id: "mono",
+    label: "Mono Synth",
+    color: "#6df",
     make: (ctx) => new WebAudioSynthMono(ctx),
     tag: "web-audio-synth-mono-controls",
     bindOpts: (bpm) => ({ color: "#6df", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
-    id: "pad",     label: "Pad",         color: "#a8f",
+    id: "pad",
+    label: "Pad",
+    color: "#a8f",
     make: (ctx) => new WebAudioSynthPad(ctx),
     tag: "web-audio-synth-pad-controls",
     bindOpts: (bpm) => ({ color: "#a8f", fx: { bpm, reverbWet: 0.3, delayMix: 0.1 } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
-    id: "blipfx",  label: "BlipFX",      color: "#fa8",
+    id: "blipfx",
+    label: "BlipFX",
+    color: "#fa8",
     make: (ctx) => new WebAudioSynthBlipFX(ctx, { volume: 0.5 }),
     tag: "web-audio-synth-blipfx-controls",
     bindOpts: (bpm) => ({ color: "#fa8", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
-    id: "break",   label: "Break Player", color: "#8fa",
-    make: (ctx) => new WebAudioBreakPlayer(ctx, { speedMultiplier: 4, subdivision: 4, returnSteps: 1, randomChance: 0.1, reverseChance: 0.04, volume: 0.8, useTimeStretch: true }),
+    id: "break",
+    label: "Break Player",
+    color: "#8fa",
+    make: (ctx) =>
+      new WebAudioBreakPlayer(ctx, {
+        speedMultiplier: 4,
+        subdivision: 4,
+        returnSteps: 1,
+        randomChance: 0.1,
+        reverseChance: 0.04,
+        volume: 0.8,
+        useTimeStretch: true,
+      }),
     tag: "web-audio-break-player-controls",
     bindOpts: (bpm) => ({ color: "#8fa", files: BREAK_FILES, basePath: BASE_PATH, fx: { bpm } }),
     // Break player uses (globalStep, bpm, time) — owner tracks globalStep externally
     step: null,
+  },
+  {
+    id: "sampler-kicks",
+    label: "Sampler (Kicks)",
+    color: "#f8a",
+    make: (ctx) => new WebAudioSamplePlayer(ctx),
+    tag: "web-audio-sample-player-controls",
+    bindOpts: (bpm) => ({ color: "#f8a", files: SAMPLE_FILES_KICKS, basePath: "", fx: { bpm } }),
+    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
+  },
+  {
+    id: "sampler-snares",
+    label: "Sampler (Snares)",
+    color: "#fa8",
+    make: (ctx) => new WebAudioSamplePlayer(ctx),
+    tag: "web-audio-sample-player-controls",
+    bindOpts: (bpm) => ({ color: "#fa8", files: SAMPLE_FILES_SNARES, basePath: "", fx: { bpm } }),
+    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
+  },
+  {
+    id: "sampler-hits",
+    label: "Sampler (Hits)",
+    color: "#8af",
+    make: (ctx) => new WebAudioSamplePlayer(ctx),
+    tag: "web-audio-sample-player-controls",
+    bindOpts: (bpm) => ({ color: "#8af", files: SAMPLE_FILES_HITS, basePath: "", fx: { bpm } }),
+    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
 ];
 
@@ -122,13 +210,28 @@ class PlaygroundApp extends HTMLElement {
     this._instruments = [];
 
     this._buildUI();
+
+    this._onKeyDown = (e) => {
+      if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+      if (e.repeat) return;
+      if (e.key === " ") {
+        e.preventDefault();
+        this._transportEl.playing ? this._transportEl.stop() : this._transportEl.play();
+      }
+    };
+    document.addEventListener("keydown", this._onKeyDown);
+  }
+
+  disconnectedCallback() {
+    if (this._onKeyDown) document.removeEventListener("keydown", this._onKeyDown);
   }
 
   // ---- UI ----
 
   _buildUI() {
     this.innerHTML = "";
-    this.style.cssText = "display:block;min-height:100vh;background:#0d0d16;color:#e0e0f0;font-family:system-ui,sans-serif;";
+    this.style.cssText =
+      "display:block;min-height:100vh;background:#0d0d16;color:#e0e0f0;font-family:system-ui,sans-serif;";
 
     // Header
     const header = document.createElement("header");
@@ -160,8 +263,12 @@ class PlaygroundApp extends HTMLElement {
       const btn = document.createElement("button");
       btn.textContent = `+ ${def.label}`;
       btn.style.cssText = `background:${def.color}22;border:1px solid ${def.color}66;color:${def.color};padding:.35rem .75rem;border-radius:4px;cursor:pointer;font-size:.8rem;`;
-      btn.addEventListener("mouseover", () => { btn.style.background = `${def.color}44`; });
-      btn.addEventListener("mouseout",  () => { btn.style.background = `${def.color}22`; });
+      btn.addEventListener("mouseover", () => {
+        btn.style.background = `${def.color}44`;
+      });
+      btn.addEventListener("mouseout", () => {
+        btn.style.background = `${def.color}22`;
+      });
       btn.addEventListener("click", () => this._addInstrument(def));
       palette.appendChild(btn);
     }
@@ -265,7 +372,8 @@ class PlaygroundApp extends HTMLElement {
 
     const removeBtn = document.createElement("button");
     removeBtn.textContent = "✕ Remove";
-    removeBtn.style.cssText = "position:absolute;top:.5rem;right:.5rem;background:#ff334422;border:1px solid #ff334466;color:#f88;padding:.2rem .5rem;border-radius:4px;cursor:pointer;font-size:.75rem;z-index:1;";
+    removeBtn.style.cssText =
+      "position:absolute;top:.5rem;right:.5rem;background:#ff334422;border:1px solid #ff334466;color:#f88;padding:.2rem .5rem;border-radius:4px;cursor:pointer;font-size:.75rem;z-index:1;";
     removeBtn.addEventListener("click", () => this._removeInstrument(entry, row));
 
     row.appendChild(removeBtn);

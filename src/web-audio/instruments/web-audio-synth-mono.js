@@ -109,6 +109,8 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
     this.detune = 0; this.unisonVoices = 1; this.unisonDetune = 0; this.subGain = 0;
     this.portamento = 0;
     this.lfoRate = 2; this.lfoDepth = 0; this.lfoShape = "sine"; this.lfoDest = "filter";
+    this.octaveOffset = 0;
+    this.octaveJumpProb = 0;
     this.applyPreset(preset);
   }
 
@@ -121,7 +123,8 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
   trigger(midiNote, durationSec, velocity = 1, atTime = 0) {
     const ctx = this.ctx;
     const t = atTime > 0 ? atTime : ctx.currentTime;
-    const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
+    const shifted = midiNote + this.octaveOffset * 12 + (Math.random() < this.octaveJumpProb ? 12 : 0);
+    const freq = 440 * Math.pow(2, (shifted - 69) / 12);
     const voices = Math.max(1, Math.round(this.unisonVoices));
     const stopTime = t + durationSec + Math.max(this.release, this.filterRelease) + 0.1;
 
@@ -237,6 +240,8 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     { param: "portamento",    label: "Glide",     min: 0,     max: 2,     step: 0.01,  tooltip: "Portamento glide time in seconds." },
     { param: "lfoRate",       label: "LFO Rate",  min: 0.01,  max: 20,    step: 0.01,  tooltip: "LFO speed in Hz." },
     { param: "lfoDepth",      label: "LFO Depth", min: 0,     max: 1,     step: 0.01,  tooltip: "LFO modulation depth (0 = off)." },
+    { param: "octaveOffset",  label: "Octave",    min: -2,    max: 2,     step: 1,     tooltip: "Shift all notes up or down by octaves." },
+    { param: "octaveJumpProb",label: "Oct Jump",  min: 0,     max: 1,     step: 0.01,  tooltip: "Probability of randomly jumping an octave on each note." },
     { param: "volume",        label: "Vol",       min: 0,     max: 1,     step: 0.01 },
   ];
 
@@ -270,7 +275,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
     this._makePresetDropdown(WebAudioSynthMono.PRESETS, toneCtrl);
-    this._makeWaveRow(["sawtooth", "square", "triangle", "sine"], toneCtrl);
+    this._makeWaveSelect(["sawtooth", "square", "triangle", "sine"], toneCtrl);
     toneCtrl.appendChild(mkSlider({ param: "detune",       label: "Detune",  min: -50, max: 50,  step: 1 }));
     toneCtrl.appendChild(mkSlider({ param: "unisonVoices", label: "Voices",  min: 1,   max: 8,   step: 1 }));
     toneCtrl.appendChild(mkSlider({ param: "unisonDetune", label: "Spread",  min: 0,   max: 100, step: 1 }));
@@ -310,39 +315,14 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     lfoCtrl.appendChild(this._makeLfoDestSelect());
     controls.appendChild(lfoEl);
 
-    // ---- Sequencer Speed ----
-    const { el: speedEl, controls: speedCtrl } = createSection("Sequencer");
-    const speedSelect = document.createElement("select");
-    speedSelect.className = "wac-select";
-    [0.5, 1, 2].forEach((val) => {
-      const opt = document.createElement("option");
-      opt.value = val;
-      opt.textContent = val === 0.5 ? "0.5x" : val === 1 ? "1x (Normal)" : "2x";
-      if (val === 1) opt.selected = true;
-      speedSelect.appendChild(opt);
-    });
-    speedSelect.addEventListener("change", () => {
-      this.speedMultiplier = parseFloat(speedSelect.value);
-      this._emitChange();
-    });
-    const speedLabel = document.createElement("label");
-    speedLabel.style.display = "flex";
-    speedLabel.style.gap = "6px";
-    speedLabel.style.alignItems = "center";
-    speedLabel.appendChild(document.createTextNode("Speed:"));
-    speedLabel.appendChild(speedSelect);
-    speedCtrl.appendChild(speedLabel);
-    controls.appendChild(speedEl);
+    // ---- Octave ----
+    const { el: octEl, controls: octCtrl } = createSection("Octave");
+    octCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Offset",    min: -2, max: 2, step: 1 }));
+    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0,  max: 1, step: 0.01 }));
+    controls.appendChild(octEl);
 
-    // Randomize button
-    const actionRow = document.createElement("div");
-    actionRow.className = "wac-action-row";
-    const randBtn = document.createElement("button");
-    randBtn.textContent = "\u2684 Randomize";
-    randBtn.className = "wac-action-btn";
-    randBtn.addEventListener("click", () => this.randomize());
-    actionRow.appendChild(randBtn);
-    expanded.appendChild(actionRow);
+    // ---- Sequencer ----
+    this._buildSequencerSection(controls, { onRandomize: () => this.randomize() });
 
     // Step sequencer
     this._seq = document.createElement("web-audio-step-seq");
@@ -353,7 +333,6 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
       probability: true,
       ratchet: true,
       conditions: true,
-      patternControls: true,
       color,
     });
     expanded.appendChild(this._seq);
@@ -424,6 +403,9 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     switch (condition) {
       case "off": return true;
       case "1:2": return barIndex % 2 === 0;
+      case "1:3": return barIndex % 3 === 0;
+      case "1:4": return barIndex % 4 === 0;
+      case "2:4": return barIndex % 4 === 1;
       case "3:4": return barIndex % 4 === 2;
       case "fill": return barIndex % 4 === 3;
       default: return true;
@@ -527,7 +509,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     switch (key) {
       case "oscType":
         this._instrument.oscType = val;
-        this._syncWaveRow();
+        this._syncWaveSelect();
         break;
       case "filterType":
         this._instrument.filterType = val;
@@ -547,7 +529,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
   }
 
   _syncExtraControls() {
-    this._syncWaveRow();
+    this._syncWaveSelect();
     if (this._filterTypeSelect && this._instrument) this._filterTypeSelect.value = this._instrument.filterType;
     if (this._lfoShapeSelect && this._instrument) this._lfoShapeSelect.value = this._instrument.lfoShape;
     if (this._lfoDestSelect && this._instrument) this._lfoDestSelect.value = this._instrument.lfoDest;

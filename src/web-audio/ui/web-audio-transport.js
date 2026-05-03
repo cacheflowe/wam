@@ -1,7 +1,7 @@
 import "./web-audio-slider.js";
 import "./web-audio-waveform.js";
 import "../fx/web-audio-fx-unit.js";
-import { injectControlsCSS, createChannelStrip } from "./web-audio-slider.js";
+import { injectControlsCSS, createChannelStrip, createCtrl } from "./web-audio-slider.js";
 import { NOTE_NAMES, SCALES } from "../global/web-audio-scales.js";
 
 /**
@@ -148,8 +148,13 @@ export class WebAudioTransportControls extends HTMLElement {
       this._rootSelect.addEventListener("change", onScaleChange);
       this._scaleSelect.addEventListener("change", onScaleChange);
 
-      topRow.appendChild(this._rootSelect);
-      topRow.appendChild(this._scaleSelect);
+      const keyCtrl = createCtrl("Key", { tooltip: "Root note for the global scale. All note instruments transpose to this key." });
+      keyCtrl.appendChild(this._rootSelect);
+      topRow.appendChild(keyCtrl);
+
+      const scaleCtrl = createCtrl("Scale", { tooltip: "Scale mode applied to all note instruments. Steps are quantized to this scale." });
+      scaleCtrl.appendChild(this._scaleSelect);
+      topRow.appendChild(scaleCtrl);
     }
 
     // Share URL slot — apps can append a button here

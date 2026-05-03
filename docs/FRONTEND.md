@@ -108,6 +108,78 @@ static SLIDER_DEFS = [
 ];
 ```
 
+## UI Controls Rule: every control needs a label and tooltip
+
+**Every interactive control — slider, select, button — must be wrapped so it has a visible label and a hover tooltip.** This is the single most important layout rule in the codebase. Bare `<select>` or `<button>` elements appended directly to a section are not acceptable.
+
+### Sliders
+
+`<web-audio-slider>` handles this natively. Set `label` (visible) and `data-tooltip` (hover) on the element:
+
+```js
+const s = document.createElement("web-audio-slider");
+s.setAttribute("label", "Cutoff");
+s.setAttribute("data-tooltip", "Low-pass filter cutoff frequency.");
+```
+
+Or via `mkSlider()` in `WebAudioControlsBase._buildControls()`:
+
+```js
+sec.appendChild(mkSlider({ param: "cutoff", label: "Cutoff", tooltip: "Low-pass filter cutoff frequency." }));
+```
+
+### Selects and Buttons: `createCtrl()`
+
+Any non-slider control (a `<select>`, a `<button>`, a number input) must be wrapped with `createCtrl()` from `web-audio-slider.js`. This creates a `div.wac-ctrl` containing a `<label>` (with optional PicoCSS tooltip) and appends the control as a child:
+
+```js
+import { createCtrl } from "../ui/web-audio-slider.js";
+
+// Select
+const mySelect = document.createElement("select");
+mySelect.className = "wac-select";
+// ... populate options ...
+const ctrl = createCtrl("Shape", { tooltip: "Oscillator waveform shape." });
+ctrl.appendChild(mySelect);
+sec.appendChild(ctrl);
+
+// Button
+const btn = document.createElement("button");
+btn.textContent = "Randomize";
+const btnCtrl = createCtrl("Rand", { tooltip: "Randomize the sequencer pattern." });
+btnCtrl.appendChild(btn);
+sec.appendChild(btnCtrl);
+```
+
+**Signature:**
+```js
+createCtrl(labelText, { wide = false, tooltip = null } = {}) → HTMLElement
+```
+- `wide: true` sets `min-width: 220px` instead of the default `110px` — use for longer selects.
+- `tooltip` is set as `data-tooltip` on the `<label>`, so PicoCSS shows it on label hover only (not on the input itself).
+
+### What this produces
+
+```html
+<div class="wac-ctrl">
+  <label data-tooltip="Oscillator waveform shape.">Shape</label>
+  <select class="wac-select">...</select>
+</div>
+```
+
+### `SLIDER_DEFS` (declarative alternative)
+
+`WebAudioControlsBase` subclasses can declare sliders statically. The `mkSlider()` factory inside `_buildControls()` reads `SLIDER_DEFS` and applies labels and tooltips automatically. Always provide a `tooltip` string for every entry:
+
+```js
+static SLIDER_DEFS = [
+  { param: "cutoff", label: "Cutoff", min: 80, max: 18000, step: 1, scale: "log",
+    tooltip: "Low-pass filter cutoff frequency." },
+];
+```
+
+---
+
 ## Controls Layout: `createSection()`
 
 All instrument-specific parameter groups use `createSection(label)` from `web-audio-slider.js`:
@@ -132,7 +204,7 @@ Key CSS classes:
 - `.wac-section` — groups a title and controls row
 - `.wac-title` — section label (also used for channel strip title)
 - `.wac-section-controls` — flex row for sliders, selects, and buttons
-- `.wac-ctrl` — wrapper for a label + select pair (e.g. Time stretch ratio)
+- `.wac-ctrl` — labeled wrapper for any non-slider control (see above)
 - `.wac-select` — styled `<select>` (max-width: 160px for instrument controls; 120px inside FX unit)
 
 Do not use `.wac-controls` as a section container — use `createSection()` instead.

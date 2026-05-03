@@ -57,6 +57,13 @@ class WebAudioGenerativeMusic extends HTMLElement {
 
     this.buildUI();
     this.addCSS();
+
+    this._onKeyDown = (e) => {
+      if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+      if (e.repeat) return;
+      if (e.key === " ") { e.preventDefault(); this._toggle(); }
+    };
+    document.addEventListener("keydown", this._onKeyDown);
   }
 
   // ---- Music theory helpers ----
@@ -666,7 +673,7 @@ class WebAudioGenerativeMusic extends HTMLElement {
   }
 
   disconnectedCallback() {
-    super.disconnectedCallback();
+    if (this._onKeyDown) document.removeEventListener("keydown", this._onKeyDown);
     if (this._autoRaf) cancelAnimationFrame(this._autoRaf);
     if (this._seq) this._seq.stop();
     if (this._ctx) this._ctx.close();

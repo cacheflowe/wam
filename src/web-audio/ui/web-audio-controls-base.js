@@ -32,6 +32,12 @@ export class WebAudioControlsBase extends HTMLElement {
     this._panSlider = null;
     this._muteHandle = null;
     this._speedMultiplier = 1;
+    this._speedSelect = null;
+    this._densityInput = null;
+    this._rotateInput = null;
+    this._rotateIntervalInput = null;
+    this._waveSelect = null;
+    this._waveSelectProp = "oscType";
   }
 
   // ---- Override points for subclass identity ----
@@ -65,13 +71,16 @@ export class WebAudioControlsBase extends HTMLElement {
       initialVol: instrument.volume,
       initialPan: 0,
     });
+    this._stripEl = strip.strip;
     this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted, setPreMuteVolume: strip.setPreMuteVolume };
     this._sliders["volume"] = strip.volSlider;
     this._panSlider = strip.panSlider;
 
-    // Waveform — always visible
+    // Waveform — compact, inside the channel strip
     const waveform = document.createElement("web-audio-waveform");
-    this.appendChild(waveform);
+    this._stripEl.appendChild(waveform);
+
+    this._buildStripActions(this._stripEl);
 
     // Expanded panel — hidden when collapsed
     const expanded = document.createElement("div");
@@ -145,6 +154,9 @@ export class WebAudioControlsBase extends HTMLElement {
     // Override in subclass
   }
 
+  /** Inject buttons into the always-visible channel strip (e.g. jam trigger). Override in subclass. */
+  _buildStripActions(strip) {}
+
   /** Handle a non-pan slider value change. Default: set on instrument. */
   _onSliderInput(param, value) {
     this._instrument[param] = value;
@@ -187,7 +199,7 @@ export class WebAudioControlsBase extends HTMLElement {
     meterAnalyser.fftSize = 256;
     this._out.connect(meterAnalyser);
     strip.meter.setAnalyser(meterAnalyser);
-    waveform.init(analyser, color);
+    waveform.init(analyser, color, { fixed: true });
   }
 
   // ---- Shared UI builders ----
@@ -199,6 +211,7 @@ export class WebAudioControlsBase extends HTMLElement {
    * @param {HTMLElement} appendTo
    */
   _makePresetDropdown(PresetsObj, appendTo) {
+    const wrap = createCtrl("Preset", { tooltip: "Load a sound preset." });
     this._presetSelect = document.createElement("select");
     this._presetSelect.className = "wac-select";
     for (const name of Object.keys(PresetsObj)) {
@@ -211,43 +224,131 @@ export class WebAudioControlsBase extends HTMLElement {
       this.applyPreset(this._presetSelect.value);
       this._emitChange();
     });
-    appendTo.appendChild(this._presetSelect);
+    wrap.appendChild(this._presetSelect);
+    appendTo.appendChild(wrap);
     return this._presetSelect;
   }
 
   /**
-   * Build oscillator-type toggle buttons (SAW/SQR/TRI/SIN).
-   * Stores the row element as this._waveRow for _syncExtraControls().
+   * Build an oscillator-type dropdown (SAW/SQR/TRI/SIN etc.) wrapped in createCtrl.
+   * Stores references as this._waveSelect and this._waveSelectProp for _syncWaveSelect().
    * @param {string[]} types  e.g. ["sawtooth","square","triangle","sine"]
    * @param {HTMLElement} appendTo
+   * @param {object} [opts]
+   * @param {string} [opts.prop="oscType"]  Property name on instrument
+   * @param {string} [opts.label="Shape"]   Control label
+   * @param {string} [opts.tooltip]         Tooltip text
    */
-  _makeWaveRow(types, appendTo) {
-    this._waveRow = document.createElement("div");
-    this._waveRow.className = "wac-wave-row";
+  _makeWaveSelect(types, appendTo, { prop = "oscType", label = "Shape", tooltip = null } = {}) {
+    this._waveSelectProp = prop;
+    const wrap = createCtrl(label, tooltip ? { tooltip } : {});
+    this._waveSelect = document.createElement("select");
+    this._waveSelect.className = "wac-select";
     for (const type of types) {
-      const btn = document.createElement("button");
-      btn.className = "wac-wave-btn";
-      btn.textContent = type.slice(0, 3).toUpperCase();
-      btn.dataset.type = type;
-      if (this._instrument.oscType === type) btn.classList.add("wac-wave-active");
-      btn.addEventListener("click", () => {
-        this._instrument.oscType = type;
-        this._waveRow
-          .querySelectorAll(".wac-wave-btn")
-          .forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === type));
-      });
-      this._waveRow.appendChild(btn);
+      const opt = document.createElement("option");
+      opt.value = type;
+      opt.textContent = type.slice(0, 3).toUpperCase();
+      if (this._instrument[prop] === type) opt.selected = true;
+      this._waveSelect.appendChild(opt);
     }
-    appendTo.appendChild(this._waveRow);
-    return this._waveRow;
+    this._waveSelect.addEventListener("change", () => {
+      this._instrument[this._waveSelectProp] = this._waveSelect.value;
+      this._emitChange();
+    });
+    wrap.appendChild(this._waveSelect);
+    appendTo.appendChild(wrap);
+    return wrap;
   }
 
-  /** Sync wave-row button active state to instrument.oscType. */
-  _syncWaveRow() {
-    if (!this._waveRow || !this._instrument) return;
-    this._waveRow
-      .querySelectorAll(".wac-wave-btn")
-      .forEach((b) => b.classList.toggle("wac-wave-active", b.dataset.type === this._instrument.oscType));
+  /** Sync wave-select value to instrument property. */
+  _syncWaveSelect() {
+    if (!this._waveSelect || !this._instrument) return;
+    this._waveSelect.value = this._instrument[this._waveSelectProp];
+  }
+
+  /**
+   * Build the Sequencer section with Speed, Density, Rotate, and optional Rand controls,
+   * each wrapped in createCtrl for consistent title/control/tooltip layout.
+   * Stores _speedSelect, _densityInput, _rotateInput, _rotateIntervalInput on this.
+   * @param {HTMLElement} controls  The .wac-controls container to append to
+   * @param {object} [opts]
+   * @param {function|null} [opts.onRandomize]  Callback for Rand button; omit to hide it
+   * @returns {{ el: HTMLElement, controls: HTMLElement }}  The section element and its controls row
+   */
+  _buildSequencerSection(controls, { onRandomize = null } = {}) {
+    const { el, controls: seqCtrl } = createSection("Sequencer");
+
+    const speedWrap = createCtrl("Speed", { tooltip: "Playback rate multiplier for this instrument." });
+    this._speedSelect = document.createElement("select");
+    this._speedSelect.className = "wac-select";
+    [0.5, 1, 2].forEach((val) => {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = val === 0.5 ? "0.5x" : val === 1 ? "1x (Normal)" : "2x";
+      if (val === 1) opt.selected = true;
+      this._speedSelect.appendChild(opt);
+    });
+    this._speedSelect.addEventListener("change", () => {
+      this.speedMultiplier = parseFloat(this._speedSelect.value);
+      this._emitChange();
+    });
+    speedWrap.appendChild(this._speedSelect);
+    seqCtrl.appendChild(speedWrap);
+
+    const densityWrap = createCtrl("Density", { tooltip: "Play this pattern every N bars. 1 = every bar." });
+    this._densityInput = document.createElement("input");
+    this._densityInput.type = "number";
+    this._densityInput.min = "1";
+    this._densityInput.max = "16";
+    this._densityInput.value = "1";
+    this._densityInput.className = "wac-num-input";
+    this._densityInput.addEventListener("change", () => {
+      this._seq?.setPatternParams({ playEvery: parseInt(this._densityInput.value) });
+      this._emitChange();
+    });
+    densityWrap.appendChild(this._densityInput);
+    seqCtrl.appendChild(densityWrap);
+
+    const rotateWrap = createCtrl("Rotate", { tooltip: "Shift pattern left by N steps each rotation interval." });
+    this._rotateInput = document.createElement("input");
+    this._rotateInput.type = "number";
+    this._rotateInput.min = "0";
+    this._rotateInput.max = "15";
+    this._rotateInput.value = "0";
+    this._rotateInput.className = "wac-num-input";
+    this._rotateInput.addEventListener("change", () => {
+      this._seq?.setPatternParams({ rotationOffset: parseInt(this._rotateInput.value) });
+      this._emitChange();
+    });
+    rotateWrap.appendChild(this._rotateInput);
+    seqCtrl.appendChild(rotateWrap);
+
+    const rotateIntervalWrap = createCtrl("Rot.Bars", { tooltip: "Apply rotation every N bars." });
+    this._rotateIntervalInput = document.createElement("input");
+    this._rotateIntervalInput.type = "number";
+    this._rotateIntervalInput.min = "1";
+    this._rotateIntervalInput.max = "16";
+    this._rotateIntervalInput.value = "1";
+    this._rotateIntervalInput.className = "wac-num-input";
+    this._rotateIntervalInput.addEventListener("change", () => {
+      this._seq?.setPatternParams({ rotationIntervalBars: parseInt(this._rotateIntervalInput.value) });
+      this._emitChange();
+    });
+    rotateIntervalWrap.appendChild(this._rotateIntervalInput);
+    seqCtrl.appendChild(rotateIntervalWrap);
+
+    if (onRandomize) {
+      const randWrap = createCtrl("Rand", { tooltip: "Randomize the step pattern." });
+      const randBtn = document.createElement("button");
+      randBtn.textContent = "⚄";
+      randBtn.className = "wac-action-btn";
+      randBtn.addEventListener("click", onRandomize);
+      randWrap.appendChild(randBtn);
+      seqCtrl.appendChild(randWrap);
+    }
+
+    controls.appendChild(el);
+    return { el, controls: seqCtrl };
   }
 
   // ---- Preset management ----
@@ -292,6 +393,7 @@ export class WebAudioControlsBase extends HTMLElement {
       muted: this._muteHandle?.isMuted() ?? false,
       pan: this._pan?.pan.value ?? 0,
       speedMultiplier: this._speedMultiplier,
+      patternParams: this._seq?.getPatternParams(),
     };
     this._extendJSON(obj);
     return obj;
@@ -317,7 +419,19 @@ export class WebAudioControlsBase extends HTMLElement {
       this._pan.pan.value = obj.pan;
       if (this._panSlider) this._panSlider.value = obj.pan;
     }
-    if (obj.speedMultiplier != null) this._speedMultiplier = obj.speedMultiplier;
+    if (obj.speedMultiplier != null) {
+      this._speedMultiplier = obj.speedMultiplier;
+      if (this._speedSelect) this._speedSelect.value = obj.speedMultiplier;
+    }
+    if (obj.patternParams) {
+      this._seq?.setPatternParams(obj.patternParams);
+      if (this._densityInput && obj.patternParams.playEvery != null)
+        this._densityInput.value = obj.patternParams.playEvery;
+      if (this._rotateInput && obj.patternParams.rotationOffset != null)
+        this._rotateInput.value = obj.patternParams.rotationOffset;
+      if (this._rotateIntervalInput && obj.patternParams.rotationIntervalBars != null)
+        this._rotateIntervalInput.value = obj.patternParams.rotationIntervalBars;
+    }
   }
 
   /** Restore a single param. Override for special handling (e.g. oscType → wave buttons). */

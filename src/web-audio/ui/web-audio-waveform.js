@@ -90,12 +90,24 @@ export default class WebAudioWaveform extends HTMLElement {
    * @param {string} [color="#00ff00"]
    * @param {object} [options]
    * @param {"waveform"|"spectrogram"|"bars"} [options.mode="waveform"]
+   * @param {boolean} [options.fixed]   Fix canvas at a small resolution; CSS controls display size.
+   *   When true the ResizeObserver is disconnected so canvas pixel dimensions never change.
+   *   Keeps per-frame drawing work constant regardless of how CSS stretches the element.
+   * @param {number}  [options.fixedWidth=128]
+   * @param {number}  [options.fixedHeight=36]
    */
   init(analyserNode, color = "#00ff00", options = {}) {
     this._analyser = analyserNode;
     this._color = color;
     this._colorRGB = WebAudioWaveform._parseColor(color);
     this._mode = options.mode ?? "waveform";
+
+    if (options.fixed && this._canvas) {
+      this._ro?.disconnect();
+      this._canvas.width  = options.fixedWidth  ?? 128;
+      this._canvas.height = options.fixedHeight ?? 36;
+    }
+
     this._analyser.fftSize = this._mode === "waveform" ? 512 : 2048;
     this._data = new Uint8Array(this._analyser.frequencyBinCount);
     this._freqData = new Uint8Array(this._analyser.frequencyBinCount);

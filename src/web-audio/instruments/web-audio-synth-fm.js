@@ -618,10 +618,19 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     return "#4af";
   }
   _defaultTitle() {
-    return "FM Chord Synth";
+    return "FM Synth";
   }
   _fxTitle() {
     return "FM FX";
+  }
+
+  _buildStripActions(strip) {
+    const btn = document.createElement("button");
+    btn.textContent = "♫";
+    btn.className = "wac-jam-btn";
+    btn.title = "Trigger chord [N]";
+    btn.addEventListener("click", () => this.triggerJamChord());
+    strip.appendChild(btn);
   }
 
   // ---- Bind override to set BPM on instrument ----
@@ -650,6 +659,17 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
     this._makePresetDropdown(WebAudioSynthFM.PRESETS, toneCtrl);
+    const randPresetWrap = createCtrl("Rand Preset", { tooltip: "Load a random preset." });
+    const randPresetBtn = document.createElement("button");
+    randPresetBtn.textContent = "⚄";
+    randPresetBtn.className = "wac-action-btn";
+    randPresetBtn.addEventListener("click", () => {
+      const names = Object.keys(WebAudioSynthFM.PRESETS);
+      this.applyPreset(names[Math.floor(Math.random() * names.length)]);
+      this._emitChange();
+    });
+    randPresetWrap.appendChild(randPresetBtn);
+    toneCtrl.appendChild(randPresetWrap);
     controls.appendChild(toneEl);
 
     // ---- FM ----
@@ -712,73 +732,25 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(octEl);
 
-    // ---- Sequencer Speed ----
-    const { el: speedEl, controls: speedCtrl } = createSection("Sequencer");
-    const speedSelect = document.createElement("select");
-    speedSelect.className = "wac-select";
-    [0.5, 1, 2].forEach((val) => {
-      const opt = document.createElement("option");
-      opt.value = val;
-      opt.textContent = val === 0.5 ? "0.5x" : val === 1 ? "1x (Normal)" : "2x";
-      if (val === 1) opt.selected = true;
-      speedSelect.appendChild(opt);
-    });
-    speedSelect.addEventListener("change", () => {
-      this.speedMultiplier = parseFloat(speedSelect.value);
-      this._emitChange();
-    });
-    const speedLabel = document.createElement("label");
-    speedLabel.style.display = "flex";
-    speedLabel.style.gap = "6px";
-    speedLabel.style.alignItems = "center";
-    speedLabel.appendChild(document.createTextNode("Speed:"));
-    speedLabel.appendChild(speedSelect);
-    speedCtrl.appendChild(speedLabel);
-    controls.appendChild(speedEl);
+    // ---- Sequencer ----
+    const { controls: seqCtrl } = this._buildSequencerSection(controls, { onRandomize: () => this.randomize() });
 
-    // Action row
-    const actionRow = document.createElement("div");
-    actionRow.className = "wac-action-row";
-
-    const chordSizeSelect = document.createElement("select");
-    chordSizeSelect.className = "wac-select";
-    this._chordSizeSelect = chordSizeSelect;
-    [2, 3, 4].forEach((n) => {
+    const chordWrap = createCtrl("Chord", { tooltip: "Number of notes per step trigger." });
+    this._chordSizeSelect = document.createElement("select");
+    this._chordSizeSelect.className = "wac-select";
+    [1, 2, 3, 4].forEach((n) => {
       const opt = document.createElement("option");
       opt.value = n;
-      opt.textContent = `${n} notes`;
+      opt.textContent = n === 1 ? "1 note" : `${n} notes`;
       if (n === this._chordSize) opt.selected = true;
-      chordSizeSelect.appendChild(opt);
+      this._chordSizeSelect.appendChild(opt);
     });
-    chordSizeSelect.addEventListener("change", () => {
-      this._chordSize = parseInt(chordSizeSelect.value);
+    this._chordSizeSelect.addEventListener("change", () => {
+      this._chordSize = parseInt(this._chordSizeSelect.value);
       this._emitChange();
     });
-    actionRow.appendChild(chordSizeSelect);
-
-    const presetBtn = document.createElement("button");
-    presetBtn.textContent = "⚄ Rand Preset";
-    presetBtn.className = "wac-action-btn";
-    presetBtn.addEventListener("click", () => {
-      const names = Object.keys(WebAudioSynthFM.PRESETS);
-      this.applyPreset(names[Math.floor(Math.random() * names.length)]);
-      this._emitChange();
-    });
-    actionRow.appendChild(presetBtn);
-
-    const randBtn = document.createElement("button");
-    randBtn.textContent = "⚄ Rand Seq";
-    randBtn.className = "wac-action-btn";
-    randBtn.addEventListener("click", () => this.randomize());
-    actionRow.appendChild(randBtn);
-
-    const chordBtn = document.createElement("button");
-    chordBtn.textContent = "♫ Chord [N]";
-    chordBtn.className = "wac-action-btn";
-    chordBtn.addEventListener("click", () => this.triggerJamChord());
-    actionRow.appendChild(chordBtn);
-
-    expanded.appendChild(actionRow);
+    chordWrap.appendChild(this._chordSizeSelect);
+    seqCtrl.appendChild(chordWrap);
 
     // Step sequencer
     this._seq = document.createElement("web-audio-step-seq");
@@ -789,7 +761,6 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
       probability: true,
       ratchet: true,
       conditions: true,
-      patternControls: true,
       color,
     });
     expanded.appendChild(this._seq);
@@ -892,7 +863,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
-            const chord = buildChordFromScale(s.note + 24, this._scaleName, this._chordSize);
+            const chord = this._chordSize === 1 ? s.note + 24 : buildChordFromScale(s.note + 24, this._scaleName, this._chordSize);
             const ratchet = s.ratchet ?? 1;
             if (ratchet > 1) {
               const ratchetDuration = subStepDur / ratchet;
@@ -918,6 +889,12 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
         return true;
       case "1:2":
         return barIndex % 2 === 0;
+      case "1:3":
+        return barIndex % 3 === 0;
+      case "1:4":
+        return barIndex % 4 === 0;
+      case "2:4":
+        return barIndex % 4 === 1;
       case "3:4":
         return barIndex % 4 === 2;
       case "fill":
@@ -939,7 +916,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
 
   triggerJamChord() {
     if (!this._instrument || !this._ctx) return;
-    const chord = buildChordFromScale(this._rootMidi + 24, this._scaleName, this._chordSize);
+    const chord = this._chordSize === 1 ? this._rootMidi + 24 : buildChordFromScale(this._rootMidi + 24, this._scaleName, this._chordSize);
     this._instrument.trigger(chord, 0.25, this._ctx.currentTime);
   }
 

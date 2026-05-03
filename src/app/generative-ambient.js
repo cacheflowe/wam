@@ -180,9 +180,17 @@ class WebAudioGenerativeAmbient extends HTMLElement {
 
     this.buildUI();
     this.addCSS();
+
+    this._onKeyDown = (e) => {
+      if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+      if (e.repeat) return;
+      if (e.key === " ") { e.preventDefault(); this._toggle(); }
+    };
+    document.addEventListener("keydown", this._onKeyDown);
   }
 
   disconnectedCallback() {
+    if (this._onKeyDown) document.removeEventListener("keydown", this._onKeyDown);
     if (this._autoRaf) cancelAnimationFrame(this._autoRaf);
     if (this._seq) this._seq.stop();
     if (this._drone) this._drone.stop();

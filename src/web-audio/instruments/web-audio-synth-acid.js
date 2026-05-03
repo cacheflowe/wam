@@ -407,12 +407,21 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     return "Acid FX";
   }
 
+  _buildStripActions(strip) {
+    const btn = document.createElement("button");
+    btn.textContent = "♩";
+    btn.className = "wac-jam-btn";
+    btn.title = "Trigger note [B]";
+    btn.addEventListener("click", () => this.queueRandomNote());
+    strip.appendChild(btn);
+  }
+
   _buildControls(controls, expanded, mkSlider, ctx, options) {
     const color = options.color || this._defaultColor();
 
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
-    this._makeWaveRow(["sawtooth", "square"], toneCtrl);
+    this._makeWaveSelect(["sawtooth", "square"], toneCtrl);
     this._makePresetDropdown(WebAudioSynthAcid.PRESETS, toneCtrl);
     controls.appendChild(toneEl);
 
@@ -447,48 +456,8 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(octEl);
 
-    // ---- Sequencer Speed ----
-    const { el: speedEl, controls: speedCtrl } = createSection("Sequencer");
-    const speedSelect = document.createElement("select");
-    speedSelect.className = "wac-select";
-    speedSelect.setAttribute("data-tooltip", "Playback rate multiplier for this instrument");
-    [0.5, 1, 2].forEach((val) => {
-      const opt = document.createElement("option");
-      opt.value = val;
-      opt.textContent = val === 0.5 ? "0.5x" : val === 1 ? "1x (Normal)" : "2x";
-      if (val === 1) opt.selected = true;
-      speedSelect.appendChild(opt);
-    });
-    speedSelect.addEventListener("change", () => {
-      this.speedMultiplier = parseFloat(speedSelect.value);
-      this._emitChange();
-    });
-    const speedLabel = document.createElement("label");
-    speedLabel.style.display = "flex";
-    speedLabel.style.gap = "6px";
-    speedLabel.style.alignItems = "center";
-    speedLabel.appendChild(document.createTextNode("Speed:"));
-    speedLabel.appendChild(speedSelect);
-    speedCtrl.appendChild(speedLabel);
-    controls.appendChild(speedEl);
-
-    // Action row — randomize + note buttons
-    const actionRow = document.createElement("div");
-    actionRow.className = "wac-action-row";
-
-    const randBtn = document.createElement("button");
-    randBtn.textContent = "⚄ Randomize";
-    randBtn.className = "wac-action-btn";
-    randBtn.addEventListener("click", () => this.randomize());
-    actionRow.appendChild(randBtn);
-
-    const noteBtn = document.createElement("button");
-    noteBtn.textContent = "♩ Note [B]";
-    noteBtn.className = "wac-action-btn";
-    noteBtn.addEventListener("click", () => this.queueRandomNote());
-    actionRow.appendChild(noteBtn);
-
-    expanded.appendChild(actionRow);
+    // ---- Sequencer ----
+    this._buildSequencerSection(controls, { onRandomize: () => this.randomize() });
 
     // Step sequencer
     this._seq = document.createElement("web-audio-step-seq");
@@ -500,7 +469,6 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
       probability: true,
       ratchet: true,
       conditions: true,
-      patternControls: true,
       color,
     });
     expanded.appendChild(this._seq);
@@ -522,7 +490,7 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
   _restoreParam(key, val) {
     if (key === "oscType") {
       this._instrument.oscType = val;
-      this._syncWaveRow();
+      this._syncWaveSelect();
     } else {
       this._instrument[key] = val;
       if (this._sliders[key]) this._sliders[key].value = val;
@@ -535,7 +503,7 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
   }
 
   _syncExtraControls() {
-    this._syncWaveRow();
+    this._syncWaveSelect();
   }
 
   // ---- Sequencer integration ----
@@ -613,6 +581,12 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
         return true;
       case "1:2":
         return barIndex % 2 === 0;
+      case "1:3":
+        return barIndex % 3 === 0;
+      case "1:4":
+        return barIndex % 4 === 0;
+      case "2:4":
+        return barIndex % 4 === 1;
       case "3:4":
         return barIndex % 4 === 2;
       case "fill":

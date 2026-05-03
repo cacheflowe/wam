@@ -171,39 +171,8 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
     sec.appendChild(mkSlider({ param: "drive",     label: "Drive",  min: 0,    max: 1,   step: 0.01 }));
     controls.appendChild(el);
 
-    // ---- Sequencer Speed ----
-    const { el: speedEl, controls: speedCtrl } = createSection("Sequencer");
-    const speedSelect = document.createElement("select");
-    speedSelect.className = "wac-select";
-    [0.5, 1, 2].forEach((val) => {
-      const opt = document.createElement("option");
-      opt.value = val;
-      opt.textContent = val === 0.5 ? "0.5x" : val === 1 ? "1x (Normal)" : "2x";
-      if (val === 1) opt.selected = true;
-      speedSelect.appendChild(opt);
-    });
-    speedSelect.addEventListener("change", () => {
-      this.speedMultiplier = parseFloat(speedSelect.value);
-      this._emitChange();
-    });
-    const speedLabel = document.createElement("label");
-    speedLabel.style.display = "flex";
-    speedLabel.style.gap = "6px";
-    speedLabel.style.alignItems = "center";
-    speedLabel.appendChild(document.createTextNode("Speed:"));
-    speedLabel.appendChild(speedSelect);
-    speedCtrl.appendChild(speedLabel);
-    controls.appendChild(speedEl);
-
-    // Randomize button
-    const actionRow = document.createElement("div");
-    actionRow.className = "wac-action-row";
-    const randBtn = document.createElement("button");
-    randBtn.textContent = "\u2684 Randomize";
-    randBtn.className = "wac-action-btn";
-    randBtn.addEventListener("click", () => this.randomize());
-    actionRow.appendChild(randBtn);
-    expanded.appendChild(actionRow);
+    // ---- Sequencer ----
+    this._buildSequencerSection(controls, { onRandomize: () => this.randomize() });
 
     // Step sequencer
     this._seq = document.createElement("web-audio-step-seq");
@@ -212,7 +181,6 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
       probability: true,
       ratchet: true,
       conditions: true,
-      patternControls: true,
       color,
     });
     expanded.appendChild(this._seq);
@@ -279,6 +247,9 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
     switch (condition) {
       case "off": return true;
       case "1:2": return barIndex % 2 === 0;
+      case "1:3": return barIndex % 3 === 0;
+      case "1:4": return barIndex % 4 === 0;
+      case "2:4": return barIndex % 4 === 1;
       case "3:4": return barIndex % 4 === 2;
       case "fill": return barIndex % 4 === 3;
       default: return true;
