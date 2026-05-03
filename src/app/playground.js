@@ -1,30 +1,30 @@
-import WebAudioSequencer from "../web-audio/global/web-audio-sequencer.js";
+import WebAudioSequencer from "../web-audio/global/wam-sequencer.js";
 
 // Import all instrument modules (registers custom elements as a side-effect)
-import "../web-audio/instruments/web-audio-perc-kick.js";
-import "../web-audio/instruments/web-audio-perc-hihat.js";
-import "../web-audio/instruments/web-audio-perc-snare.js";
-import "../web-audio/instruments/web-audio-synth-acid.js";
-import "../web-audio/instruments/web-audio-synth-808.js";
-import "../web-audio/instruments/web-audio-synth-fm.js";
-import "../web-audio/instruments/web-audio-synth-mono.js";
-import "../web-audio/instruments/web-audio-synth-pad.js";
-import "../web-audio/instruments/web-audio-synth-blipfx.js";
-import "../web-audio/instruments/web-audio-break-player.js";
-import "../web-audio/instruments/web-audio-sample-player.js";
-import "../web-audio/ui/web-audio-transport.js";
+import "../web-audio/instruments/wam-perc-kick.js";
+import "../web-audio/instruments/wam-perc-hihat.js";
+import "../web-audio/instruments/wam-perc-snare.js";
+import "../web-audio/instruments/wam-synth-acid.js";
+import "../web-audio/instruments/wam-synth-808.js";
+import "../web-audio/instruments/wam-synth-fm.js";
+import "../web-audio/instruments/wam-synth-mono.js";
+import "../web-audio/instruments/wam-synth-pad.js";
+import "../web-audio/instruments/wam-synth-blipfx.js";
+import "../web-audio/instruments/wam-break-player.js";
+import "../web-audio/instruments/wam-sample-player.js";
+import "../web-audio/ui/wam-transport.js";
 
-import WebAudioPercKick from "../web-audio/instruments/web-audio-perc-kick.js";
-import WebAudioPercHihat from "../web-audio/instruments/web-audio-perc-hihat.js";
-import WebAudioPercSnare from "../web-audio/instruments/web-audio-perc-snare.js";
-import WebAudioSynthAcid from "../web-audio/instruments/web-audio-synth-acid.js";
-import WebAudioSynth808 from "../web-audio/instruments/web-audio-synth-808.js";
-import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
-import WebAudioSynthMono from "../web-audio/instruments/web-audio-synth-mono.js";
-import WebAudioSynthPad from "../web-audio/instruments/web-audio-synth-pad.js";
-import WebAudioSynthBlipFX from "../web-audio/instruments/web-audio-synth-blipfx.js";
-import WebAudioBreakPlayer from "../web-audio/instruments/web-audio-break-player.js";
-import WebAudioSamplePlayer from "../web-audio/instruments/web-audio-sample-player.js";
+import WebAudioPercKick from "../web-audio/instruments/wam-perc-kick.js";
+import WebAudioPercHihat from "../web-audio/instruments/wam-perc-hihat.js";
+import WebAudioPercSnare from "../web-audio/instruments/wam-perc-snare.js";
+import WebAudioSynthAcid from "../web-audio/instruments/wam-synth-acid.js";
+import WebAudioSynth808 from "../web-audio/instruments/wam-synth-808.js";
+import WebAudioSynthFM from "../web-audio/instruments/wam-synth-fm.js";
+import WebAudioSynthMono from "../web-audio/instruments/wam-synth-mono.js";
+import WebAudioSynthPad from "../web-audio/instruments/wam-synth-pad.js";
+import WebAudioSynthBlipFX from "../web-audio/instruments/wam-synth-blipfx.js";
+import WebAudioBreakPlayer from "../web-audio/instruments/wam-break-player.js";
+import WebAudioSamplePlayer from "../web-audio/instruments/wam-sample-player.js";
 
 const BASE_PATH = "/audio/breaks/";
 const BREAK_FILES = [
@@ -69,7 +69,7 @@ const INSTRUMENT_TYPES = [
     label: "Kick",
     color: "#f44",
     make: (ctx) => new WebAudioPercKick(ctx),
-    tag: "web-audio-perc-kick-controls",
+    tag: "wam-perc-kick-controls",
     bindOpts: (bpm) => ({ color: "#f44", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
@@ -78,7 +78,7 @@ const INSTRUMENT_TYPES = [
     label: "Hi-Hat",
     color: "#ff0",
     make: (ctx) => new WebAudioPercHihat(ctx),
-    tag: "web-audio-perc-hihat-controls",
+    tag: "wam-perc-hihat-controls",
     bindOpts: (bpm) => ({ color: "#ff0", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
@@ -87,7 +87,7 @@ const INSTRUMENT_TYPES = [
     label: "Snare",
     color: "#f80",
     make: (ctx) => new WebAudioPercSnare(ctx),
-    tag: "web-audio-perc-snare-controls",
+    tag: "wam-perc-snare-controls",
     bindOpts: (bpm) => ({ color: "#f80", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
@@ -96,7 +96,7 @@ const INSTRUMENT_TYPES = [
     label: "Acid",
     color: "#8f0",
     make: (ctx) => new WebAudioSynthAcid(ctx),
-    tag: "web-audio-synth-acid-controls",
+    tag: "wam-synth-acid-controls",
     bindOpts: (bpm) => ({
       color: "#8f0",
       fx: { bpm, reverbWet: 0.15, delayInterval: 0.75, delayFeedback: 0.35, delayMix: 0 },
@@ -108,7 +108,7 @@ const INSTRUMENT_TYPES = [
     label: "808 Bass",
     color: "#f04",
     make: (ctx) => new WebAudioSynth808(ctx),
-    tag: "web-audio-synth-808-controls",
+    tag: "wam-synth-808-controls",
     bindOpts: (bpm) => ({ color: "#f04", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
@@ -117,7 +117,7 @@ const INSTRUMENT_TYPES = [
     label: "FM Synth",
     color: "#4df",
     make: (ctx) => new WebAudioSynthFM(ctx),
-    tag: "web-audio-synth-fm-controls",
+    tag: "wam-synth-fm-controls",
     bindOpts: (bpm) => ({
       color: "#4df",
       fx: { bpm, reverbWet: 0.2, delayInterval: 0.5, delayFeedback: 0.4, delayMix: 0.1 },
@@ -129,7 +129,7 @@ const INSTRUMENT_TYPES = [
     label: "Mono Synth",
     color: "#6df",
     make: (ctx) => new WebAudioSynthMono(ctx),
-    tag: "web-audio-synth-mono-controls",
+    tag: "wam-synth-mono-controls",
     bindOpts: (bpm) => ({ color: "#6df", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
@@ -138,7 +138,7 @@ const INSTRUMENT_TYPES = [
     label: "Pad",
     color: "#a8f",
     make: (ctx) => new WebAudioSynthPad(ctx),
-    tag: "web-audio-synth-pad-controls",
+    tag: "wam-synth-pad-controls",
     bindOpts: (bpm) => ({ color: "#a8f", fx: { bpm, reverbWet: 0.3, delayMix: 0.1 } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
@@ -147,7 +147,7 @@ const INSTRUMENT_TYPES = [
     label: "BlipFX",
     color: "#fa8",
     make: (ctx) => new WebAudioSynthBlipFX(ctx, { volume: 0.5 }),
-    tag: "web-audio-synth-blipfx-controls",
+    tag: "wam-synth-blipfx-controls",
     bindOpts: (bpm) => ({ color: "#fa8", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
@@ -165,7 +165,7 @@ const INSTRUMENT_TYPES = [
         volume: 0.8,
         useTimeStretch: true,
       }),
-    tag: "web-audio-break-player-controls",
+    tag: "wam-break-player-controls",
     bindOpts: (bpm) => ({ color: "#8fa", files: BREAK_FILES, basePath: BASE_PATH, fx: { bpm } }),
     // Break player uses (globalStep, bpm, time) — owner tracks globalStep externally
     step: null,
@@ -175,7 +175,7 @@ const INSTRUMENT_TYPES = [
     label: "Sampler (Kicks)",
     color: "#f8a",
     make: (ctx) => new WebAudioSamplePlayer(ctx),
-    tag: "web-audio-sample-player-controls",
+    tag: "wam-sample-player-controls",
     bindOpts: (bpm) => ({ color: "#f8a", files: SAMPLE_FILES_KICKS, basePath: "", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
@@ -184,7 +184,7 @@ const INSTRUMENT_TYPES = [
     label: "Sampler (Snares)",
     color: "#fa8",
     make: (ctx) => new WebAudioSamplePlayer(ctx),
-    tag: "web-audio-sample-player-controls",
+    tag: "wam-sample-player-controls",
     bindOpts: (bpm) => ({ color: "#fa8", files: SAMPLE_FILES_SNARES, basePath: "", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
@@ -193,7 +193,7 @@ const INSTRUMENT_TYPES = [
     label: "Sampler (Hits)",
     color: "#8af",
     make: (ctx) => new WebAudioSamplePlayer(ctx),
-    tag: "web-audio-sample-player-controls",
+    tag: "wam-sample-player-controls",
     bindOpts: (bpm) => ({ color: "#8af", files: SAMPLE_FILES_HITS, basePath: "", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
@@ -247,7 +247,7 @@ class PlaygroundApp extends HTMLElement {
     // Transport row
     const transportRow = document.createElement("section");
     transportRow.style.cssText = "margin-bottom:1.5rem;";
-    this._transportEl = document.createElement("web-audio-transport");
+    this._transportEl = document.createElement("wam-transport");
     transportRow.appendChild(this._transportEl);
     main.appendChild(transportRow);
 

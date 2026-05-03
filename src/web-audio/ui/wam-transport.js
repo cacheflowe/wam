@@ -1,15 +1,15 @@
-import "./web-audio-slider.js";
-import "./web-audio-waveform.js";
-import "../fx/web-audio-fx-unit.js";
-import { injectControlsCSS, createChannelStrip, createCtrl } from "./web-audio-slider.js";
-import { NOTE_NAMES, SCALES } from "../global/web-audio-scales.js";
+import "./wam-slider.js";
+import "./wam-waveform.js";
+import "../fx/wam-fx-unit.js";
+import { injectControlsCSS, createChannelStrip, createCtrl } from "./wam-slider.js";
+import { NOTE_NAMES, SCALES } from "../global/wam-scales.js";
 
 /**
  * WebAudioTransportControls — master transport panel as a Web Component.
  *
  * Owns the master audio chain (masterGain → FX → analyser → destination),
  * the play/stop + BPM controls, and optional key/scale selects.
- * Shares visual conventions with instrument controls panels (.wac-* classes,
+ * Shares visual conventions with instrument controls panels (.wam-* classes,
  * channel strip, waveform, collapsible sections, FX unit).
  *
  * Usage:
@@ -55,7 +55,7 @@ export class WebAudioTransportControls extends HTMLElement {
    * @param {string}  [options.title]        Panel label (default "Transport")
    * @param {string}  [options.color]        Accent color (default "#fff")
    * @param {boolean} [options.showScales]   Show key/scale section (default true)
-   * @param {object}  [options.fx]           Passed to web-audio-fx-unit init
+   * @param {object}  [options.fx]           Passed to wam-fx-unit init
    */
   init(ctx, options = {}) {
     this._ctx = ctx;
@@ -66,7 +66,7 @@ export class WebAudioTransportControls extends HTMLElement {
     const showScales = options.showScales !== false;
 
     this.innerHTML = "";
-    this.classList.add("wac-panel");
+    this.classList.add("wam-panel");
     injectControlsCSS();
     this.style.setProperty("--slider-accent", color);
     this.style.setProperty("--fx-accent", color);
@@ -99,17 +99,17 @@ export class WebAudioTransportControls extends HTMLElement {
 
     // ---- Always-visible transport row (between strip and expanded) ----
     const topRow = document.createElement("div");
-    topRow.className = "wac-transport-row";
+    topRow.className = "wam-transport-row";
 
     // Play/Stop
     this._playBtn = document.createElement("button");
-    this._playBtn.className = "wac-play-btn";
+    this._playBtn.className = "wam-play-btn";
     this._playBtn.textContent = "▶ Play";
     this._playBtn.addEventListener("click", () => this._playing ? this._stop() : this._play());
     topRow.appendChild(this._playBtn);
 
     // BPM
-    this._bpmSlider = document.createElement("web-audio-slider");
+    this._bpmSlider = document.createElement("wam-slider");
     this._bpmSlider.setAttribute("param", "bpm");
     this._bpmSlider.setAttribute("label", "BPM");
     this._bpmSlider.setAttribute("min", "40");
@@ -126,7 +126,7 @@ export class WebAudioTransportControls extends HTMLElement {
     // Key/Scale
     if (showScales) {
       this._rootSelect = document.createElement("select");
-      this._rootSelect.className = "wac-select";
+      this._rootSelect.className = "wam-select";
       for (let midi = 24; midi <= 35; midi++) {
         const opt = document.createElement("option");
         opt.value = midi;
@@ -136,7 +136,7 @@ export class WebAudioTransportControls extends HTMLElement {
       }
 
       this._scaleSelect = document.createElement("select");
-      this._scaleSelect.className = "wac-select";
+      this._scaleSelect.className = "wam-select";
       for (const name of Object.keys(SCALES)) {
         const opt = document.createElement("option");
         opt.value = name;
@@ -159,22 +159,22 @@ export class WebAudioTransportControls extends HTMLElement {
 
     // Share URL slot — apps can append a button here
     this._shareSlot = document.createElement("span");
-    this._shareSlot.className = "wac-transport-share-slot";
+    this._shareSlot.className = "wam-transport-share-slot";
     topRow.appendChild(this._shareSlot);
 
     this.appendChild(topRow);
 
     // Waveform — always visible
-    const waveform = document.createElement("web-audio-waveform");
+    const waveform = document.createElement("wam-waveform");
     this.appendChild(waveform);
 
     // Expanded panel — only Master FX
     const expanded = document.createElement("div");
-    expanded.className = "wac-expanded";
+    expanded.className = "wam-expanded";
     this.appendChild(expanded);
 
     // FX unit
-    this._fxUnit = document.createElement("web-audio-fx-unit");
+    this._fxUnit = document.createElement("wam-fx-unit");
     expanded.appendChild(this._fxUnit);
 
     // Audio routing
@@ -265,7 +265,7 @@ export class WebAudioTransportControls extends HTMLElement {
     this._playing = true;
     if (this._playBtn) {
       this._playBtn.textContent = "◼ Stop";
-      this._playBtn.classList.add("wac-playing");
+      this._playBtn.classList.add("wam-playing");
     }
     if (this._seq) this._seq.start();
     this.dispatchEvent(new CustomEvent("transport-play", { bubbles: true }));
@@ -275,7 +275,7 @@ export class WebAudioTransportControls extends HTMLElement {
     this._playing = false;
     if (this._playBtn) {
       this._playBtn.textContent = "▶ Play";
-      this._playBtn.classList.remove("wac-playing");
+      this._playBtn.classList.remove("wam-playing");
     }
     if (this._seq) this._seq.stop();
     this.dispatchEvent(new CustomEvent("transport-stop", { bubbles: true }));
@@ -313,4 +313,4 @@ export class WebAudioTransportControls extends HTMLElement {
   }
 }
 
-customElements.define("web-audio-transport", WebAudioTransportControls);
+customElements.define("wam-transport", WebAudioTransportControls);

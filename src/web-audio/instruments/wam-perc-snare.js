@@ -1,7 +1,7 @@
-import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
-import "../ui/web-audio-step-seq.js";
-import { STEP_WEIGHTS } from "../global/web-audio-scales.js";
-import { WebAudioControlsBase, createSection } from "../ui/web-audio-controls-base.js";
+import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
+import "../ui/wam-step-seq.js";
+import { STEP_WEIGHTS } from "../global/wam-scales.js";
+import { WebAudioControlsBase, createSection } from "../ui/wam-controls-base.js";
 
 /**
  * WebAudioPercSnare — layered snare drum with tone body, noise snap, and snare buzz.
@@ -191,12 +191,12 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
 
     // Clap mode toggle
     const clapBtn = document.createElement("button");
-    clapBtn.className = "wac-wave-btn";
+    clapBtn.className = "wam-wave-btn";
     clapBtn.textContent = "CLAP";
-    clapBtn.classList.toggle("wac-wave-active", !!this._instrument.clapMode);
+    clapBtn.classList.toggle("wam-wave-active", !!this._instrument.clapMode);
     clapBtn.addEventListener("click", () => {
       this._instrument.clapMode = !this._instrument.clapMode;
-      clapBtn.classList.toggle("wac-wave-active", this._instrument.clapMode);
+      clapBtn.classList.toggle("wam-wave-active", this._instrument.clapMode);
       this._emitChange();
     });
     this._clapBtn = clapBtn;
@@ -216,7 +216,7 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
     this._buildSequencerSection({ onRandomize: () => this.randomize() });
 
     // Step sequencer (no note selection for percussion)
-    this._seq = document.createElement("web-audio-step-seq");
+    this._seq = document.createElement("wam-step-seq");
     this._seq.init({
       steps: WebAudioPercSnareControls.DEFAULT_PATTERN(),
       probability: true,
@@ -233,7 +233,7 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
 
   _syncExtraControls() {
     if (this._clapBtn && this._instrument) {
-      this._clapBtn.classList.toggle("wac-wave-active", !!this._instrument.clapMode);
+      this._clapBtn.classList.toggle("wam-wave-active", !!this._instrument.clapMode);
     }
     this._syncWaveSelect();
   }
@@ -361,4 +361,4 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
   }
 }
 
-customElements.define("web-audio-perc-snare-controls", WebAudioPercSnareControls);
+customElements.define("wam-perc-snare-controls", WebAudioPercSnareControls);

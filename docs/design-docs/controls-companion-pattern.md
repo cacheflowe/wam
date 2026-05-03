@@ -42,7 +42,7 @@ static SLIDER_DEFS = [
 ];
 ```
 
-`bind()` iterates this array to create `<web-audio-slider>` elements. A delegated `slider-input` event listener maps `e.detail.param` → `instrument[param] = e.detail.value`. Adding a new parameter means: (1) add getter/setter on the instrument, (2) add entry to `SLIDER_DEFS`, (3) add key to preset objects.
+`bind()` iterates this array to create `<wam-slider>` elements. A delegated `slider-input` event listener maps `e.detail.param` → `instrument[param] = e.detail.value`. Adding a new parameter means: (1) add getter/setter on the instrument, (2) add entry to `SLIDER_DEFS`, (3) add key to preset objects.
 
 ### Serialization Contract
 

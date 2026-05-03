@@ -54,7 +54,7 @@ Build a library of browser-based instruments that are:
 | **Transport spacebar everywhere** | 2026-05-02 — Spacebar play/stop added to Playground, Generative Music, Generative Ambient, Plants apps |
 | **Slider focus blur** | 2026-05-02 — `pointerup` → `blur()` added to `WebAudioSlider` |
 | **BlipFX lock sound toggle** | 2026-05-02 — 🔓/🔒 button in BlipFX action row; guards `randomize()` in `step()` and `triggerNow()`; persisted in JSON |
-| **Jam buttons in channel strip** | 2026-05-02 — ♩ (Acid), ♫ (FM), ▶ (BlipFX) moved to always-visible channel strip via `_buildStripActions` hook; `.wac-jam-btn` style |
+| **Jam buttons in channel strip** | 2026-05-02 — ♩ (Acid), ♫ (FM), ▶ (BlipFX) moved to always-visible channel strip via `_buildStripActions` hook; `.wam-jam-btn` style |
 | **Sequencer UI cleanup** | 2026-05-02 — Randomize button moved into step-seq `patternControls` row via `onRandomize` callback; action rows removed from Kick, HiHat, Snare, Mono, 808, Pad, Acid; FM action row trimmed to chord-size + rand-preset |
 | **Build `src/site/app.js` demo harness** | Pre-existing — hash-routed menu wiring all apps; confirmed complete |
 | **Test playground** | Pre-existing — `playground.js` with per-instrument add/remove and shared transport; confirmed complete |
@@ -67,12 +67,12 @@ Build a library of browser-based instruments that are:
 | **Vocoder polish & testing** | High | Gate threshold added, needs more testing; latency optimization; carrier routing verified |
 | **FM synth quality** | High | FM sounds inferior to Mono — investigate why; retune presets; fix silent presets |
 | **Composition serialization** | High | Full JSON state for multi-instrument arrangements; see **Composition Serialization** section below |
-| **Rename & shorten prefix** | High | `web-audio-` prefix is too verbose; see **Renaming** section below |
+| **Rename & shorten prefix** | ~~High~~ | ~~`web-audio-` prefix too verbose~~ — **Done 2026-05-03** |
 | **MIDI keyboard input** | Medium | Map note-on/off to currently-selected instrument's `trigger()`; see **MIDI** section below |
 | **Channel strip section toggles** | ~~Medium~~ | ~~Independent Controls / Sequencer / FX toggle buttons~~ — **Done 2026-05-03** |
 | **Double-click/tap reset to default** | Medium | Double-click (or double-tap) any UI control (sliders, knobs, dropdowns, toggles) resets it to its default value |
 | **Knob controls / compact UI** | Medium | Replace sliders with compact knob controls for VST-like density; see **UI Direction** section below |
-| **Parametric EQ** | Medium | 3-4 band EQ as first effect in FX unit chain; new `web-audio-eq.js` with engine + UI; see **New Effects** section below |
+| **Parametric EQ** | Medium | 3-4 band EQ as first effect in FX unit chain; new `wam-eq.js` with engine + UI; see **New Effects** section below |
 | **MediaRecorder video+audio capture** | Medium | Record window/interface as video+audio; transport-aware loop recording; see **MediaRecorder Recording** section below |
 | Responsive volume / overload protection | Medium | See **Responsive Volume** section below |
 | Acid-breaks UI grid layout | Medium | Container queries for responsive panel grid; see **Layout** section below |
@@ -82,6 +82,7 @@ Build a library of browser-based instruments that are:
 | MIDI learn | Medium | See **MIDI** section below |
 | Per-instrument product specs | Medium | Fill out individual spec files in [product-specs/](../product-specs/) |
 | Refine existing instruments & effects | Ongoing | Tuning, preset quality, edge cases |
+| **Loop Player (Break Player evolution)** | Medium | Generalize break player into a BPM-synced loop player; see **Loop Player** section below |
 | Add new instruments & effects | Ongoing | See **Possible Future Instruments** section below |
 | npm package publication | Low | Export each instrument as a named module; publish to npm |
 | **Multi-user jamming** | Future | WebSocket shared state for collaborative sessions; explore later |
@@ -119,14 +120,14 @@ Goal: replace the single expand/collapse drawer with three independent toggle bu
 - State persisted in `toJSON()` / `fromJSON()`
 
 **Implementation notes**:
-- The three sections are already DOM-separate (`div.wac-controls`, `div.wac-expanded` for sequencer, `web-audio-fx-unit`)
-- Toggle buttons can use the same `.wac-mute-btn` / active-state pattern as Mute
+- The three sections are already DOM-separate (`div.wam-controls`, `div.wam-expanded` for sequencer, `wam-fx-unit`)
+- Toggle buttons can use the same `.wam-mute-btn` / active-state pattern as Mute
 - This is part of a broader push to normalize button and control styles across the UI — all toggle-style buttons (Mute, Controls, Seq, FX, Lock, Jam) should share a single visual language
 
 **Phases**:
 1. Add Controls / Sequencer / FX toggle buttons to `WebAudioControlsBase` channel strip
 2. Wire each button to show/hide its corresponding DOM section
-3. Unify toggle button CSS into a single reusable `.wac-toggle-btn` class (Mute + new buttons + Lock + Jam)
+3. Unify toggle button CSS into a single reusable `.wam-toggle-btn` class (Mute + new buttons + Lock + Jam)
 4. Persist section visibility in `toJSON()` / `fromJSON()`
 
 ## Test Playground
@@ -144,17 +145,13 @@ Goal: a lightweight dev environment where instruments can be instantiated, tweak
 
 ## Renaming & Prefix Cleanup
 
-Goal: replace the verbose `web-audio-` prefix on file names, Web Component tag names, and CSS class namespaces with something shorter.
+**Completed 2026-05-03.** Replaced the verbose `web-audio-` prefix on all file names, Web Component tag names, and CSS class namespaces with `wam-` (Web Audio Module).
 
-**Candidate prefix**: `wam-` (Web Audio Module) — short, project-specific, unlikely to collide.
-
-| Current | Proposed |
+| Was | Now |
 |---|---|
 | `web-audio-synth-acid.js` | `wam-synth-acid.js` |
 | `<web-audio-slider>` | `<wam-slider>` |
-| `.was-range` / `.wac-section` | `.wam-range` / `.wam-section` |
-
-**Prerequisite**: complete the File Organization refactor first.
+| `.wac-section` / `.was-range` | `.wam-section` / `.wam-range` |
 
 ## File Organization
 
@@ -188,7 +185,31 @@ Planned tools:
 - **Accent migration**: move accents to neighboring steps
 - **Morph target**: set a target pattern and interpolate toward it over X bars
 
-These would live in a `web-audio-evolution.js` module, usable independently of the step sequencer UI.
+These would live in a `wam-evolution.js` module, usable independently of the step sequencer UI.
+
+## Loop Player
+
+Goal: evolve `WebAudioBreakPlayer` into a general-purpose BPM-synced loop player that supports any audio loop — not just breakbeats.
+
+**Motivation**: The current break player is hardcoded to a single set of breakbeat files. Users want to play ambient textures, melodic loops, vocal chops, percussion loops, etc. — anything that should lock to transport BPM via time-stretch.
+
+**Key changes from current break player**:
+- **Folder-based file discovery** — use Vite glob pattern (like the sampler) to auto-discover loops from configurable `public/audio/loops/` subdirectories
+- **Multiple instances** — register as a normal instrument in the playground/acid-breaks with different loop folders (breaks, textures, vocals, etc.)
+- **Rename** — `WebAudioBreakPlayer` → `WebAudioLoopPlayer` (keep break player as alias or migrate)
+- **Same core engine** — time-stretch, subdivision slicing, BPM sync, return/random/reverse logic all still apply
+
+**NOT extending the sampler** — the playback models are fundamentally different:
+- Sampler = one-shot trigger → ADSR → done (fire-and-forget voices)
+- Loop player = continuous BPM-synced playback with time-stretch and beat-locked looping
+
+They share `wam-sample-utils.js` for loading and the Vite glob pattern for file discovery, but the audio engines have nothing in common.
+
+**Implementation phases**:
+1. Refactor break player to accept `files` + `basePath` via options (like sampler does) instead of hardcoded manifest
+2. Add Vite glob discovery for loop folders
+3. Allow multiple instances in playground with different folders
+4. Rename to `WebAudioLoopPlayer` (optional, could wait for prefix rename)
 
 ## Jam & Randomize Buttons
 
@@ -240,7 +261,7 @@ Goal: make sequenced patterns feel more organic and less machine-rigid.
 
 | Effect | Notes |
 |---|---|
-| **Parametric EQ** | 3–4 band parametric EQ (low shelf, mid peaking, high shelf + optional mid 2) using `BiquadFilterNode`; new `web-audio-eq.js` with audio engine + UI controls; first effect in FX unit chain so it shapes tone before reverb/delay/etc. |
+| **Parametric EQ** | 3–4 band parametric EQ (low shelf, mid peaking, high shelf + optional mid 2) using `BiquadFilterNode`; new `wam-eq.js` with audio engine + UI controls; first effect in FX unit chain so it shapes tone before reverb/delay/etc. |
 | **Sidechain Compressor** | Duck one instrument based on another's amplitude (envelope follower → gain modulation) |
 | **Phaser** | Multi-stage all-pass filter sweep; LFO-modulated; stereo |
 | **Compressor** | Wrapper + UI around `DynamicsCompressorNode` |
@@ -358,7 +379,7 @@ Goal: a single JSON document that fully describes a multi-instrument arrangement
   "transport": { "bpm": 128, "root": "C", "scale": "minor", "masterVolume": 0.8, "fx": {} },
   "instruments": [
     {
-      "type": "web-audio-synth-acid",
+      "type": "wam-synth-acid",
       "params": { "cutoff": 800, "resonance": 12, "volume": 0.6 },
       "fx": { "reverbWet": 0.2, "delayMix": 0.1 },
       "seq": { "steps": [...], "speedMultiplier": 1, "patternParams": {} }

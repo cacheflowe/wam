@@ -1,8 +1,8 @@
-import "../ui/web-audio-slider.js";
-import "../ui/web-audio-step-seq.js";
-import { buildChordFromScale, scaleNotesInRange, scaleNoteOptions } from "../global/web-audio-scales.js";
-import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
-import { WebAudioControlsBase, createSection, createCtrl } from "../ui/web-audio-controls-base.js";
+import "../ui/wam-slider.js";
+import "../ui/wam-step-seq.js";
+import { buildChordFromScale, scaleNotesInRange, scaleNoteOptions } from "../global/wam-scales.js";
+import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../ui/wam-controls-base.js";
 
 /**
  * WebAudioSynthFM — polyphonic 2-operator FM synthesizer.
@@ -627,7 +627,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
   _buildStripActions(strip) {
     const btn = document.createElement("button");
     btn.textContent = "♫";
-    btn.className = "wac-jam-btn";
+    btn.className = "wam-jam-btn";
     btn.title = "Trigger chord [N]";
     btn.addEventListener("click", () => this.triggerJamChord());
     strip.appendChild(btn);
@@ -650,7 +650,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     const mkSelect = (labelText, appendTo) => {
       const wrap = createCtrl(labelText);
       const sel = document.createElement("select");
-      sel.className = "wac-select";
+      sel.className = "wam-select";
       wrap.appendChild(sel);
       appendTo.appendChild(wrap);
       return sel;
@@ -662,7 +662,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     const randPresetWrap = createCtrl("Rand Preset", { tooltip: "Load a random preset." });
     const randPresetBtn = document.createElement("button");
     randPresetBtn.textContent = "⚄";
-    randPresetBtn.className = "wac-action-btn";
+    randPresetBtn.className = "wam-action-btn";
     randPresetBtn.addEventListener("click", () => {
       const names = Object.keys(WebAudioSynthFM.PRESETS);
       this.applyPreset(names[Math.floor(Math.random() * names.length)]);
@@ -737,7 +737,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
 
     const chordWrap = createCtrl("Chord", { tooltip: "Number of notes per step trigger." });
     this._chordSizeSelect = document.createElement("select");
-    this._chordSizeSelect.className = "wac-select";
+    this._chordSizeSelect.className = "wam-select";
     [1, 2, 3, 4].forEach((n) => {
       const opt = document.createElement("option");
       opt.value = n;
@@ -753,7 +753,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     seqCtrl.appendChild(chordWrap);
 
     // Step sequencer
-    this._seq = document.createElement("web-audio-step-seq");
+    this._seq = document.createElement("wam-step-seq");
     const noteOpts = scaleNoteOptions(this._rootMidi, this._scaleName, 24, 48);
     this._seq.init({
       steps: WebAudioSynthFMControls.DEFAULT_PATTERN(),
@@ -935,4 +935,4 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
   }
 }
 
-customElements.define("web-audio-synth-fm-controls", WebAudioSynthFMControls);
+customElements.define("wam-synth-fm-controls", WebAudioSynthFMControls);

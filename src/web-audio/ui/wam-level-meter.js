@@ -1,8 +1,8 @@
 /**
- * <web-audio-level-meter> — compact vertical VU meter driven by an AnalyserNode.
+ * <wam-level-meter> — compact vertical VU meter driven by an AnalyserNode.
  *
  * Usage:
- *   const meter = document.createElement("web-audio-level-meter");
+ *   const meter = document.createElement("wam-level-meter");
  *   container.appendChild(meter);
  *   meter.setAnalyser(ctx.createAnalyser());
  */
@@ -102,12 +102,12 @@ export default class WebAudioLevelMeter extends HTMLElement {
     WebAudioLevelMeter.#cssInjected = true;
     const s = document.createElement("style");
     s.textContent = `
-      web-audio-level-meter {
+      wam-level-meter {
         display: flex;
         align-items: stretch;
         flex-shrink: 0;
       }
-      web-audio-level-meter canvas {
+      wam-level-meter canvas {
         display: block;
         border-radius: 2px;
       }
@@ -116,4 +116,4 @@ export default class WebAudioLevelMeter extends HTMLElement {
   }
 }
 
-customElements.define("web-audio-level-meter", WebAudioLevelMeter);
+customElements.define("wam-level-meter", WebAudioLevelMeter);

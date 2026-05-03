@@ -33,7 +33,7 @@
 | Single file per instrument vs split | Single file (class + controls) | Easy to import, easy to understand, clear ownership |
 | localStorage state vs no persistence | localStorage with debounce | Users expect state to survive page refresh; no backend needed |
 | No TypeScript | Vanilla JS | Keeps the codebase approachable; primary users are creative coders, not enterprise devs |
-| PicoCSS for app shell | PicoCSS | Fast, semantic, zero config; doesn't conflict with component-scoped `.wac-*` CSS |
+| PicoCSS for app shell | PicoCSS | Fast, semantic, zero config; doesn't conflict with component-scoped `.wam-*` CSS |
 
 ## Out of Scope (Current)
 

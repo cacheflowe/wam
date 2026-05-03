@@ -5,7 +5,7 @@
  * per audio source, with trail fade and a beat-pulse ring.
  *
  * Usage:
- *   const vis = document.createElement("web-audio-plant-visualizer");
+ *   const vis = document.createElement("wam-plant-visualizer");
  *   container.appendChild(vis);
  *   vis.init([
  *     { analyser, color: "#4488ff", baseRadius: 100, radiusScale: 50, bins: 16, rotMult: 1.0, lineWidth: 2, alpha: 0.7 },
@@ -194,4 +194,4 @@ export default class WebAudioPlantVisualizer extends HTMLElement {
   }
 }
 
-customElements.define("web-audio-plant-visualizer", WebAudioPlantVisualizer);
+customElements.define("wam-plant-visualizer", WebAudioPlantVisualizer);

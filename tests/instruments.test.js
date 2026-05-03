@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import WebAudioInstrumentBase from "../src/web-audio/global/web-audio-instrument-base.js";
-import WebAudioPercKick from "../src/web-audio/instruments/web-audio-perc-kick.js";
-import WebAudioPercHihat from "../src/web-audio/instruments/web-audio-perc-hihat.js";
-import WebAudioSynthMono from "../src/web-audio/instruments/web-audio-synth-mono.js";
-import WebAudioSynthPad from "../src/web-audio/instruments/web-audio-synth-pad.js";
-import WebAudioSynth808 from "../src/web-audio/instruments/web-audio-synth-808.js";
-import WebAudioSynthAcid from "../src/web-audio/instruments/web-audio-synth-acid.js";
-import WebAudioSynthFM from "../src/web-audio/instruments/web-audio-synth-fm.js";
-import WebAudioSynthBlipFX from "../src/web-audio/instruments/web-audio-synth-blipfx.js";
+import WebAudioInstrumentBase from "../src/web-audio/global/wam-instrument-base.js";
+import WebAudioPercKick from "../src/web-audio/instruments/wam-perc-kick.js";
+import WebAudioPercHihat from "../src/web-audio/instruments/wam-perc-hihat.js";
+import WebAudioSynthMono from "../src/web-audio/instruments/wam-synth-mono.js";
+import WebAudioSynthPad from "../src/web-audio/instruments/wam-synth-pad.js";
+import WebAudioSynth808 from "../src/web-audio/instruments/wam-synth-808.js";
+import WebAudioSynthAcid from "../src/web-audio/instruments/wam-synth-acid.js";
+import WebAudioSynthFM from "../src/web-audio/instruments/wam-synth-fm.js";
+import WebAudioSynthBlipFX from "../src/web-audio/instruments/wam-synth-blipfx.js";
 
 // ---- Instrument registry: [Class, defaultPreset, hasPresets] ----
 const INSTRUMENTS = [

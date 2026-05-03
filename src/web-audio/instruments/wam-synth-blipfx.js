@@ -1,6 +1,6 @@
-import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
-import "../ui/web-audio-step-seq.js";
-import { WebAudioControlsBase, createSection, createCtrl } from "../ui/web-audio-controls-base.js";
+import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
+import "../ui/wam-step-seq.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../ui/wam-controls-base.js";
 
 /**
  * WebAudioSynthBlipFX — procedural sound effect synthesizer.
@@ -650,7 +650,7 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
   _buildStripActions(strip) {
     const btn = document.createElement("button");
     btn.textContent = "▶";
-    btn.className = "wac-jam-btn";
+    btn.className = "wam-jam-btn";
     btn.title = "Trigger sound [V]";
     btn.addEventListener("click", () => this.triggerNow());
     strip.appendChild(btn);
@@ -672,7 +672,7 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
 
     const shapeWrap = createCtrl("Shape", { tooltip: "Oscillator waveform shape." });
     this._shapeSelect = document.createElement("select");
-    this._shapeSelect.className = "wac-select";
+    this._shapeSelect.className = "wam-select";
     WebAudioSynthBlipFX.SHAPES.forEach((name, i) => {
       const opt = document.createElement("option");
       opt.value = i;
@@ -694,7 +694,7 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     const randPresetWrap = createCtrl("Rand Preset", { tooltip: "Load a random preset." });
     const randPresetBtn = document.createElement("button");
     randPresetBtn.textContent = "⚄";
-    randPresetBtn.className = "wac-action-btn";
+    randPresetBtn.className = "wam-action-btn";
     randPresetBtn.addEventListener("click", () => {
       const names = Object.keys(WebAudioSynthBlipFX.PRESETS);
       const name = names[Math.floor(Math.random() * names.length)];
@@ -741,11 +741,11 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
 
     // ---- Action row ----
     const actionRow = document.createElement("div");
-    actionRow.className = "wac-action-row";
+    actionRow.className = "wam-action-row";
 
     const newBtn = document.createElement("button");
     newBtn.textContent = "\u2684 Randomize";
-    newBtn.className = "wac-action-btn";
+    newBtn.className = "wam-action-btn";
     newBtn.addEventListener("click", () => {
       if (this._locked) return;
       this._instrument.randomize();
@@ -757,7 +757,7 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
 
     this._lockBtn = document.createElement("button");
     this._lockBtn.textContent = "\uD83D\uDD13 Lock";
-    this._lockBtn.className = "wac-action-btn";
+    this._lockBtn.className = "wam-action-btn";
     this._lockBtn.addEventListener("click", () => {
       this._locked = !this._locked;
       this._lockBtn.textContent = this._locked ? "\uD83D\uDD12 Locked" : "\uD83D\uDD13 Lock";
@@ -774,7 +774,7 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     this._buildSequencerSection();
 
     // Step sequencer (no note selection — probability controls when blips fire)
-    this._seq = document.createElement("web-audio-step-seq");
+    this._seq = document.createElement("wam-step-seq");
     this._seq.init({
       steps: WebAudioSynthBlipFXControls.DEFAULT_PATTERN(),
       probability: true,
@@ -968,4 +968,4 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
   }
 }
 
-customElements.define("web-audio-synth-blipfx-controls", WebAudioSynthBlipFXControls);
+customElements.define("wam-synth-blipfx-controls", WebAudioSynthBlipFXControls);

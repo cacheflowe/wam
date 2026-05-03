@@ -6,7 +6,7 @@
  * No colors, no gradients — white on black only.
  *
  * Usage:
- *   const grid = document.createElement("web-audio-sequence-grid");
+ *   const grid = document.createElement("wam-sequence-grid");
  *   container.appendChild(grid);
  *   grid.setPatterns([
  *     { label: "K", steps: [true,false,...] },  // 16 booleans
@@ -119,4 +119,4 @@ export default class WebAudioSequenceGrid extends HTMLElement {
   }
 }
 
-customElements.define("web-audio-sequence-grid", WebAudioSequenceGrid);
+customElements.define("wam-sequence-grid", WebAudioSequenceGrid);

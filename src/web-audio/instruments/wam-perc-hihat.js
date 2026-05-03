@@ -1,7 +1,7 @@
-import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
-import "../ui/web-audio-step-seq.js";
-import { STEP_WEIGHTS } from "../global/web-audio-scales.js";
-import { WebAudioControlsBase, createSection } from "../ui/web-audio-controls-base.js";
+import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
+import "../ui/wam-step-seq.js";
+import { STEP_WEIGHTS } from "../global/wam-scales.js";
+import { WebAudioControlsBase, createSection } from "../ui/wam-controls-base.js";
 
 /**
  * WebAudioPercHihat — 909-style hi-hat with metallic oscillators + noise.
@@ -171,7 +171,7 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
     this._buildSequencerSection({ onRandomize: () => this.randomize() });
 
     // Step sequencer with open/closed hat support
-    this._seq = document.createElement("web-audio-step-seq");
+    this._seq = document.createElement("wam-step-seq");
     this._seq.init({
       steps: WebAudioPercHihatControls.DEFAULT_PATTERN(),
       probability: true,
@@ -285,4 +285,4 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
   }
 }
 
-customElements.define("web-audio-perc-hihat-controls", WebAudioPercHihatControls);
+customElements.define("wam-perc-hihat-controls", WebAudioPercHihatControls);

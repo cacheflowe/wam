@@ -12,7 +12,7 @@
  * Each stage handles its own dry/wet internally.
  *
  * Usage:
- *   const fx = document.createElement("web-audio-fx-unit");
+ *   const fx = document.createElement("wam-fx-unit");
  *   parentEl.appendChild(fx);
  *   fx.init(ctx, { bpm: 128, reverbWet: 0.15, delayInterval: 0.75 });
  *   synth.connect(fx);
@@ -20,13 +20,13 @@
  *   fx.bpm = 140; // live BPM update
  */
 
-import WebAudioFxReverb from "./web-audio-fx-reverb.js";
-import WebAudioFxDelay from "./web-audio-fx-delay.js";
-import WebAudioFxChorus from "./web-audio-fx-chorus.js";
-import WebAudioFxFilter from "./web-audio-fx-filter.js";
-import "../ui/web-audio-slider.js";
-import "../ui/web-audio-filter-sweep.js";
-import { injectControlsCSS, createSection, createCtrl } from "../ui/web-audio-slider.js";
+import WebAudioFxReverb from "./wam-fx-reverb.js";
+import WebAudioFxDelay from "./wam-fx-delay.js";
+import WebAudioFxChorus from "./wam-fx-chorus.js";
+import WebAudioFxFilter from "./wam-fx-filter.js";
+import "../ui/wam-slider.js";
+import "../ui/wam-filter-sweep.js";
+import { injectControlsCSS, createSection, createCtrl } from "../ui/wam-slider.js";
 
 export default class WebAudioFxUnit extends HTMLElement {
   static #cssInjected = false;
@@ -165,22 +165,22 @@ export default class WebAudioFxUnit extends HTMLElement {
     if (!obj) return;
     if (obj.reverbWet != null && this._reverb) {
       this._reverb.wet = obj.reverbWet;
-      const s = this.querySelector('web-audio-slider[param="reverbWet"]');
+      const s = this.querySelector('wam-slider[param="reverbWet"]');
       if (s) s.value = obj.reverbWet;
     }
     if (obj.reverbPreDelay != null && this._reverb) {
       this._reverb.preDelay = obj.reverbPreDelay;
-      const s = this.querySelector('web-audio-slider[param="reverbPreDelay"]');
+      const s = this.querySelector('wam-slider[param="reverbPreDelay"]');
       if (s) s.value = obj.reverbPreDelay;
     }
     if (obj.reverbHpFreq != null && this._reverb) {
       this._reverb.hpFreq = obj.reverbHpFreq;
-      const s = this.querySelector('web-audio-slider[param="reverbHpFreq"]');
+      const s = this.querySelector('wam-slider[param="reverbHpFreq"]');
       if (s) s.value = obj.reverbHpFreq;
     }
     if (obj.reverbLpFreq != null && this._reverb) {
       this._reverb.lpFreq = obj.reverbLpFreq;
-      const s = this.querySelector('web-audio-slider[param="reverbLpFreq"]');
+      const s = this.querySelector('wam-slider[param="reverbLpFreq"]');
       if (s) s.value = obj.reverbLpFreq;
     }
     if (obj.delayInterval != null && this._delay) {
@@ -190,17 +190,17 @@ export default class WebAudioFxUnit extends HTMLElement {
     }
     if (obj.delayFeedback != null && this._delay) {
       this._delay.feedback = obj.delayFeedback;
-      const s = this.querySelector('web-audio-slider[param="delayFeedback"]');
+      const s = this.querySelector('wam-slider[param="delayFeedback"]');
       if (s) s.value = obj.delayFeedback;
     }
     if (obj.delayMix != null && this._delay) {
       this._delay.wet = obj.delayMix;
-      const s = this.querySelector('web-audio-slider[param="delayMix"]');
+      const s = this.querySelector('wam-slider[param="delayMix"]');
       if (s) s.value = obj.delayMix;
     }
     if (obj.delayFilterSweep != null && this._delay) {
       this._delay.filterSweep = obj.delayFilterSweep;
-      const s = this.querySelector('web-audio-filter-sweep[param="delayFilterSweep"]');
+      const s = this.querySelector('wam-filter-sweep[param="delayFilterSweep"]');
       if (s) s.value = obj.delayFilterSweep;
     } else if (obj.delayFilterFreq != null && this._delay) {
       // backwards-compat: old saves stored raw LP frequency — map to a negative sweep
@@ -208,7 +208,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     }
     if (obj.delayModulation != null && this._delay) {
       this._delay.modulation = obj.delayModulation;
-      const s = this.querySelector('web-audio-slider[param="delayModulation"]');
+      const s = this.querySelector('wam-slider[param="delayModulation"]');
       if (s) s.value = obj.delayModulation;
     }
     if (obj.chorusVoices != null && this._chorus) {
@@ -218,32 +218,32 @@ export default class WebAudioFxUnit extends HTMLElement {
     }
     if (obj.chorusRate != null && this._chorus) {
       this._chorus.rate = obj.chorusRate;
-      const s = this.querySelector('web-audio-slider[param="chorusRate"]');
+      const s = this.querySelector('wam-slider[param="chorusRate"]');
       if (s) s.value = obj.chorusRate;
     }
     if (obj.chorusDepth != null && this._chorus) {
       this._chorus.depth = obj.chorusDepth;
-      const s = this.querySelector('web-audio-slider[param="chorusDepth"]');
+      const s = this.querySelector('wam-slider[param="chorusDepth"]');
       if (s) s.value = obj.chorusDepth;
     }
     if (obj.chorusDelay != null && this._chorus) {
       this._chorus.delay = obj.chorusDelay;
-      const s = this.querySelector('web-audio-slider[param="chorusDelay"]');
+      const s = this.querySelector('wam-slider[param="chorusDelay"]');
       if (s) s.value = obj.chorusDelay;
     }
     if (obj.chorusFeedback != null && this._chorus) {
       this._chorus.feedback = obj.chorusFeedback;
-      const s = this.querySelector('web-audio-slider[param="chorusFeedback"]');
+      const s = this.querySelector('wam-slider[param="chorusFeedback"]');
       if (s) s.value = obj.chorusFeedback;
     }
     if (obj.chorusSpread != null && this._chorus) {
       this._chorus.spread = obj.chorusSpread;
-      const s = this.querySelector('web-audio-slider[param="chorusSpread"]');
+      const s = this.querySelector('wam-slider[param="chorusSpread"]');
       if (s) s.value = obj.chorusSpread;
     }
     if (obj.chorusWet != null && this._chorus) {
       this._chorus.wet = obj.chorusWet;
-      const s = this.querySelector('web-audio-slider[param="chorusWet"]');
+      const s = this.querySelector('wam-slider[param="chorusWet"]');
       if (s) s.value = obj.chorusWet;
     }
     if (obj.chorusShape != null && this._chorus) {
@@ -253,7 +253,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     }
     if (obj.filterSweep != null && this._filter) {
       this._filter.sweep = obj.filterSweep;
-      const s = this.querySelector("web-audio-filter-sweep");
+      const s = this.querySelector("wam-filter-sweep");
       if (s) s.value = obj.filterSweep;
     } else {
       // backwards-compat: old saves had separate lpFreq/hpFreq
@@ -262,7 +262,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     }
     if (obj.filterQ != null && this._filter) {
       this._filter.q = obj.filterQ;
-      const s = this.querySelector('web-audio-slider[param="filterQ"]');
+      const s = this.querySelector('wam-slider[param="filterQ"]');
       if (s) s.value = obj.filterQ;
     }
   }
@@ -276,7 +276,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     const mkSelect = (labelText, appendTo, tooltip = null) => {
       const wrap = createCtrl(labelText, { tooltip });
       const sel = document.createElement("select");
-      sel.className = "wac-select";
+      sel.className = "wam-select";
       wrap.appendChild(sel);
       appendTo.appendChild(wrap);
       return sel;
@@ -284,7 +284,7 @@ export default class WebAudioFxUnit extends HTMLElement {
 
     // ---- Filter ----
     const { el: filtEl, controls: filtCtrl } = createSection("Filter");
-    const sweep = document.createElement("web-audio-filter-sweep");
+    const sweep = document.createElement("wam-filter-sweep");
     sweep.setAttribute("param", "filterSweep");
     sweep.setAttribute("label", "Sweep");
     sweep.setAttribute("data-tooltip", "Combined HP+LP filter sweep. Left = cut lows, right = cut highs, center = bypass.");
@@ -315,7 +315,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     delCtrl.appendChild(this._addSlider("delayFeedback", "Feedbk", 0, 0.9, 0.01, options.delayFeedback ?? 0.35, {
       tooltip: "How much of the delay output feeds back into the input. High values = long, cascading repeats.",
     }));
-    const delayFilterSweep = document.createElement("web-audio-filter-sweep");
+    const delayFilterSweep = document.createElement("wam-filter-sweep");
     delayFilterSweep.setAttribute("param", "delayFilterSweep");
     delayFilterSweep.setAttribute("label", "Dub Filt");
     delayFilterSweep.setAttribute("data-tooltip", "Filter applied to the delay feedback path. Creates dub-style filtered echoes.");
@@ -454,7 +454,7 @@ export default class WebAudioFxUnit extends HTMLElement {
   }
 
   _addSlider(param, label, min, max, step, value, opts = {}) {
-    const slider = document.createElement("web-audio-slider");
+    const slider = document.createElement("wam-slider");
     slider.setAttribute("param", param);
     slider.setAttribute("label", label);
     slider.setAttribute("min", min);
@@ -473,7 +473,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     WebAudioFxUnit.#cssInjected = true;
     const style = document.createElement("style");
     style.textContent = `
-      web-audio-fx-unit {
+      wam-fx-unit {
         display: flex;
         flex-direction: column;
         gap: 0;
@@ -487,4 +487,4 @@ export default class WebAudioFxUnit extends HTMLElement {
   }
 }
 
-customElements.define("web-audio-fx-unit", WebAudioFxUnit);
+customElements.define("wam-fx-unit", WebAudioFxUnit);

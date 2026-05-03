@@ -1,8 +1,8 @@
-import WebAudioVocoder from "../web-audio/instruments/web-audio-vocoder.js";
-import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
-import WebAudioSynthMono from "../web-audio/instruments/web-audio-synth-mono.js";
-import "../web-audio/ui/web-audio-waveform.js";
-import "../web-audio/ui/web-audio-level-meter.js";
+import WebAudioVocoder from "../web-audio/instruments/wam-vocoder.js";
+import WebAudioSynthFM from "../web-audio/instruments/wam-synth-fm.js";
+import WebAudioSynthMono from "../web-audio/instruments/wam-synth-mono.js";
+import "../web-audio/ui/wam-waveform.js";
+import "../web-audio/ui/wam-level-meter.js";
 
 // QWERTY piano — two rows covering C3 to E4
 const KEY_NOTE_MAP = {
@@ -160,7 +160,7 @@ class VocoderApp extends HTMLElement {
     if (mode === "fm") {
       if (!this._fmCarrier) {
         this._fmCarrier = new WebAudioSynthFM(this._ctx);
-        this._fmControls = document.createElement("web-audio-synth-fm-controls");
+        this._fmControls = document.createElement("wam-synth-fm-controls");
         panel.innerHTML = `<div class="vc-ext-label">FM Synth Carrier</div>`;
         panel.appendChild(this._fmControls);
         this._fmControls.bind(this._fmCarrier, this._ctx, { color: "#4df", fx: { bpm: 120 } });
@@ -170,7 +170,7 @@ class VocoderApp extends HTMLElement {
     } else if (mode === "mono") {
       if (!this._monoCarrier) {
         this._monoCarrier = new WebAudioSynthMono(this._ctx);
-        this._monoControls = document.createElement("web-audio-synth-mono-controls");
+        this._monoControls = document.createElement("wam-synth-mono-controls");
         panel.innerHTML = `<div class="vc-ext-label">Mono Synth Carrier</div>`;
         panel.appendChild(this._monoControls);
         this._monoControls.bind(this._monoCarrier, this._ctx, { color: "#6df", fx: { bpm: 120 } });
@@ -252,7 +252,7 @@ class VocoderApp extends HTMLElement {
           <h2>🎙 Vocoder</h2>
           <div class="vc-transport">
             <button class="vc-btn vc-mic-btn" id="micBtn">🎤 Connect Mic</button>
-            <web-audio-level-meter id="micMeter"></web-audio-level-meter>
+            <wam-level-meter id="micMeter"></wam-level-meter>
             <span class="vc-mic-status" id="micStatus">Mic off</span>
             <button class="vc-btn vc-play-btn" id="playBtn">▶ Play</button>
           </div>
@@ -347,7 +347,7 @@ class VocoderApp extends HTMLElement {
         <!-- External carrier instrument controls (shown when FM / MONO selected) -->
         <div id="extCarrierPanel" style="display:none"></div>
 
-        <web-audio-waveform id="waveform" class="vc-waveform"></web-audio-waveform>
+        <wam-waveform id="waveform" class="vc-waveform"></wam-waveform>
       </div>
     `;
 
@@ -528,7 +528,7 @@ class VocoderApp extends HTMLElement {
       .vc-header h2 { margin: 0; color: #9b8dff; font-size: 1.4rem; }
 
       .vc-transport { display: flex; align-items: center; gap: 0.75rem; }
-      .vc-transport web-audio-level-meter { height: 28px; }
+      .vc-transport wam-level-meter { height: 28px; }
 
       .vc-btn {
         font-family: monospace;
@@ -706,7 +706,7 @@ class VocoderApp extends HTMLElement {
         border-radius: 3px;
       }
 
-      web-audio-waveform.vc-waveform {
+      wam-waveform.vc-waveform {
         display: block;
         height: 60px;
         background: #060610;

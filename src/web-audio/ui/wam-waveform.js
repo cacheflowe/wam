@@ -10,7 +10,7 @@
  * requestAnimationFrame. Resizes responsively via ResizeObserver.
  *
  * Usage:
- *   const vis = document.createElement("web-audio-waveform");
+ *   const vis = document.createElement("wam-waveform");
  *   parentEl.appendChild(vis);
  *   const analyser = ctx.createAnalyser();
  *   someNode.connect(analyser);
@@ -239,11 +239,11 @@ export default class WebAudioWaveform extends HTMLElement {
     WebAudioWaveform.#cssInjected = true;
     const s = document.createElement("style");
     s.textContent = `
-      web-audio-waveform { display: block; cursor: pointer; }
-      web-audio-waveform canvas { display: block; width: 100%; height: 100%; }
+      wam-waveform { display: block; cursor: pointer; }
+      wam-waveform canvas { display: block; width: 100%; height: 100%; }
     `;
     document.head.appendChild(s);
   }
 }
 
-customElements.define("web-audio-waveform", WebAudioWaveform);
+customElements.define("wam-waveform", WebAudioWaveform);

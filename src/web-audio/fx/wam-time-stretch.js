@@ -17,8 +17,8 @@
  *   ts.seek(0.5);          // jump to 50% through buffer
  */
 
-import "../ui/web-audio-slider.js";
-import { injectControlsCSS, createSection, createCtrl } from "../ui/web-audio-slider.js";
+import "../ui/wam-slider.js";
+import { injectControlsCSS, createSection, createCtrl } from "../ui/wam-slider.js";
 
 export default class WebAudioTimeStretch {
   /**
@@ -43,7 +43,7 @@ export default class WebAudioTimeStretch {
   }
 
   async _init() {
-    const url = new URL("./web-audio-time-stretch.worklet.js", import.meta.url);
+    const url = new URL("./wam-time-stretch.worklet.js", import.meta.url);
     await this.ctx.audioWorklet.addModule(url);
 
     this._node = new AudioWorkletNode(this.ctx, "time-stretch-processor", {
@@ -211,7 +211,7 @@ const GRAIN_STYLES = [
  * Supports toJSON/fromJSON for state persistence (localStorage, URL hash sharing).
  *
  * Usage:
- *   const tsControls = document.createElement("web-audio-time-stretch-controls");
+ *   const tsControls = document.createElement("wam-time-stretch-controls");
  *   parent.appendChild(tsControls);
  *   tsControls.init(breakPlayer);           // target with pitchShift / stretchRatio
  *   tsControls.init(breakPlayer, { title: "Pitch / Time", color: "#0cc" });
@@ -246,7 +246,7 @@ export class WebAudioTimeStretchControls extends HTMLElement {
     this.appendChild(sectionEl);
 
     // Pitch slider
-    const pitchSlider = document.createElement("web-audio-slider");
+    const pitchSlider = document.createElement("wam-slider");
     pitchSlider.setAttribute("param", "pitchShift");
     pitchSlider.setAttribute("label", "Pitch");
     pitchSlider.setAttribute("min", -24);
@@ -260,7 +260,7 @@ export class WebAudioTimeStretchControls extends HTMLElement {
     // Time stretch ratio select
     const stretchWrap = createCtrl("Time");
     this._stretchSelect = document.createElement("select");
-    this._stretchSelect.className = "wac-select";
+    this._stretchSelect.className = "wam-select";
     for (const { label, value } of STRETCH_RATIOS) {
       const opt = document.createElement("option");
       opt.value = value;
@@ -278,7 +278,7 @@ export class WebAudioTimeStretchControls extends HTMLElement {
     // Grain style select (clean vs vintage)
     const styleWrap = createCtrl("Style");
     this._styleSelect = document.createElement("select");
-    this._styleSelect.className = "wac-select";
+    this._styleSelect.className = "wam-select";
     for (const { label, value } of GRAIN_STYLES) {
       const opt = document.createElement("option");
       opt.value = value;
@@ -335,4 +335,4 @@ export class WebAudioTimeStretchControls extends HTMLElement {
   }
 }
 
-customElements.define("web-audio-time-stretch-controls", WebAudioTimeStretchControls);
+customElements.define("wam-time-stretch-controls", WebAudioTimeStretchControls);

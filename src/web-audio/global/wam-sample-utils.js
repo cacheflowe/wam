@@ -2,7 +2,7 @@
  * Shared sample-loading utilities for sample-based instruments.
  *
  * Usage:
- *   import { loadSample, buildReverseBuffer } from "../global/web-audio-sample-utils.js";
+ *   import { loadSample, buildReverseBuffer } from "../global/wam-sample-utils.js";
  *   const buffer = await loadSample(ctx, "/audio/samples/kicks/kick-808.wav");
  *   const reversed = buildReverseBuffer(ctx, buffer);
  */

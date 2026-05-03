@@ -1,5 +1,5 @@
-import "./web-audio-slider.js";
-import { injectControlsCSS, createChannelStrip, createSection, createCtrl } from "./web-audio-slider.js";
+import "./wam-slider.js";
+import { injectControlsCSS, createChannelStrip, createSection, createCtrl } from "./wam-slider.js";
 
 /**
  * WebAudioControlsBase — shared foundation for all instrument control panels.
@@ -66,7 +66,7 @@ export class WebAudioControlsBase extends HTMLElement {
     const color = options.color || this._defaultColor();
     this.innerHTML = "";
     this._sliders = {};
-    this.classList.add("wac-panel");
+    this.classList.add("wam-panel");
     injectControlsCSS();
     this.style.setProperty("--slider-accent", color);
     this.style.setProperty("--fx-accent", color);
@@ -87,7 +87,7 @@ export class WebAudioControlsBase extends HTMLElement {
     // Ctrl / Seq / FX section toggle buttons
     const mkToggle = (label, tooltip) => {
       const btn = document.createElement("button");
-      btn.className = "wac-toggle-btn";
+      btn.className = "wam-toggle-btn";
       btn.textContent = label;
       btn.title = tooltip;
       return btn;
@@ -100,25 +100,25 @@ export class WebAudioControlsBase extends HTMLElement {
     this._stripEl.appendChild(this._fxBtn);
 
     // Waveform — compact, inside the channel strip
-    const waveform = document.createElement("web-audio-waveform");
+    const waveform = document.createElement("wam-waveform");
     this._stripEl.appendChild(waveform);
 
     this._buildStripActions(this._stripEl);
 
     // Three independent sections
     this._ctrlSection = document.createElement("div");
-    this._ctrlSection.className = "wac-section-ctrl";
+    this._ctrlSection.className = "wam-section-ctrl";
     this._ctrlSection.setAttribute("data-hidden", "");   // default: hidden
     this.appendChild(this._ctrlSection);
 
     this._seqSection = document.createElement("div");
-    this._seqSection.className = "wac-section-seq";
+    this._seqSection.className = "wam-section-seq";
     // default: visible (no data-hidden)
     this.appendChild(this._seqSection);
     this._seqBtn.setAttribute("data-active", "");
 
     this._fxSection = document.createElement("div");
-    this._fxSection.className = "wac-section-fx";
+    this._fxSection.className = "wam-section-fx";
     this._fxSection.setAttribute("data-hidden", "");     // default: hidden
     this.appendChild(this._fxSection);
 
@@ -137,12 +137,12 @@ export class WebAudioControlsBase extends HTMLElement {
 
     // Controls wrapper inside ctrl section
     const controls = document.createElement("div");
-    controls.className = "wac-controls";
+    controls.className = "wam-controls";
     this._ctrlSection.appendChild(controls);
 
-    // Slider factory — creates a web-audio-slider, registers in _sliders, returns element
+    // Slider factory — creates a wam-slider, registers in _sliders, returns element
     const mkSlider = (def) => {
-      const s = document.createElement("web-audio-slider");
+      const s = document.createElement("wam-slider");
       s.setAttribute("param", def.param);
       s.setAttribute("label", def.label);
       s.setAttribute("min", def.min);
@@ -193,8 +193,8 @@ export class WebAudioControlsBase extends HTMLElement {
   /**
    * Build the instrument-specific controls (sections, sequencer, action buttons).
    * Called during bind() after the expanded panel is created.
-   * @param {HTMLElement} controls  The .wac-controls div inside the expanded panel
-   * @param {HTMLElement} expanded  The .wac-expanded div (for appending sequencer etc.)
+   * @param {HTMLElement} controls  The .wam-controls div inside the expanded panel
+   * @param {HTMLElement} expanded  The .wam-expanded div (for appending sequencer etc.)
    * @param {function} mkSlider     Factory: mkSlider({ param, label, min, max, step, scale? }) → HTMLElement
    * @param {AudioContext} ctx
    * @param {object} options        The full options passed to bind()
@@ -218,7 +218,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
   /** Create and return the FX unit element. Override to return null (808). */
   _createFxUnit(expanded, ctx, options) {
-    const fxUnit = document.createElement("web-audio-fx-unit");
+    const fxUnit = document.createElement("wam-fx-unit");
     expanded.appendChild(fxUnit);
     fxUnit.init(ctx, {
       title: this._fxTitle(),
@@ -262,7 +262,7 @@ export class WebAudioControlsBase extends HTMLElement {
   _makePresetDropdown(PresetsObj, appendTo) {
     const wrap = createCtrl("Preset", { tooltip: "Load a sound preset." });
     this._presetSelect = document.createElement("select");
-    this._presetSelect.className = "wac-select";
+    this._presetSelect.className = "wam-select";
     for (const name of Object.keys(PresetsObj)) {
       const opt = document.createElement("option");
       opt.value = name;
@@ -292,7 +292,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._waveSelectProp = prop;
     const wrap = createCtrl(label, tooltip ? { tooltip } : {});
     this._waveSelect = document.createElement("select");
-    this._waveSelect.className = "wac-select";
+    this._waveSelect.className = "wam-select";
     for (const type of types) {
       const opt = document.createElement("option");
       opt.value = type;
@@ -319,7 +319,7 @@ export class WebAudioControlsBase extends HTMLElement {
    * Build the Sequencer section with Speed, Density, Rotate, and optional Rand controls,
    * each wrapped in createCtrl for consistent title/control/tooltip layout.
    * Stores _speedSelect, _densityInput, _rotateInput, _rotateIntervalInput on this.
-   * @param {HTMLElement} controls  The .wac-controls container to append to
+   * @param {HTMLElement} controls  The .wam-controls container to append to
    * @param {object} [opts]
    * @param {function|null} [opts.onRandomize]  Callback for Rand button; omit to hide it
    * @returns {{ el: HTMLElement, controls: HTMLElement }}  The section element and its controls row
@@ -337,7 +337,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
     const speedWrap = createCtrl("Speed", { tooltip: "Playback rate multiplier for this instrument." });
     this._speedSelect = document.createElement("select");
-    this._speedSelect.className = "wac-select";
+    this._speedSelect.className = "wam-select";
     [0.5, 1, 2].forEach((val) => {
       const opt = document.createElement("option");
       opt.value = val;
@@ -358,7 +358,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._densityInput.min = "1";
     this._densityInput.max = "16";
     this._densityInput.value = "1";
-    this._densityInput.className = "wac-num-input";
+    this._densityInput.className = "wam-num-input";
     this._densityInput.addEventListener("change", () => {
       this._seq?.setPatternParams({ playEvery: parseInt(this._densityInput.value) });
       this._emitChange();
@@ -372,7 +372,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._rotateInput.min = "0";
     this._rotateInput.max = "15";
     this._rotateInput.value = "0";
-    this._rotateInput.className = "wac-num-input";
+    this._rotateInput.className = "wam-num-input";
     this._rotateInput.addEventListener("change", () => {
       this._seq?.setPatternParams({ rotationOffset: parseInt(this._rotateInput.value) });
       this._emitChange();
@@ -386,7 +386,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._rotateIntervalInput.min = "1";
     this._rotateIntervalInput.max = "16";
     this._rotateIntervalInput.value = "1";
-    this._rotateIntervalInput.className = "wac-num-input";
+    this._rotateIntervalInput.className = "wam-num-input";
     this._rotateIntervalInput.addEventListener("change", () => {
       this._seq?.setPatternParams({ rotationIntervalBars: parseInt(this._rotateIntervalInput.value) });
       this._emitChange();
@@ -398,7 +398,7 @@ export class WebAudioControlsBase extends HTMLElement {
       const randWrap = createCtrl("Rand", { tooltip: "Randomize the step pattern." });
       const randBtn = document.createElement("button");
       randBtn.textContent = "⚄";
-      randBtn.className = "wac-action-btn";
+      randBtn.className = "wam-action-btn";
       randBtn.addEventListener("click", onRandomize);
       randWrap.appendChild(randBtn);
       seqCtrl.appendChild(randWrap);

@@ -8,7 +8,7 @@ import {
   scaleNoteOptions,
   buildChordFromScale,
   LEAD_OSC_TYPES,
-} from "../src/web-audio/global/web-audio-scales.js";
+} from "../src/web-audio/global/wam-scales.js";
 
 describe("SCALES", () => {
   it("has 8 scales", () => {

@@ -1,13 +1,13 @@
-import WebAudioSequencer from "../web-audio/global/web-audio-sequencer.js";
-import WebAudioSynthAcid from "../web-audio/instruments/web-audio-synth-acid.js";
-import WebAudioSynth808 from "../web-audio/instruments/web-audio-synth-808.js";
-import WebAudioSynthBlipFX from "../web-audio/instruments/web-audio-synth-blipfx.js";
-import WebAudioBreakPlayer from "../web-audio/instruments/web-audio-break-player.js";
-import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
-import WebAudioPercKick from "../web-audio/instruments/web-audio-perc-kick.js";
-import WebAudioPercHihat from "../web-audio/instruments/web-audio-perc-hihat.js";
-import WebAudioPercSnare from "../web-audio/instruments/web-audio-perc-snare.js";
-import "../web-audio/ui/web-audio-transport.js";
+import WebAudioSequencer from "../web-audio/global/wam-sequencer.js";
+import WebAudioSynthAcid from "../web-audio/instruments/wam-synth-acid.js";
+import WebAudioSynth808 from "../web-audio/instruments/wam-synth-808.js";
+import WebAudioSynthBlipFX from "../web-audio/instruments/wam-synth-blipfx.js";
+import WebAudioBreakPlayer from "../web-audio/instruments/wam-break-player.js";
+import WebAudioSynthFM from "../web-audio/instruments/wam-synth-fm.js";
+import WebAudioPercKick from "../web-audio/instruments/wam-perc-kick.js";
+import WebAudioPercHihat from "../web-audio/instruments/wam-perc-hihat.js";
+import WebAudioPercSnare from "../web-audio/instruments/wam-perc-snare.js";
+import "../web-audio/ui/wam-transport.js";
 
 const BASE_PATH = "/audio/breaks/";
 const BREAK_FILES = [
@@ -336,69 +336,69 @@ class WebAudioAcid extends HTMLElement {
     transportGroup.className = "instrument-group transport-group";
     this.appendChild(transportGroup);
 
-    this._transport = document.createElement("web-audio-transport");
+    this._transport = document.createElement("wam-transport");
     transportGroup.appendChild(this._transport);
 
     // Share button — appended to transport's share slot after init()
     this._shareBtn = document.createElement("button");
     this._shareBtn.textContent = "Share URL";
-    this._shareBtn.className = "wac-play-btn";
+    this._shareBtn.className = "wam-play-btn";
     this._shareBtn.addEventListener("click", () => this._shareURL());
 
     // ---- Break group ----
     const breakGroup = document.createElement("div");
     breakGroup.className = "instrument-group break-group";
     this.appendChild(breakGroup);
-    this._breakControls = document.createElement("web-audio-break-player-controls");
+    this._breakControls = document.createElement("wam-break-player-controls");
     breakGroup.appendChild(this._breakControls);
 
     // ---- Kick group ----
     const kickGroup = document.createElement("div");
     kickGroup.className = "instrument-group kick-group";
     this.appendChild(kickGroup);
-    this._kickControls = document.createElement("web-audio-perc-kick-controls");
+    this._kickControls = document.createElement("wam-perc-kick-controls");
     kickGroup.appendChild(this._kickControls);
 
     // ---- Snare group ----
     const snareGroup = document.createElement("div");
     snareGroup.className = "instrument-group snare-group";
     this.appendChild(snareGroup);
-    this._snareControls = document.createElement("web-audio-perc-snare-controls");
+    this._snareControls = document.createElement("wam-perc-snare-controls");
     snareGroup.appendChild(this._snareControls);
 
     // ---- Hi-Hat group ----
     const hihatGroup = document.createElement("div");
     hihatGroup.className = "instrument-group hihat-group";
     this.appendChild(hihatGroup);
-    this._hihatControls = document.createElement("web-audio-perc-hihat-controls");
+    this._hihatControls = document.createElement("wam-perc-hihat-controls");
     hihatGroup.appendChild(this._hihatControls);
 
     // ---- 808 group ----
     const g808 = document.createElement("div");
     g808.className = "instrument-group bass808-group";
     this.appendChild(g808);
-    this._808Controls = document.createElement("web-audio-synth-808-controls");
+    this._808Controls = document.createElement("wam-synth-808-controls");
     g808.appendChild(this._808Controls);
 
     // ---- FM Chord group ----
     const fmGroup = document.createElement("div");
     fmGroup.className = "instrument-group chord-fm-group";
     this.appendChild(fmGroup);
-    this._fmControls = document.createElement("web-audio-synth-fm-controls");
+    this._fmControls = document.createElement("wam-synth-fm-controls");
     fmGroup.appendChild(this._fmControls);
 
     // ---- BlipFX group ----
     const blipfxGroup = document.createElement("div");
     blipfxGroup.className = "instrument-group blipfx-group";
     this.appendChild(blipfxGroup);
-    this._blipfxControls = document.createElement("web-audio-synth-blipfx-controls");
+    this._blipfxControls = document.createElement("wam-synth-blipfx-controls");
     blipfxGroup.appendChild(this._blipfxControls);
 
     // ---- Acid / TB-303 group ----
     const acidGroup = document.createElement("div");
     acidGroup.className = "instrument-group acid-group";
     this.appendChild(acidGroup);
-    this._acidControls = document.createElement("web-audio-synth-acid-controls");
+    this._acidControls = document.createElement("wam-synth-acid-controls");
     acidGroup.appendChild(this._acidControls);
   }
 
@@ -434,16 +434,16 @@ class WebAudioAcid extends HTMLElement {
       .acid-group     { --fx-accent: #0f0; }
       .transport-group { --fx-accent: #aaa; --slider-accent: #aaa; }
 
-      web-audio-waveform {
+      wam-waveform {
         height: 44px;
         background: #060606;
         border-top: 1px solid #151515;
       }
-      .break-group    web-audio-waveform { border-color: #002020; }
-      .bass808-group  web-audio-waveform { border-color: #1a0f00; }
-      .chord-fm-group web-audio-waveform { border-color: #001a2a; }
-      .blipfx-group   web-audio-waveform { border-color: #100020; }
-      .acid-group     web-audio-waveform { border-color: #001500; }
+      .break-group    wam-waveform { border-color: #002020; }
+      .bass808-group  wam-waveform { border-color: #1a0f00; }
+      .chord-fm-group wam-waveform { border-color: #001a2a; }
+      .blipfx-group   wam-waveform { border-color: #100020; }
+      .acid-group     wam-waveform { border-color: #001500; }
     `;
     document.head.appendChild(styleEl);
   }

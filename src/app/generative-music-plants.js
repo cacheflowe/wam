@@ -1,17 +1,17 @@
-import WebAudioSynthMono, { WebAudioSynthMonoControls } from "../web-audio/instruments/web-audio-synth-mono.js";
-import WebAudioSynthPad, { WebAudioSynthPadControls } from "../web-audio/instruments/web-audio-synth-pad.js";
-import WebAudioSynthFM, { WebAudioSynthFMControls } from "../web-audio/instruments/web-audio-synth-fm.js";
-import WebAudioPercKick, { WebAudioPercKickControls } from "../web-audio/instruments/web-audio-perc-kick.js";
-import WebAudioPercHihat, { WebAudioPercHihatControls } from "../web-audio/instruments/web-audio-perc-hihat.js";
-import WebAudioFxReverb from "../web-audio/fx/web-audio-fx-reverb.js";
-import WebAudioFxDelay from "../web-audio/fx/web-audio-fx-delay.js";
-import "../web-audio/ui/web-audio-slider.js";
-import "../web-audio/fx/web-audio-fx-unit.js";
-import "../web-audio/ui/web-audio-waveform.js";
-import "../web-audio/ui/web-audio-plant-visualizer.js";
-import "../web-audio/ui/web-audio-sequence-grid.js";
-import WebAudioSequencer from "../web-audio/global/web-audio-sequencer.js";
-import { SCALES_ORDERED as SCALES, buildChordFromScale, LEAD_OSC_TYPES } from "../web-audio/global/web-audio-scales.js";
+import WebAudioSynthMono, { WebAudioSynthMonoControls } from "../web-audio/instruments/wam-synth-mono.js";
+import WebAudioSynthPad, { WebAudioSynthPadControls } from "../web-audio/instruments/wam-synth-pad.js";
+import WebAudioSynthFM, { WebAudioSynthFMControls } from "../web-audio/instruments/wam-synth-fm.js";
+import WebAudioPercKick, { WebAudioPercKickControls } from "../web-audio/instruments/wam-perc-kick.js";
+import WebAudioPercHihat, { WebAudioPercHihatControls } from "../web-audio/instruments/wam-perc-hihat.js";
+import WebAudioFxReverb from "../web-audio/fx/wam-fx-reverb.js";
+import WebAudioFxDelay from "../web-audio/fx/wam-fx-delay.js";
+import "../web-audio/ui/wam-slider.js";
+import "../web-audio/fx/wam-fx-unit.js";
+import "../web-audio/ui/wam-waveform.js";
+import "../web-audio/ui/wam-plant-visualizer.js";
+import "../web-audio/ui/wam-sequence-grid.js";
+import WebAudioSequencer from "../web-audio/global/wam-sequencer.js";
+import { SCALES_ORDERED as SCALES, buildChordFromScale, LEAD_OSC_TYPES } from "../web-audio/global/wam-scales.js";
 
 const ROOT_MIDI = 48; // C3
 
@@ -777,15 +777,15 @@ class WebAudioGenerativeMusicPlants extends HTMLElement {
       }
     });
 
-    this._seqGrid = document.createElement("web-audio-sequence-grid");
+    this._seqGrid = document.createElement("wam-sequence-grid");
     c1.appendChild(this._seqGrid);
 
-    this._visualizer = this._makeEl("web-audio-plant-visualizer", "gm-visualizer");
+    this._visualizer = this._makeEl("wam-plant-visualizer", "gm-visualizer");
     c1.appendChild(this._visualizer);
 
-    this._fxUnit = document.createElement("web-audio-fx-unit");
+    this._fxUnit = document.createElement("wam-fx-unit");
     c1.appendChild(this._fxUnit);
-    this._waveform = document.createElement("web-audio-waveform");
+    this._waveform = document.createElement("wam-waveform");
     c1.appendChild(this._waveform);
 
     // ---- Column 3: system guide ----
@@ -817,12 +817,12 @@ class WebAudioGenerativeMusicPlants extends HTMLElement {
     this._debugControls = [];
 
     const INSTRUMENTS = [
-      { label: "Bass",     tag: "web-audio-synth-mono-controls",  inst: this._bass,  color: "#4477ff" },
-      { label: "Lead",     tag: "web-audio-synth-mono-controls",  inst: this._lead,  color: "#00dd88" },
-      { label: "Kick",     tag: "web-audio-perc-kick-controls",   inst: this._kick,  color: "#ffffff" },
-      { label: "Hihat",    tag: "web-audio-perc-hihat-controls",  inst: this._hihat, color: "#ffee33" },
-      { label: "Pad",      tag: "web-audio-synth-pad-controls",   inst: this._pad,   color: "#ff8844" },
-      { label: "FM Chord", tag: "web-audio-synth-fm-controls",    inst: this._fm,    color: "#cc44ff" },
+      { label: "Bass",     tag: "wam-synth-mono-controls",  inst: this._bass,  color: "#4477ff" },
+      { label: "Lead",     tag: "wam-synth-mono-controls",  inst: this._lead,  color: "#00dd88" },
+      { label: "Kick",     tag: "wam-perc-kick-controls",   inst: this._kick,  color: "#ffffff" },
+      { label: "Hihat",    tag: "wam-perc-hihat-controls",  inst: this._hihat, color: "#ffee33" },
+      { label: "Pad",      tag: "wam-synth-pad-controls",   inst: this._pad,   color: "#ff8844" },
+      { label: "FM Chord", tag: "wam-synth-fm-controls",    inst: this._fm,    color: "#cc44ff" },
     ];
 
     for (const { label, tag, inst, color } of INSTRUMENTS) {
@@ -959,7 +959,7 @@ class WebAudioGenerativeMusicPlants extends HTMLElement {
   }
 
   _makeParamSlider(param, label, min, max, step, initial, hint) {
-    const slider = document.createElement("web-audio-slider");
+    const slider = document.createElement("wam-slider");
     slider.setAttribute("param", param);
     slider.setAttribute("label", label);
     slider.setAttribute("min", min);
@@ -1147,7 +1147,7 @@ class WebAudioGenerativeMusicPlants extends HTMLElement {
         margin-bottom: -2px;
       }
 
-      generative-music-plants web-audio-sequence-grid {
+      generative-music-plants wam-sequence-grid {
         width: 100%;
         height: 88px;
         margin-bottom: 10px;

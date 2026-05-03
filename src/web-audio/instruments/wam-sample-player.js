@@ -1,8 +1,8 @@
-import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
-import { loadSample, buildReverseBuffer } from "../global/web-audio-sample-utils.js";
-import { STEP_WEIGHTS, scaleNoteOptions, buildChordFromScale } from "../global/web-audio-scales.js";
-import "../ui/web-audio-step-seq.js";
-import { WebAudioControlsBase, createSection, createCtrl } from "../ui/web-audio-controls-base.js";
+import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
+import { loadSample, buildReverseBuffer } from "../global/wam-sample-utils.js";
+import { STEP_WEIGHTS, scaleNoteOptions, buildChordFromScale } from "../global/wam-scales.js";
+import "../ui/wam-step-seq.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../ui/wam-controls-base.js";
 
 /**
  * WebAudioSamplePlayer — one-shot sample player with ADSR, pitch, and reverse.
@@ -378,7 +378,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     // File dropdown
     const fileWrap = createCtrl("File", { tooltip: "Select which sample file to play." });
     this._fileSelect = document.createElement("select");
-    this._fileSelect.className = "wac-select";
+    this._fileSelect.className = "wam-select";
     if (options.files) {
       for (const { label, file } of options.files) {
         const opt = document.createElement("option");
@@ -397,7 +397,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     // Random sample picker
     const randWrap = createCtrl("Random", { tooltip: "Pick a random sample from the loaded set." });
     const randBtn = document.createElement("button");
-    randBtn.className = "wac-wave-btn";
+    randBtn.className = "wam-wave-btn";
     randBtn.textContent = "PICK";
     randBtn.addEventListener("click", () => {
       if (!this._instrument?.loaded) return;
@@ -414,12 +414,12 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     // Melodic mode toggle
     const melodicWrap = createCtrl("Mode", { tooltip: "Melodic: pitch samples to scale notes. Drum: natural pitch." });
     this._melodicBtn = document.createElement("button");
-    this._melodicBtn.className = "wac-wave-btn";
+    this._melodicBtn.className = "wam-wave-btn";
     this._melodicBtn.textContent = "MELODIC";
-    if (this._melodicMode) this._melodicBtn.classList.add("wac-wave-active");
+    if (this._melodicMode) this._melodicBtn.classList.add("wam-wave-active");
     this._melodicBtn.addEventListener("click", () => {
       this._melodicMode = !this._melodicMode;
-      this._melodicBtn.classList.toggle("wac-wave-active", this._melodicMode);
+      this._melodicBtn.classList.toggle("wam-wave-active", this._melodicMode);
       // Update sequencer note options
       if (this._melodicMode) {
         this._seq?.setNoteOptions(scaleNoteOptions(this._rootMidi ?? 48, this._scaleName ?? "Chromatic", 36, 72));
@@ -434,12 +434,12 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     // Choke toggle (mono voice — cut previous on retrigger)
     const chokeWrap = createCtrl("Choke", { tooltip: "Cut previous sound on retrigger. Off = polyphonic layering." });
     this._chokeBtn = document.createElement("button");
-    this._chokeBtn.className = "wac-wave-btn";
+    this._chokeBtn.className = "wam-wave-btn";
     this._chokeBtn.textContent = "CHOKE";
-    if (this._instrument?.choke) this._chokeBtn.classList.add("wac-wave-active");
+    if (this._instrument?.choke) this._chokeBtn.classList.add("wam-wave-active");
     this._chokeBtn.addEventListener("click", () => {
       this._instrument.choke = !this._instrument.choke;
-      this._chokeBtn.classList.toggle("wac-wave-active", this._instrument.choke);
+      this._chokeBtn.classList.toggle("wam-wave-active", this._instrument.choke);
       this._emitChange();
     });
     chokeWrap.appendChild(this._chokeBtn);
@@ -448,7 +448,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     // Chord size (only effective in melodic mode)
     const chordWrap = createCtrl("Chord", { tooltip: "Number of notes per step trigger (melodic mode)." });
     this._chordSizeSelect = document.createElement("select");
-    this._chordSizeSelect.className = "wac-select";
+    this._chordSizeSelect.className = "wam-select";
     [1, 2, 3, 4].forEach((n) => {
       const opt = document.createElement("option");
       opt.value = n;
@@ -471,12 +471,12 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     // Envelope on/off toggle
     const envToggleWrap = createCtrl("ADSR", { tooltip: "Enable ADSR envelope shaping. Off = play full sample." });
     this._envToggleBtn = document.createElement("button");
-    this._envToggleBtn.className = "wac-wave-btn";
+    this._envToggleBtn.className = "wam-wave-btn";
     this._envToggleBtn.textContent = "ENV";
-    if (this._instrument?.useEnvelope) this._envToggleBtn.classList.add("wac-wave-active");
+    if (this._instrument?.useEnvelope) this._envToggleBtn.classList.add("wam-wave-active");
     this._envToggleBtn.addEventListener("click", () => {
       this._instrument.useEnvelope = !this._instrument.useEnvelope;
-      this._envToggleBtn.classList.toggle("wac-wave-active", this._instrument.useEnvelope);
+      this._envToggleBtn.classList.toggle("wam-wave-active", this._instrument.useEnvelope);
       this._emitChange();
     });
     envToggleWrap.appendChild(this._envToggleBtn);
@@ -502,7 +502,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     });
 
     // ---- Step sequencer ----
-    this._seq = document.createElement("web-audio-step-seq");
+    this._seq = document.createElement("wam-step-seq");
     const seqOpts = {
       steps: WebAudioSamplePlayerControls.DEFAULT_PATTERN(),
       probability: true,
@@ -529,7 +529,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
 
   _buildStripActions(strip) {
     const btn = document.createElement("button");
-    btn.className = "wac-jam-btn";
+    btn.className = "wam-jam-btn";
     btn.textContent = "\u25B6";
     btn.title = "Trigger sample";
     btn.addEventListener("mousedown", () => {
@@ -691,7 +691,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     if (obj.melodicMode != null) {
       this._melodicMode = obj.melodicMode;
       if (this._melodicBtn) {
-        this._melodicBtn.classList.toggle("wac-wave-active", obj.melodicMode);
+        this._melodicBtn.classList.toggle("wam-wave-active", obj.melodicMode);
       }
       if (this._melodicMode && this._seq) {
         this._seq.setNoteOptions(scaleNoteOptions(this._rootMidi ?? 48, this._scaleName ?? "Chromatic", 36, 72));
@@ -704,10 +704,10 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     if (obj.choke != null) {
       this._instrument.choke = obj.choke;
       if (this._chokeBtn) {
-        this._chokeBtn.classList.toggle("wac-wave-active", obj.choke);
+        this._chokeBtn.classList.toggle("wam-wave-active", obj.choke);
       }
     }
   }
 }
 
-customElements.define("web-audio-sample-player-controls", WebAudioSamplePlayerControls);
+customElements.define("wam-sample-player-controls", WebAudioSamplePlayerControls);

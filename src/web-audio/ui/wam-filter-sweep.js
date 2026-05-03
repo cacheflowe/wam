@@ -1,20 +1,20 @@
 /**
- * <web-audio-filter-sweep> — bipolar DJ-style filter sweep control.
+ * <wam-filter-sweep> — bipolar DJ-style filter sweep control.
  *
  * Center = bypass. Left half = LP sweep (20kHz→80Hz log).
  * Right half = HP sweep (20Hz→8kHz log).
  *
  * Value display shows "LP 2.4k" / "open" / "HP 380" with mode-colored text.
- * Visually matches <web-audio-slider> exactly; only the value display differs.
+ * Visually matches <wam-slider> exactly; only the value display differs.
  *
  * Dispatches: slider-input { param, value: -1..1 }
  *
  * Usage:
- *   <web-audio-filter-sweep param="filterSweep" label="Filter"></web-audio-filter-sweep>
+ *   <wam-filter-sweep param="filterSweep" label="Filter"></wam-filter-sweep>
  */
 
-import WebAudioSlider from "./web-audio-slider.js";
-import { sweepToLpFreq, sweepToHpFreq } from "../fx/web-audio-fx-filter.js";
+import WebAudioSlider from "./wam-slider.js";
+import { sweepToLpFreq, sweepToHpFreq } from "../fx/wam-fx-filter.js";
 
 function fmtFreq(hz) {
   if (hz >= 9950) return "20k";
@@ -55,13 +55,13 @@ export default class WebAudioFilterSweep extends HTMLElement {
 
     // Top row — identical structure to WebAudioSlider
     const top = document.createElement("div");
-    top.className = "was-top";
+    top.className = "wam-top";
 
     const lbl = document.createElement("label");
-    lbl.className = "was-label";
+    lbl.className = "wam-label";
 
     const labelText = document.createElement("span");
-    labelText.className = "was-label-text";
+    labelText.className = "wam-label-text";
     labelText.textContent = (this.getAttribute("label") || "Filter") + " ";
     const tooltip = this.getAttribute("data-tooltip");
     if (tooltip) {
@@ -70,7 +70,7 @@ export default class WebAudioFilterSweep extends HTMLElement {
     }
 
     this._valEl = document.createElement("span");
-    this._valEl.className = "was-val";
+    this._valEl.className = "wam-val";
 
     lbl.appendChild(labelText);
     lbl.appendChild(this._valEl);
@@ -80,7 +80,7 @@ export default class WebAudioFilterSweep extends HTMLElement {
     // Range input — identical to WebAudioSlider's range
     this._range = document.createElement("input");
     this._range.type = "range";
-    this._range.className = "was-range";
+    this._range.className = "wam-range";
     this._range.min = -1;
     this._range.max = 1;
     this._range.step = 0.001;
@@ -131,19 +131,19 @@ export default class WebAudioFilterSweep extends HTMLElement {
     WebAudioFilterSweep.#cssInjected = true;
     const s = document.createElement("style");
     s.textContent = `
-      web-audio-filter-sweep {
+      wam-filter-sweep {
         display: flex;
         flex-direction: column;
         gap: 4px;
         min-width: 80px;
         font-family: monospace;
       }
-      web-audio-filter-sweep .was-val[data-mode="open"] { color: #555; }
-      web-audio-filter-sweep .was-val[data-mode="lp"]   { color: #48f; transition: color 0.1s; }
-      web-audio-filter-sweep .was-val[data-mode="hp"]   { color: #fa6; transition: color 0.1s; }
+      wam-filter-sweep .wam-val[data-mode="open"] { color: #555; }
+      wam-filter-sweep .wam-val[data-mode="lp"]   { color: #48f; transition: color 0.1s; }
+      wam-filter-sweep .wam-val[data-mode="hp"]   { color: #fa6; transition: color 0.1s; }
     `;
     document.head.appendChild(s);
   }
 }
 
-customElements.define("web-audio-filter-sweep", WebAudioFilterSweep);
+customElements.define("wam-filter-sweep", WebAudioFilterSweep);

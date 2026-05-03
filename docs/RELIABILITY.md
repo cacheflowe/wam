@@ -21,7 +21,7 @@ startBtn.addEventListener("click", async () => {
 
 ```js
 await ctx.audioWorklet.addModule(
-  new URL("./web-audio-pitch-shift.worklet.js", import.meta.url).href
+  new URL("./wam-pitch-shift.worklet.js", import.meta.url).href
 );
 ```
 

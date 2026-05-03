@@ -1,7 +1,7 @@
-import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
-import "../ui/web-audio-step-seq.js";
-import { scaleNoteOptions, STEP_WEIGHTS } from "../global/web-audio-scales.js";
-import { WebAudioControlsBase, createSection, createCtrl } from "../ui/web-audio-controls-base.js";
+import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
+import "../ui/wam-step-seq.js";
+import { scaleNoteOptions, STEP_WEIGHTS } from "../global/wam-scales.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../ui/wam-controls-base.js";
 
 export default class WebAudioSynthMono extends WebAudioInstrumentBase {
   static PRESETS = {
@@ -325,7 +325,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     this._buildSequencerSection({ onRandomize: () => this.randomize() });
 
     // Step sequencer
-    this._seq = document.createElement("web-audio-step-seq");
+    this._seq = document.createElement("wam-step-seq");
     const noteOpts = scaleNoteOptions(this._rootMidi, this._scaleName, 24, 72);
     this._seq.init({
       steps: WebAudioSynthMonoControls.DEFAULT_PATTERN(),
@@ -439,7 +439,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
   _makeFilterTypeSelect() {
     const wrap = createCtrl("Type");
     this._filterTypeSelect = document.createElement("select");
-    this._filterTypeSelect.className = "wac-select";
+    this._filterTypeSelect.className = "wam-select";
     for (const [val, label] of [["lowpass","LP"],["highpass","HP"],["bandpass","BP"],["notch","Notch"]]) {
       const opt = document.createElement("option");
       opt.value = val; opt.textContent = label;
@@ -457,7 +457,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
   _makeLfoShapeSelect() {
     const wrap = createCtrl("Shape");
     this._lfoShapeSelect = document.createElement("select");
-    this._lfoShapeSelect.className = "wac-select";
+    this._lfoShapeSelect.className = "wam-select";
     for (const [val, label] of [["sine","Sin"],["triangle","Tri"],["square","Sqr"],["sawtooth","Saw"]]) {
       const opt = document.createElement("option");
       opt.value = val; opt.textContent = label;
@@ -475,7 +475,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
   _makeLfoDestSelect() {
     const wrap = createCtrl("Dest");
     this._lfoDestSelect = document.createElement("select");
-    this._lfoDestSelect.className = "wac-select";
+    this._lfoDestSelect.className = "wam-select";
     for (const [val, label] of [["filter","Filter"],["pitch","Pitch"],["amp","Amp"]]) {
       const opt = document.createElement("option");
       opt.value = val; opt.textContent = label;
@@ -536,4 +536,4 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
   }
 }
 
-customElements.define("web-audio-synth-mono-controls", WebAudioSynthMonoControls);
+customElements.define("wam-synth-mono-controls", WebAudioSynthMonoControls);

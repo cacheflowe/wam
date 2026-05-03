@@ -1,15 +1,15 @@
-import WebAudioSynthMono from "../web-audio/instruments/web-audio-synth-mono.js";
-import WebAudioSynthPad from "../web-audio/instruments/web-audio-synth-pad.js";
-import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
-import WebAudioFxReverb from "../web-audio/fx/web-audio-fx-reverb.js";
-import WebAudioFxDelay from "../web-audio/fx/web-audio-fx-delay.js";
-import WebAudioFxChorus from "../web-audio/fx/web-audio-fx-chorus.js";
-import "../web-audio/ui/web-audio-slider.js";
-import "../web-audio/fx/web-audio-fx-unit.js";
-import "../web-audio/ui/web-audio-waveform.js";
-import "../web-audio/ui/web-audio-plant-visualizer.js";
-import WebAudioSequencer from "../web-audio/global/web-audio-sequencer.js";
-import { SCALES_ORDERED as SCALES, buildChordFromScale } from "../web-audio/global/web-audio-scales.js";
+import WebAudioSynthMono from "../web-audio/instruments/wam-synth-mono.js";
+import WebAudioSynthPad from "../web-audio/instruments/wam-synth-pad.js";
+import WebAudioSynthFM from "../web-audio/instruments/wam-synth-fm.js";
+import WebAudioFxReverb from "../web-audio/fx/wam-fx-reverb.js";
+import WebAudioFxDelay from "../web-audio/fx/wam-fx-delay.js";
+import WebAudioFxChorus from "../web-audio/fx/wam-fx-chorus.js";
+import "../web-audio/ui/wam-slider.js";
+import "../web-audio/fx/wam-fx-unit.js";
+import "../web-audio/ui/wam-waveform.js";
+import "../web-audio/ui/wam-plant-visualizer.js";
+import WebAudioSequencer from "../web-audio/global/wam-sequencer.js";
+import { SCALES_ORDERED as SCALES, buildChordFromScale } from "../web-audio/global/wam-scales.js";
 
 const ROOT_MIDI = 36; // C2 — lower root for ambient
 
@@ -789,12 +789,12 @@ class WebAudioGenerativeAmbient extends HTMLElement {
     });
 
     // Visualizer + FX + waveform
-    this._visualizer = this._makeEl("web-audio-plant-visualizer", "ga-visualizer");
+    this._visualizer = this._makeEl("wam-plant-visualizer", "ga-visualizer");
     c1.appendChild(this._visualizer);
 
-    this._fxUnit = document.createElement("web-audio-fx-unit");
+    this._fxUnit = document.createElement("wam-fx-unit");
     c1.appendChild(this._fxUnit);
-    this._waveform = document.createElement("web-audio-waveform");
+    this._waveform = document.createElement("wam-waveform");
     c1.appendChild(this._waveform);
 
     this._buildSystemGuideInto(col3.body);
@@ -808,10 +808,10 @@ class WebAudioGenerativeAmbient extends HTMLElement {
     this._debugControls = [];
 
     const INSTRUMENTS = [
-      { label: "Pad A", tag: "web-audio-synth-pad-controls", inst: this._pad, color: "#aa66ff", dest: this._padChorus.input },
-      { label: "Pad B", tag: "web-audio-synth-mono-controls", inst: this._padB, color: "#6688ff", dest: this._padBDelay.input },
-      { label: "Melody", tag: "web-audio-synth-mono-controls", inst: this._melody, color: "#99eeff", dest: this._melDelay.input },
-      { label: "FM", tag: "web-audio-synth-fm-controls", inst: this._fm, color: "#eeccff", dest: this._fmReverb.input },
+      { label: "Pad A", tag: "wam-synth-pad-controls", inst: this._pad, color: "#aa66ff", dest: this._padChorus.input },
+      { label: "Pad B", tag: "wam-synth-mono-controls", inst: this._padB, color: "#6688ff", dest: this._padBDelay.input },
+      { label: "Melody", tag: "wam-synth-mono-controls", inst: this._melody, color: "#99eeff", dest: this._melDelay.input },
+      { label: "FM", tag: "wam-synth-fm-controls", inst: this._fm, color: "#eeccff", dest: this._fmReverb.input },
     ];
 
     for (const { label, tag, inst, color, dest } of INSTRUMENTS) {
@@ -972,7 +972,7 @@ class WebAudioGenerativeAmbient extends HTMLElement {
   }
 
   _makeParamSlider(param, label, min, max, step, initial, hint) {
-    const slider = document.createElement("web-audio-slider");
+    const slider = document.createElement("wam-slider");
     slider.setAttribute("param", param);
     slider.setAttribute("label", label);
     slider.setAttribute("min", min);
@@ -1159,7 +1159,7 @@ class WebAudioGenerativeAmbient extends HTMLElement {
         border-radius: 2px; color: #8899ff; font-size: 0.95em;
       }
 
-      web-audio-waveform {
+      wam-waveform {
         height: 40px; background: #040408;
         border-top: 1px solid #0f0f1f; display: block;
       }

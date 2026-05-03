@@ -9,9 +9,9 @@ A zero-dependency browser synthesizer toolkit built on the Web Audio API and Web
 The library has four layers:
 
 ```
-Demo / App              web-audio-acid.js (wires everything together)
+Demo / App              wam-acid.js (wires everything together)
                               |
-Controls (Web Components)     <web-audio-synth-acid-controls>
+Controls (Web Components)     <wam-synth-acid-controls>
                               |
 Instruments (plain classes)   WebAudioSynthAcid
                               |
@@ -34,15 +34,15 @@ Effects & Utilities           WebAudioFxDelay, WebAudioFxUnit, WebAudioSequencer
 
 | File | Class | Type | Description |
 |------|-------|------|-------------|
-| `web-audio-synth-acid.js` | `WebAudioSynthAcid` | Mono bass | TB-303-style acid synth with resonant filter sweep, portamento, unison |
-| `web-audio-synth-808.js` | `WebAudioSynth808` | Pitched bass | 808 sub-bass with pitch sweep, click transient, sub oscillator, tone filter |
-| `web-audio-synth-fm.js` | `WebAudioSynthFM` | Poly FM | 2-operator FM synth with mod envelope, BPM-synced filter LFO, chord mode |
-| `web-audio-synth-mono.js` | `WebAudioSynthMono` | Mono synth | Sawtooth/square/triangle with ADSR, filter envelope, detune, sub osc |
-| `web-audio-synth-pad.js` | `WebAudioSynthPad` | Poly pad | Chord pad with constant-power voice scaling |
-| `web-audio-synth-blipfx.js` | `WebAudioSynthBlipFX` | SFX | Procedural sound effects with 6 waveforms, FM, bit-crush, randomization |
-| `web-audio-perc-kick.js` | `WebAudioPercKick` | Percussion | 808-style kick via sine sweep |
-| `web-audio-perc-hihat.js` | `WebAudioPercHihat` | Percussion | Bandpass-filtered noise with open/closed character |
-| `web-audio-break-player.js` | `WebAudioBreakPlayer` | Sampler | Drum loop player with time-stretch, random jumps, reverse, BPM sync |
+| `wam-synth-acid.js` | `WebAudioSynthAcid` | Mono bass | TB-303-style acid synth with resonant filter sweep, portamento, unison |
+| `wam-synth-808.js` | `WebAudioSynth808` | Pitched bass | 808 sub-bass with pitch sweep, click transient, sub oscillator, tone filter |
+| `wam-synth-fm.js` | `WebAudioSynthFM` | Poly FM | 2-operator FM synth with mod envelope, BPM-synced filter LFO, chord mode |
+| `wam-synth-mono.js` | `WebAudioSynthMono` | Mono synth | Sawtooth/square/triangle with ADSR, filter envelope, detune, sub osc |
+| `wam-synth-pad.js` | `WebAudioSynthPad` | Poly pad | Chord pad with constant-power voice scaling |
+| `wam-synth-blipfx.js` | `WebAudioSynthBlipFX` | SFX | Procedural sound effects with 6 waveforms, FM, bit-crush, randomization |
+| `wam-perc-kick.js` | `WebAudioPercKick` | Percussion | 808-style kick via sine sweep |
+| `wam-perc-hihat.js` | `WebAudioPercHihat` | Percussion | Bandpass-filtered noise with open/closed character |
+| `wam-break-player.js` | `WebAudioBreakPlayer` | Sampler | Drum loop player with time-stretch, random jumps, reverse, BPM sync |
 
 Each instrument file also exports a `*Controls` companion class (e.g., `WebAudioSynthAcidControls`), registered as a custom element.
 
@@ -50,41 +50,41 @@ Each instrument file also exports a `*Controls` companion class (e.g., `WebAudio
 
 | File | Class | Description |
 |------|-------|-------------|
-| `web-audio-fx-reverb.js` | `WebAudioFxReverb` | Convolution reverb with synthesized impulse response, dry/wet |
-| `web-audio-fx-delay.js` | `WebAudioFxDelay` | Dub delay with BPM sync, feedback LP filter, LFO modulation |
-| `web-audio-fx-chorus.js` | `WebAudioFxChorus` | Multi-voice chorus (1-6 voices) with stereo spread, feedback |
-| `web-audio-fx-filter.js` | `WebAudioFxFilter` | Combined HP + LP with shared Q, always inline (no dry/wet) |
-| `web-audio-fx-distortion.js` | `WebAudioFxDistortion` | Soft-clip waveshaper with dry/wet |
-| `web-audio-fx-unit.js` | `WebAudioFxUnit` | **Web Component** composing reverb + delay + chorus + filter with full UI |
+| `wam-fx-reverb.js` | `WebAudioFxReverb` | Convolution reverb with synthesized impulse response, dry/wet |
+| `wam-fx-delay.js` | `WebAudioFxDelay` | Dub delay with BPM sync, feedback LP filter, LFO modulation |
+| `wam-fx-chorus.js` | `WebAudioFxChorus` | Multi-voice chorus (1-6 voices) with stereo spread, feedback |
+| `wam-fx-filter.js` | `WebAudioFxFilter` | Combined HP + LP with shared Q, always inline (no dry/wet) |
+| `wam-fx-distortion.js` | `WebAudioFxDistortion` | Soft-clip waveshaper with dry/wet |
+| `wam-fx-unit.js` | `WebAudioFxUnit` | **Web Component** composing reverb + delay + chorus + filter with full UI |
 
 ### Audio processing
 
 | File | Class | Description |
 |------|-------|-------------|
-| `web-audio-pitch-shift.js` | `WebAudioPitchShift` | Real-time pitch-shift effect (granular overlap-add) |
-| `web-audio-pitch-shift.worklet.js` | (AudioWorklet) | Worklet processor for pitch shifting |
-| `web-audio-time-stretch.js` | `WebAudioTimeStretch` | Granular time-stretch with independent speed/pitch |
-| `web-audio-time-stretch.worklet.js` | (AudioWorklet) | Worklet processor for time stretching |
+| `wam-pitch-shift.js` | `WebAudioPitchShift` | Real-time pitch-shift effect (granular overlap-add) |
+| `wam-pitch-shift.worklet.js` | (AudioWorklet) | Worklet processor for pitch shifting |
+| `wam-time-stretch.js` | `WebAudioTimeStretch` | Granular time-stretch with independent speed/pitch |
+| `wam-time-stretch.worklet.js` | (AudioWorklet) | Worklet processor for time stretching |
 
 ### UI components
 
 | File | Class | Custom element | Description |
 |------|-------|----------------|-------------|
-| `web-audio-slider.js` | `WebAudioSlider` | `<web-audio-slider>` | Range input with linear/log scale, color theming |
-| `web-audio-step-seq.js` | `WebAudioStepSeq` | `<web-audio-step-seq>` | 16-step sequencer grid with note select, accent toggles |
-| `web-audio-waveform.js` | `WebAudioWaveform` | `<web-audio-waveform>` | Visualizer: oscilloscope, spectrogram waterfall, FFT bars (click to cycle) |
+| `wam-slider.js` | `WebAudioSlider` | `<wam-slider>` | Range input with linear/log scale, color theming |
+| `wam-step-seq.js` | `WebAudioStepSeq` | `<wam-step-seq>` | 16-step sequencer grid with note select, accent toggles |
+| `wam-waveform.js` | `WebAudioWaveform` | `<wam-waveform>` | Visualizer: oscilloscope, spectrogram waterfall, FFT bars (click to cycle) |
 
-`web-audio-slider.js` also exports two helper functions used by all controls components:
+`wam-slider.js` also exports two helper functions used by all controls components:
 
-- `injectControlsCSS()` -- shared CSS for the `.wac-*` class system
+- `injectControlsCSS()` -- shared CSS for the `.wam-*` class system
 - `createTitleWithMute(parentEl, title, getOutGain)` -- title bar with mute toggle
 
 ### Utilities
 
 | File | Exports | Description |
 |------|---------|-------------|
-| `web-audio-sequencer.js` | `WebAudioSequencer` | Lookahead step sequencer (Chris Wilson technique) |
-| `web-audio-scales.js` | `SCALES`, `scaleNotesInRange()`, `buildChordFromScale()`, etc. | Music theory: 8 scales (dark-to-bright), note names, chord builder |
+| `wam-sequencer.js` | `WebAudioSequencer` | Lookahead step sequencer (Chris Wilson technique) |
+| `wam-scales.js` | `SCALES`, `scaleNotesInRange()`, `buildChordFromScale()`, etc. | Music theory: 8 scales (dark-to-bright), note names, chord builder |
 
 ---
 
@@ -158,10 +158,10 @@ The `!= null` guard allows presets to be partial -- you only need to specify the
 Each instrument file exports both the audio class and a Controls web component:
 
 ```js
-// web-audio-synth-acid.js
+// wam-synth-acid.js
 export default class WebAudioSynthAcid { ... }
 export class WebAudioSynthAcidControls extends HTMLElement { ... }
-customElements.define("web-audio-synth-acid-controls", WebAudioSynthAcidControls);
+customElements.define("wam-synth-acid-controls", WebAudioSynthAcidControls);
 ```
 
 Every Controls class follows the same lifecycle:
@@ -222,7 +222,7 @@ static SLIDER_DEFS = [
 ];
 ```
 
-Controls iterate this array to create `<web-audio-slider>` elements and bind them via a delegated `slider-input` event listener:
+Controls iterate this array to create `<wam-slider>` elements and bind them via a delegated `slider-input` event listener:
 
 ```js
 this.addEventListener("slider-input", (e) => {
@@ -237,7 +237,7 @@ The `param` attribute on the slider matches the property name on the instrument 
 Frequency controls use `scale="log"` for perceptually uniform slider travel:
 
 ```html
-<web-audio-slider param="lpFreq" min="80" max="20000" step="1" scale="log">
+<wam-slider param="lpFreq" min="80" max="20000" step="1" scale="log">
 ```
 
 Internally, the slider maps a 0-1 normalized position to/from the real value range using exponential curves:
@@ -389,7 +389,7 @@ master.connect(ctx.destination);
 
 // 2. Create instrument + controls
 const acid = new WebAudioSynthAcid(ctx);
-const acidControls = document.createElement("web-audio-synth-acid-controls");
+const acidControls = document.createElement("wam-synth-acid-controls");
 container.appendChild(acidControls);
 acidControls.bind(acid, ctx, {
   color: "#0f0",
@@ -417,7 +417,7 @@ acidControls.fromJSON(state);
 
 ## Music theory module
 
-`web-audio-scales.js` provides:
+`wam-scales.js` provides:
 
 - **8 scales** ordered dark-to-bright: Phrygian, Blues, Minor, Dorian, Pentatonic Minor, Pentatonic Major, Major, Lydian
 - **`scaleNotesInRange(root, scale, min, max)`** -- all MIDI notes in a scale within a range

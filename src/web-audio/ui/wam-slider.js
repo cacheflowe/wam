@@ -1,4 +1,4 @@
-import "./web-audio-level-meter.js";
+import "./wam-level-meter.js";
 
 // Set to false to start all channel strips expanded by default.
 export const CHANNEL_STRIP_COLLAPSED_DEFAULT = true;
@@ -10,12 +10,12 @@ export const CHANNEL_STRIP_COLLAPSED_DEFAULT = true;
  * interaction; programmatic `.value` updates the display silently (no event).
  *
  * Usage:
- *   <web-audio-slider label="Cutoff" param="cutoff"
- *     min="50" max="10000" step="1" value="600"></web-audio-slider>
+ *   <wam-slider label="Cutoff" param="cutoff"
+ *     min="50" max="10000" step="1" value="600"></wam-slider>
  *
  * Logarithmic scale (ideal for frequency controls):
- *   <web-audio-slider label="LPF" param="lpFreq"
- *     min="80" max="20000" step="1" scale="log" value="20000"></web-audio-slider>
+ *   <wam-slider label="LPF" param="lpFreq"
+ *     min="80" max="20000" step="1" scale="log" value="20000"></wam-slider>
  *
  * Color theming (in priority order):
  *   1. `color` attribute on the element
@@ -53,19 +53,19 @@ export default class WebAudioSlider extends HTMLElement {
       this._setDisplayValue(num);
       if (this._range) this._range.value = this._isLog ? this._toSlider(num) : num;
     } else if (name === "label") {
-      const lbl = this.querySelector(".was-label-text");
+      const lbl = this.querySelector(".wam-label-text");
       if (lbl) lbl.textContent = val + " ";
     } else if (name === "min" || name === "max" || name === "step") {
       if (!this._isLog && this._range) this._range[name] = val;
     } else if (name === "color") {
       this.style.setProperty("--slider-accent", val);
     } else if (name === "hint") {
-      let hintEl = this.querySelector(".was-hint");
+      let hintEl = this.querySelector(".wam-hint");
       if (val) {
         if (!hintEl) {
           hintEl = document.createElement("span");
-          hintEl.className = "was-hint";
-          const top = this.querySelector(".was-top");
+          hintEl.className = "wam-hint";
+          const top = this.querySelector(".wam-top");
           if (top) top.appendChild(hintEl);
         }
         hintEl.textContent = val;
@@ -111,12 +111,12 @@ export default class WebAudioSlider extends HTMLElement {
 
     // Top row: label + value + optional hint
     const top = document.createElement("div");
-    top.className = "was-top";
+    top.className = "wam-top";
 
     const lbl = document.createElement("label");
-    lbl.className = "was-label";
+    lbl.className = "wam-label";
     const labelText = document.createElement("span");
-    labelText.className = "was-label-text";
+    labelText.className = "wam-label-text";
     labelText.textContent = label + " ";
     const tooltip = this.getAttribute("data-tooltip");
     if (tooltip) {
@@ -124,14 +124,14 @@ export default class WebAudioSlider extends HTMLElement {
       this.removeAttribute("data-tooltip");
     }
     this._valEl = document.createElement("span");
-    this._valEl.className = "was-val";
+    this._valEl.className = "wam-val";
     lbl.appendChild(labelText);
     lbl.appendChild(this._valEl);
     top.appendChild(lbl);
 
     if (hint) {
       const hintEl = document.createElement("span");
-      hintEl.className = "was-hint";
+      hintEl.className = "wam-hint";
       hintEl.textContent = hint;
       top.appendChild(hintEl);
     }
@@ -141,7 +141,7 @@ export default class WebAudioSlider extends HTMLElement {
     // Range input — log sliders use 0–1 normalized, linear sliders use real min/max
     this._range = document.createElement("input");
     this._range.type = "range";
-    this._range.className = "was-range";
+    this._range.className = "wam-range";
     if (this._isLog) {
       this._range.min = 0;
       this._range.max = 1;
@@ -225,35 +225,35 @@ export default class WebAudioSlider extends HTMLElement {
     WebAudioSlider.#cssInjected = true;
     const s = document.createElement("style");
     s.textContent = `
-      web-audio-slider {
+      wam-slider {
         display: flex;
         flex-direction: column;
         gap: 4px;
         min-width: 80px;
         font-family: monospace;
       }
-      .was-top {
+      .wam-top {
         display: flex;
         align-items: baseline;
         justify-content: space-between;
         gap: 6px;
       }
-      .was-label {
+      .wam-label {
         font-size: 0.7em;
         color: #555;
         text-transform: uppercase;
         letter-spacing: 0.05em;
       }
-      .was-val {
+      .wam-val {
         color: var(--slider-accent, #0f0);
         font-family: monospace;
       }
-      .was-hint {
+      .wam-hint {
         font-size: 0.6em;
         color: #444;
         white-space: nowrap;
       }
-      .was-range {
+      .wam-range {
         width: 100%;
         height: 22px;
         box-sizing: border-box;
@@ -264,14 +264,14 @@ export default class WebAudioSlider extends HTMLElement {
   }
 }
 
-customElements.define("web-audio-slider", WebAudioSlider);
+customElements.define("wam-slider", WebAudioSlider);
 
 // ---- Shared CSS for instrument controls components ----
 
 let _controlsCSSInjected = false;
 
 /**
- * Inject shared CSS for `<web-audio-*-controls>` components.
+ * Inject shared CSS for `<wam-*-controls>` components.
  * Call from any controls component's bind() — only injects once.
  */
 export function injectControlsCSS() {
@@ -279,15 +279,15 @@ export function injectControlsCSS() {
   _controlsCSSInjected = true;
   const s = document.createElement("style");
   s.textContent = /* css */ `
-    .wac-panel {
+    .wam-panel {
       display: block;
       background: #141414;
       border: 1px solid #222;
       border-radius: 6px;
       font-family: monospace;
     }
-    /* .wac-play-btn appearance defined in the shared control foundation below */
-    .wac-transport-row {
+    /* .wam-play-btn appearance defined in the shared control foundation below */
+    .wam-transport-row {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -295,23 +295,23 @@ export function injectControlsCSS() {
       flex-wrap: wrap;
       background: #0a0a14;
     }
-    .wac-transport-row web-audio-slider {
+    .wam-transport-row wam-slider {
       flex: 1;
       min-width: 80px;
       max-width: 160px;
     }
-    .wac-transport-row .wac-select {
+    .wam-transport-row .wam-select {
       max-width: 90px;
     }
-    .wac-transport-share-slot {
+    .wam-transport-share-slot {
       margin-left: auto;
     }
     /* Clip channel strip and waveform to the top rounded corners */
-    .wac-channel-strip {
+    .wam-channel-strip {
       border-radius: 5px 5px 0 0;
       overflow: hidden;
     }
-    .wac-title {
+    .wam-title {
       font-size: 0.7em;
       color: var(--slider-accent, #555);
       text-transform: uppercase;
@@ -319,46 +319,46 @@ export function injectControlsCSS() {
       padding: 10px 14px 0;
       opacity: 0.6;
     }
-    .wac-controls {
+    .wam-controls {
       display: flex;
       flex-direction: column;
       gap: 0;
       padding: 6px 14px 10px;
     }
-    .wac-section {
+    .wam-section {
       display: flex;
       flex-direction: column;
       gap: 6px;
       padding: 6px 0;
     }
-    .wac-section + .wac-section {
+    .wam-section + .wam-section {
       border-top: 1px solid #1d1d1d;
     }
-    .wac-section .wac-title { padding: 0; }
-    .wac-section-controls {
+    .wam-section .wam-title { padding: 0; }
+    .wam-section-controls {
       display: flex;
       flex-wrap: wrap;
       align-items: flex-start;
       gap: 8px 14px;
     }
-    .wac-wave-row {
+    .wam-wave-row {
       display: flex;
       gap: 6px;
       width: 100%;
     }
     /* ---- Shared control foundation ---- */
     /* All interactive controls share the same height, font, and box model.
-       <input> elements need the element+class selector (input.wac-num-input) to reach
+       <input> elements need the element+class selector (input.wam-num-input) to reach
        specificity (0,1,1) — matching PicoCSS's input:not(...) rules — and win by
        source order since this style tag is injected after PicoCSS loads. */
-    .wac-select,
-    input.wac-num-input,
-    .wac-wave-btn,
-    .wac-toggle-btn,
-    .wac-mute-btn,
-    .wac-action-btn,
-    .wac-jam-btn,
-    .wac-play-btn {
+    .wam-select,
+    input.wam-num-input,
+    .wam-wave-btn,
+    .wam-toggle-btn,
+    .wam-mute-btn,
+    .wam-action-btn,
+    .wam-jam-btn,
+    .wam-play-btn {
       font-family: monospace;
       font-size: 0.8em;
       height: 22px;
@@ -369,29 +369,29 @@ export function injectControlsCSS() {
       cursor: pointer;
     }
     /* ---- Passive inputs (select, number, wave) ---- */
-    .wac-select,
-    input.wac-num-input,
-    .wac-wave-btn {
+    .wam-select,
+    input.wam-num-input,
+    .wam-wave-btn {
       background: #1a1a1a;
       color: #888;
       border: 1px solid #333;
     }
-    .wac-select { padding: 0 5px; max-width: 160px; }
-    input.wac-num-input {
+    .wam-select { padding: 0 5px; max-width: 160px; }
+    input.wam-num-input {
       padding: 0 5px;
       width: 52px;
       -moz-appearance: textfield;
     }
-    input.wac-num-input::-webkit-inner-spin-button,
-    input.wac-num-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-    .wac-wave-btn { padding: 0 10px; }
-    .wac-wave-btn.wac-wave-active {
+    input.wam-num-input::-webkit-inner-spin-button,
+    input.wam-num-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .wam-wave-btn { padding: 0 10px; }
+    .wam-wave-btn.wam-wave-active {
       color: var(--slider-accent, #0f0);
       border-color: var(--slider-accent, #0f0);
     }
     /* ---- Neutral toggle buttons (Ctrl / Seq / FX / Mute) ---- */
-    .wac-toggle-btn,
-    .wac-mute-btn {
+    .wam-toggle-btn,
+    .wam-mute-btn {
       padding: 0 10px;
       background: transparent;
       color: #555;
@@ -399,50 +399,50 @@ export function injectControlsCSS() {
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-    .wac-toggle-btn[data-active] {
+    .wam-toggle-btn[data-active] {
       background: color-mix(in srgb, var(--slider-accent, #0f0) 15%, transparent);
       color: var(--slider-accent, #0f0);
       border-color: var(--slider-accent, #0f0);
     }
-    .wac-toggle-btn:hover { color: #888; border-color: #555; }
-    .wac-toggle-btn[data-active]:hover {
+    .wam-toggle-btn:hover { color: #888; border-color: #555; }
+    .wam-toggle-btn[data-active]:hover {
       background: color-mix(in srgb, var(--slider-accent, #0f0) 25%, transparent);
     }
-    .wac-mute-btn.wac-muted { background: #a00; color: #fff; border-color: #a00; }
+    .wam-mute-btn.wam-muted { background: #a00; color: #fff; border-color: #a00; }
     /* ---- Accent buttons (action, jam, play) ---- */
-    .wac-action-btn,
-    .wac-jam-btn,
-    .wac-play-btn {
+    .wam-action-btn,
+    .wam-jam-btn,
+    .wam-play-btn {
       background: color-mix(in srgb, var(--slider-accent, #0f0) 10%, #111);
       color: var(--slider-accent, #0f0);
       border: 1px solid var(--slider-accent, #0f0);
       white-space: nowrap;
     }
-    .wac-action-btn { padding: 0 12px; }
-    .wac-jam-btn    { padding: 0 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .wac-play-btn   { padding: 0 14px; letter-spacing: 0.04em; }
-    .wac-action-btn:hover,
-    .wac-jam-btn:hover,
-    .wac-play-btn:hover { background: var(--slider-accent, #0f0); color: #000; }
-    .wac-play-btn.wac-playing {
+    .wam-action-btn { padding: 0 12px; }
+    .wam-jam-btn    { padding: 0 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .wam-play-btn   { padding: 0 14px; letter-spacing: 0.04em; }
+    .wam-action-btn:hover,
+    .wam-jam-btn:hover,
+    .wam-play-btn:hover { background: var(--slider-accent, #0f0); color: #000; }
+    .wam-play-btn.wam-playing {
       background: color-mix(in srgb, var(--slider-accent, #0f0) 20%, #111);
     }
     /* ---- Labeled control wrapper ---- */
-    .wac-ctrl {
+    .wam-ctrl {
       display: flex;
       flex-direction: column;
       gap: 4px;
       min-width: 110px;
     }
-    .wac-ctrl-wide { min-width: 220px; }
-    .wac-ctrl label {
+    .wam-ctrl-wide { min-width: 220px; }
+    .wam-ctrl label {
       font-size: 0.7em;
       color: #555;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
     /* ---- Action row ---- */
-    .wac-action-row {
+    .wam-action-row {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -451,11 +451,11 @@ export function injectControlsCSS() {
     }
     /* ---- Section visibility ---- */
     [data-hidden] { display: none !important; }
-    .wac-section-seq { border-top: 1px solid #1d1d1d; }
-    .wac-section-fx  { border-top: 1px solid #1d1d1d; }
-    .wac-section-ctrl[data-hidden] + .wac-section-seq { border-top: none; }
+    .wam-section-seq { border-top: 1px solid #1d1d1d; }
+    .wam-section-fx  { border-top: 1px solid #1d1d1d; }
+    .wam-section-ctrl[data-hidden] + .wam-section-seq { border-top: none; }
     /* ---- Channel strip ---- */
-    .wac-channel-strip {
+    .wam-channel-strip {
       display: flex;
       align-items: center;
       gap: 8px 12px;
@@ -463,7 +463,7 @@ export function injectControlsCSS() {
       padding: 8px 14px;
       border-bottom: 1px solid #1d1d1d;
     }
-    .wac-strip-header {
+    .wam-strip-header {
       display: flex;
       align-items: center;
       gap: 5px;
@@ -472,21 +472,21 @@ export function injectControlsCSS() {
       flex-shrink: 0;
       min-width: 72px;
     }
-    .wac-strip-name {
+    .wam-strip-name {
       font-size: 0.7em;
       color: var(--slider-accent, #0f0);
       text-transform: uppercase;
       letter-spacing: 0.1em;
       opacity: 0.75;
     }
-    .wac-strip-chevron {
+    .wam-strip-chevron {
       font-size: 1.3rem;
       color: #555;
       transition: transform 0.15s ease;
       line-height: 1;
     }
-    [data-collapsed] > .wac-channel-strip .wac-strip-chevron { transform: rotate(-90deg); }
-    .wac-channel-strip web-audio-waveform {
+    [data-collapsed] > .wam-channel-strip .wam-strip-chevron { transform: rotate(-90deg); }
+    .wam-channel-strip wam-waveform {
       flex: 1 1 60px;
       max-width: 100px;
       height: 36px;
@@ -495,25 +495,25 @@ export function injectControlsCSS() {
       border-radius: 2px;
       border: none;
     }
-    .wac-channel-strip web-audio-slider {
+    .wam-channel-strip wam-slider {
       flex: 1 1 80px;
       max-width: 160px;
     }
-    .wac-channel-strip web-audio-slider[param="pan"] {
+    .wam-channel-strip wam-slider[param="pan"] {
       max-width: 110px;
     }
     /* ---- Expanded / collapsed ---- */
-    [data-collapsed] > .wac-expanded { display: none; }
-    [data-no-sequencer] web-audio-step-seq,
-    [data-no-sequencer] .wac-action-row { display: none; }
+    [data-collapsed] > .wam-expanded { display: none; }
+    [data-no-sequencer] wam-step-seq,
+    [data-no-sequencer] .wam-action-row { display: none; }
     /* ---- PicoCSS tooltip overrides for slider label ---- */
-    .was-label-text[data-tooltip],
-    .wac-ctrl label[data-tooltip] {
+    .wam-label-text[data-tooltip],
+    .wam-ctrl label[data-tooltip] {
       cursor: help;
       border-bottom: 0;
     }
-    .was-label-text[data-tooltip]::before,
-    .wac-ctrl label[data-tooltip]::before {
+    .wam-label-text[data-tooltip]::before,
+    .wam-ctrl label[data-tooltip]::before {
       white-space: normal;
       overflow: visible;
       width: 130px;
@@ -527,7 +527,7 @@ export function injectControlsCSS() {
 }
 
 /**
- * Create a labeled control wrapper for use inside `.wac-section-controls`.
+ * Create a labeled control wrapper for use inside `.wam-section-controls`.
  * Append the returned element to a section controls row; add your input as a child.
  *
  * @param {string}  labelText
@@ -537,7 +537,7 @@ export function injectControlsCSS() {
  */
 export function createCtrl(labelText, { wide = false, tooltip = null } = {}) {
   const el = document.createElement("div");
-  el.className = wide ? "wac-ctrl wac-ctrl-wide" : "wac-ctrl";
+  el.className = wide ? "wam-ctrl wam-ctrl-wide" : "wam-ctrl";
   const lbl = document.createElement("label");
   lbl.textContent = labelText;
   if (tooltip) lbl.setAttribute("data-tooltip", tooltip);
@@ -546,7 +546,7 @@ export function createCtrl(labelText, { wide = false, tooltip = null } = {}) {
 }
 
 /**
- * Create a labeled section group for use inside `.wac-controls`.
+ * Create a labeled section group for use inside `.wam-controls`.
  * Append the returned `el` to the controls container; add children to `controls`.
  *
  * @param {string} label  Section heading text
@@ -554,13 +554,13 @@ export function createCtrl(labelText, { wide = false, tooltip = null } = {}) {
  */
 export function createSection(label) {
   const el = document.createElement("div");
-  el.className = "wac-section";
+  el.className = "wam-section";
   const lbl = document.createElement("div");
-  lbl.className = "wac-title";
+  lbl.className = "wam-title";
   lbl.textContent = label;
   el.appendChild(lbl);
   const controls = document.createElement("div");
-  controls.className = "wac-section-controls";
+  controls.className = "wam-section-controls";
   el.appendChild(controls);
   return { el, controls };
 }
@@ -583,18 +583,18 @@ export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1
   if (!noCollapse && CHANNEL_STRIP_COLLAPSED_DEFAULT) parentEl.setAttribute("data-collapsed", "");
 
   const strip = document.createElement("div");
-  strip.className = "wac-channel-strip";
+  strip.className = "wam-channel-strip";
 
   // Name + optional expand/collapse toggle
   const header = document.createElement("div");
-  header.className = "wac-strip-header";
+  header.className = "wam-strip-header";
   const nameEl = document.createElement("span");
-  nameEl.className = "wac-strip-name";
+  nameEl.className = "wam-strip-name";
   nameEl.textContent = title;
   header.appendChild(nameEl);
   if (!noCollapse) {
     const chevron = document.createElement("span");
-    chevron.className = "wac-strip-chevron";
+    chevron.className = "wam-strip-chevron";
     chevron.textContent = "▾";
     header.appendChild(chevron);
     header.addEventListener("click", () => parentEl.toggleAttribute("data-collapsed"));
@@ -602,11 +602,11 @@ export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1
   strip.appendChild(header);
 
   // Level meter
-  const meter = document.createElement("web-audio-level-meter");
+  const meter = document.createElement("wam-level-meter");
   strip.appendChild(meter);
 
   // Volume slider
-  const volSlider = document.createElement("web-audio-slider");
+  const volSlider = document.createElement("wam-slider");
   volSlider.setAttribute("param", "volume");
   volSlider.setAttribute("label", "Vol");
   volSlider.setAttribute("min", "0");
@@ -618,7 +618,7 @@ export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1
   // Pan slider (double-click resets to center)
   let panSlider = null;
   if (pan) {
-    panSlider = document.createElement("web-audio-slider");
+    panSlider = document.createElement("wam-slider");
     panSlider.setAttribute("param", "pan");
     panSlider.setAttribute("label", "Pan");
     panSlider.setAttribute("min", "-1");
@@ -631,7 +631,7 @@ export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1
 
   // Mute button
   const muteBtn = document.createElement("button");
-  muteBtn.className = "wac-mute-btn";
+  muteBtn.className = "wam-mute-btn";
   muteBtn.textContent = "Mute";
   strip.appendChild(muteBtn);
 
@@ -649,7 +649,7 @@ export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1
     } else {
       if (out) out.gain.value = preMuteVolume;
     }
-    muteBtn.classList.toggle("wac-muted", muted);
+    muteBtn.classList.toggle("wam-muted", muted);
     muteBtn.textContent = muted ? "Muted" : "Mute";
     parentEl.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
   });
@@ -670,7 +670,7 @@ export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1
         preMuteVolume = out?.gain.value ?? 1;
         if (out) out.gain.value = 0;
       }
-      muteBtn.classList.toggle("wac-muted", muted);
+      muteBtn.classList.toggle("wam-muted", muted);
       muteBtn.textContent = muted ? "Muted" : "Mute";
     },
   };

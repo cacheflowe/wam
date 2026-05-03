@@ -19,7 +19,7 @@
  * Usage (direct):
  *   const delay = new WebAudioFxDelay(ctx, { delayTime: 0.25 });
  */
-import { sweepToLpFreq, sweepToHpFreq } from "./web-audio-fx-filter.js";
+import { sweepToLpFreq, sweepToHpFreq } from "./wam-fx-filter.js";
 
 export default class WebAudioFxDelay {
   static INTERVALS = [

@@ -1,10 +1,10 @@
-import "../ui/web-audio-slider.js";
-import "../fx/web-audio-fx-unit.js";
-import "../ui/web-audio-waveform.js";
-import "../fx/web-audio-pitch-shift.js";
-import "../fx/web-audio-time-stretch.js";
-import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
-import { WebAudioControlsBase, createSection, createCtrl } from "../ui/web-audio-controls-base.js";
+import "../ui/wam-slider.js";
+import "../fx/wam-fx-unit.js";
+import "../ui/wam-waveform.js";
+import "../fx/wam-pitch-shift.js";
+import "../fx/wam-time-stretch.js";
+import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
+import { WebAudioControlsBase, createSection, createCtrl } from "../ui/wam-controls-base.js";
 
 /**
  * WebAudioBreakPlayer — loads a drum loop, time-stretches it to the target
@@ -102,7 +102,7 @@ export default class WebAudioBreakPlayer extends WebAudioInstrumentBase {
 
     // Initialize pitch-shift effect node (lazy — only on first load when enabled)
     if (this._useTimeStretch && !this._pitchShiftNode) {
-      const { default: WebAudioPitchShift } = await import("../fx/web-audio-pitch-shift.js");
+      const { default: WebAudioPitchShift } = await import("../fx/wam-pitch-shift.js");
       this._pitchShiftNode = new WebAudioPitchShift(this.ctx);
       await this._pitchShiftNode.ready;
       this._pitchShiftNode.connect(this._out);
@@ -318,7 +318,7 @@ const SPEED_MULTIPLIERS = [
  * Audio routing: instrument → analyser → fxUnit → controls._out
  *
  * Usage:
- *   const controls = document.createElement("web-audio-break-player-controls");
+ *   const controls = document.createElement("wam-break-player-controls");
  *   parent.appendChild(controls);
  *   controls.bind(breakPlayer, ctx, {
  *     files: [{ label: "Think (4)", file: "0034-break-think.badsister_loop_4_.wav" }],
@@ -362,7 +362,7 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
     const mkSelect = (labelText, appendTo) => {
       const wrap = createCtrl(labelText);
       const sel = document.createElement("select");
-      sel.className = "wac-select";
+      sel.className = "wam-select";
       wrap.appendChild(sel);
       appendTo.appendChild(wrap);
       return sel;
@@ -373,10 +373,10 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
 
     if (options.files?.length) {
       const fileWrap = document.createElement("div");
-      fileWrap.className = "wac-ctrl wac-ctrl-wide";
+      fileWrap.className = "wam-ctrl wam-ctrl-wide";
       fileWrap.appendChild(Object.assign(document.createElement("label"), { textContent: "Sample" }));
       this._fileSelect = document.createElement("select");
-      this._fileSelect.className = "wac-select";
+      this._fileSelect.className = "wam-select";
       const noneOpt = document.createElement("option");
       noneOpt.value = "";
       noneOpt.textContent = "— None —";
@@ -445,7 +445,7 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
     // ---- Time-stretch controls (only when enabled) ----
     this._tsControls = null;
     if (this._instrument._useTimeStretch) {
-      this._tsControls = document.createElement("web-audio-time-stretch-controls");
+      this._tsControls = document.createElement("wam-time-stretch-controls");
       controls.appendChild(this._tsControls);
       this._tsControls.init(this._instrument, { color: options.color || this._defaultColor() });
     }
@@ -456,7 +456,7 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
     for (const [label, seg] of [["K", 0], ["H", 1], ["S", 2]]) {
       const btn = document.createElement("button");
       btn.textContent = label;
-      btn.className = "wac-jam-btn";
+      btn.className = "wam-jam-btn";
       btn.addEventListener("mousedown", () => { this._pendingSegment = seg; });
       strip.appendChild(btn);
     }
@@ -553,4 +553,4 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
   }
 }
 
-customElements.define("web-audio-break-player-controls", WebAudioBreakPlayerControls);
+customElements.define("wam-break-player-controls", WebAudioBreakPlayerControls);

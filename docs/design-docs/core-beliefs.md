@@ -34,4 +34,4 @@ This library was created as a fresh-start migration of a growing web audio codeb
 
 **Rationale**: CSS custom properties (`--slider-accent`, `--fx-accent`) cannot cross shadow DOM boundaries without explicit forwarding. Light DOM keeps the component tree inspectable in DevTools and allows parent CSS to theme child components naturally.
 
-**Consequences**: Component CSS must use class-scoped selectors (`.wac-*`) rather than `:host` or scoped rules. CSS is injected once to `<head>` via the static-flag pattern to avoid duplication.
+**Consequences**: Component CSS must use class-scoped selectors (`.wam-*`) rather than `:host` or scoped rules. CSS is injected once to `<head>` via the static-flag pattern to avoid duplication.

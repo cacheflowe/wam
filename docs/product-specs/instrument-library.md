@@ -51,7 +51,7 @@ synth.trigger(36, 0.25, 0.8, ctx.currentTime + 0.1);
 
 ```js
 const synth = new WebAudioSynthAcid(ctx);
-const controls = document.createElement("web-audio-synth-acid-controls");
+const controls = document.createElement("wam-synth-acid-controls");
 container.appendChild(controls);
 controls.bind(synth, ctx, { color: "#0f0", fx: { bpm: 128 } });
 controls.connect(masterGain);

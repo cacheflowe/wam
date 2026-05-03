@@ -1,8 +1,8 @@
-import "../ui/web-audio-slider.js";
-import "../ui/web-audio-step-seq.js";
-import { scaleNoteOptions, STEP_WEIGHTS } from "../global/web-audio-scales.js";
-import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
-import { WebAudioControlsBase, createSection } from "../ui/web-audio-controls-base.js";
+import "../ui/wam-slider.js";
+import "../ui/wam-step-seq.js";
+import { scaleNoteOptions, STEP_WEIGHTS } from "../global/wam-scales.js";
+import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
+import { WebAudioControlsBase, createSection } from "../ui/wam-controls-base.js";
 
 /**
  * WebAudioSynth808 — pitched 808-style sub-bass synthesizer.
@@ -361,7 +361,7 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
     this._buildSequencerSection({ onRandomize: () => this.randomize() });
 
     // Step sequencer
-    this._seq = document.createElement("web-audio-step-seq");
+    this._seq = document.createElement("wam-step-seq");
     const noteOpts = scaleNoteOptions(this._rootMidi, this._scaleName, 24, 48);
     this._seq.init({
       steps: WebAudioSynth808Controls.DEFAULT_PATTERN(),
@@ -498,4 +498,4 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
   }
 }
 
-customElements.define("web-audio-synth-808-controls", WebAudioSynth808Controls);
+customElements.define("wam-synth-808-controls", WebAudioSynth808Controls);

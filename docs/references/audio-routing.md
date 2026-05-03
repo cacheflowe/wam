@@ -82,14 +82,14 @@ master.connect(ctx.destination);
 
 // Instrument 1
 const acid = new WebAudioSynthAcid(ctx);
-const acidCtrl = document.createElement("web-audio-synth-acid-controls");
+const acidCtrl = document.createElement("wam-synth-acid-controls");
 document.body.appendChild(acidCtrl);
 acidCtrl.bind(acid, ctx, { color: "#0f0", fx: { bpm: 128 } });
 acidCtrl.connect(master);
 
 // Instrument 2
 const kick = new WebAudioPercKick(ctx);
-const kickCtrl = document.createElement("web-audio-perc-kick-controls");
+const kickCtrl = document.createElement("wam-perc-kick-controls");
 document.body.appendChild(kickCtrl);
 kickCtrl.bind(kick, ctx, { color: "#f80" });
 kickCtrl.connect(master);
@@ -130,5 +130,5 @@ acid.trigger(36, 0.25, 0.8, ctx.currentTime);
 
 ## Related Docs
 
-- [web-audio-api.md](web-audio-api.md) — AudioContext, node types, AudioParam scheduling
+- [wam-api.md](wam-api.md) — AudioContext, node types, AudioParam scheduling
 - [docs/BACKEND.md](../BACKEND.md) — instrument and effect inventory

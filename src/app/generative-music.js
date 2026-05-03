@@ -1,15 +1,15 @@
-import WebAudioSynthMono from "../web-audio/instruments/web-audio-synth-mono.js";
-import WebAudioSynthPad from "../web-audio/instruments/web-audio-synth-pad.js";
-import WebAudioSynthFM from "../web-audio/instruments/web-audio-synth-fm.js";
-import WebAudioPercKick from "../web-audio/instruments/web-audio-perc-kick.js";
-import WebAudioPercHihat from "../web-audio/instruments/web-audio-perc-hihat.js";
-import WebAudioFxReverb from "../web-audio/fx/web-audio-fx-reverb.js";
-import WebAudioFxDelay from "../web-audio/fx/web-audio-fx-delay.js";
-import "../web-audio/ui/web-audio-slider.js";
-import "../web-audio/fx/web-audio-fx-unit.js";
-import "../web-audio/ui/web-audio-waveform.js";
-import WebAudioSequencer from "../web-audio/global/web-audio-sequencer.js";
-import { SCALES_ORDERED as SCALES, buildChordFromScale, LEAD_OSC_TYPES } from "../web-audio/global/web-audio-scales.js";
+import WebAudioSynthMono from "../web-audio/instruments/wam-synth-mono.js";
+import WebAudioSynthPad from "../web-audio/instruments/wam-synth-pad.js";
+import WebAudioSynthFM from "../web-audio/instruments/wam-synth-fm.js";
+import WebAudioPercKick from "../web-audio/instruments/wam-perc-kick.js";
+import WebAudioPercHihat from "../web-audio/instruments/wam-perc-hihat.js";
+import WebAudioFxReverb from "../web-audio/fx/wam-fx-reverb.js";
+import WebAudioFxDelay from "../web-audio/fx/wam-fx-delay.js";
+import "../web-audio/ui/wam-slider.js";
+import "../web-audio/fx/wam-fx-unit.js";
+import "../web-audio/ui/wam-waveform.js";
+import WebAudioSequencer from "../web-audio/global/wam-sequencer.js";
+import { SCALES_ORDERED as SCALES, buildChordFromScale, LEAD_OSC_TYPES } from "../web-audio/global/wam-scales.js";
 
 const ROOT_MIDI = 48; // C3
 
@@ -502,9 +502,9 @@ class WebAudioGenerativeMusic extends HTMLElement {
       this._beatLeds.push(led);
     }
 
-    // Helper: create a web-audio-slider for composition/sound params
+    // Helper: create a wam-slider for composition/sound params
     const makeSlider = (param, label, color, hint) => {
-      const slider = document.createElement("web-audio-slider");
+      const slider = document.createElement("wam-slider");
       slider.setAttribute("param", param);
       slider.setAttribute("label", label);
       slider.setAttribute("min", 0);
@@ -548,9 +548,9 @@ class WebAudioGenerativeMusic extends HTMLElement {
     );
 
     // FX unit and waveform — audio-initialized lazily in _startAudio()
-    this._fxUnit = document.createElement("web-audio-fx-unit");
+    this._fxUnit = document.createElement("wam-fx-unit");
     this.appendChild(this._fxUnit);
-    this._waveform = document.createElement("web-audio-waveform");
+    this._waveform = document.createElement("wam-waveform");
     this.appendChild(this._waveform);
   }
 

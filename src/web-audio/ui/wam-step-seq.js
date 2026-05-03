@@ -1,5 +1,5 @@
 /**
- * <web-audio-step-seq> — configurable 16-step sequencer UI component.
+ * <wam-step-seq> — configurable 16-step sequencer UI component.
  *
  * Features:
  *   • On/off toggle per step
@@ -14,7 +14,7 @@
  *   • Dispatches "pattern-change" CustomEvent when pattern-level controls change
  *
  * Usage:
- *   const seq = document.createElement("web-audio-step-seq");
+ *   const seq = document.createElement("wam-step-seq");
  *   container.appendChild(seq);
  *   seq.init({
  *     steps: [...],              // array of {active, note, accent?, probability?, ratchet?, conditions?}
@@ -40,12 +40,12 @@ export default class WebAudioStepSeq extends HTMLElement {
     WebAudioStepSeq.#cssInjected = true;
     const style = document.createElement("style");
     style.textContent = `
-      web-audio-step-seq {
+      wam-step-seq {
         display: grid;
         grid-template-columns: repeat(var(--seq-cols, 16), 1fr);
         gap: 4px;
       }
-      web-audio-step-seq .wass-step {
+      wam-step-seq .wass-step {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -55,15 +55,15 @@ export default class WebAudioStepSeq extends HTMLElement {
         border-radius: 4px;
         transition: background 0.05s;
       }
-      web-audio-step-seq .wass-step.wass-active {
+      wam-step-seq .wass-step.wass-active {
         background: color-mix(in srgb, var(--seq-color, #0f0) 25%, transparent);
       }
-      web-audio-step-seq .wass-num {
+      wam-step-seq .wass-num {
         font-size: 0.6rem;
         opacity: 0.5;
         line-height: 1;
       }
-      web-audio-step-seq .wass-on {
+      wam-step-seq .wass-on {
         background: none;
         border: 1px solid color-mix(in srgb, var(--seq-color, #0f0) 50%, transparent);
         color: color-mix(in srgb, var(--seq-color, #0f0) 50%, transparent);
@@ -76,12 +76,12 @@ export default class WebAudioStepSeq extends HTMLElement {
         line-height: 1;
         transition: all 0.1s;
       }
-      web-audio-step-seq .wass-on.on {
+      wam-step-seq .wass-on.on {
         background: var(--seq-color, #0f0);
         border-color: var(--seq-color, #0f0);
         color: #111;
       }
-      web-audio-step-seq .wass-note {
+      wam-step-seq .wass-note {
         font-size: 0.6rem;
         width: 100%;
         min-width: 0;
@@ -91,7 +91,7 @@ export default class WebAudioStepSeq extends HTMLElement {
         border-radius: 2px;
         padding: 1px 2px;
       }
-      web-audio-step-seq .wass-accent {
+      wam-step-seq .wass-accent {
         display: flex;
         align-items: center;
         gap: 2px;
@@ -100,12 +100,12 @@ export default class WebAudioStepSeq extends HTMLElement {
         cursor: pointer;
         user-select: none;
       }
-      web-audio-step-seq .wass-accent input[type=checkbox] {
+      wam-step-seq .wass-accent input[type=checkbox] {
         margin: 0;
         width: 10px;
         height: 10px;
       }
-      web-audio-step-seq .wass-probability {
+      wam-step-seq .wass-probability {
         display: flex;
         align-items: center;
         gap: 2px;
@@ -114,7 +114,7 @@ export default class WebAudioStepSeq extends HTMLElement {
         width: 100%;
         min-width: 0;
       }
-      web-audio-step-seq .wass-probability input[type=range] {
+      wam-step-seq .wass-probability input[type=range] {
         width: 100%;
         height: 6px;
         margin: 0;
@@ -122,7 +122,7 @@ export default class WebAudioStepSeq extends HTMLElement {
         cursor: pointer;
         accent-color: var(--seq-color, #0f0);
       }
-      web-audio-step-seq .wass-ratchet {
+      wam-step-seq .wass-ratchet {
         font-size: 0.55rem;
         width: 100%;
         min-width: 0;
@@ -133,7 +133,7 @@ export default class WebAudioStepSeq extends HTMLElement {
         padding: 1px 2px;
         opacity: 0.7;
       }
-      web-audio-step-seq .wass-conditions {
+      wam-step-seq .wass-conditions {
         font-size: 0.55rem;
         width: 100%;
         min-width: 0;
@@ -144,7 +144,7 @@ export default class WebAudioStepSeq extends HTMLElement {
         padding: 1px 2px;
         opacity: 0.7;
       }
-      web-audio-step-seq .wass-pattern-controls {
+      wam-step-seq .wass-pattern-controls {
         grid-column: 1 / -1;
         display: flex;
         gap: 12px;
@@ -155,17 +155,17 @@ export default class WebAudioStepSeq extends HTMLElement {
         font-size: 0.65rem;
         opacity: 0.8;
       }
-      web-audio-step-seq .wass-pattern-control {
+      wam-step-seq .wass-pattern-control {
         display: flex;
         align-items: center;
         gap: 4px;
         white-space: nowrap;
       }
-      web-audio-step-seq .wass-pattern-control label {
+      wam-step-seq .wass-pattern-control label {
         opacity: 0.7;
       }
-      web-audio-step-seq .wass-pattern-control input,
-      web-audio-step-seq .wass-pattern-control select {
+      wam-step-seq .wass-pattern-control input,
+      wam-step-seq .wass-pattern-control select {
         font-size: 0.65rem;
         padding: 2px 4px;
         background: #222;
@@ -173,7 +173,7 @@ export default class WebAudioStepSeq extends HTMLElement {
         border: 1px solid #444;
         border-radius: 2px;
       }
-      web-audio-step-seq .wass-rand-btn {
+      wam-step-seq .wass-rand-btn {
         font-family: monospace;
         font-size: 0.65rem;
         padding: 2px 8px;
@@ -185,11 +185,11 @@ export default class WebAudioStepSeq extends HTMLElement {
         border-radius: 3px;
         cursor: pointer;
       }
-      web-audio-step-seq .wass-rand-btn:hover {
+      wam-step-seq .wass-rand-btn:hover {
         background: var(--seq-color, #0f0);
         color: #000;
       }
-      web-audio-step-seq .wass-rand-row {
+      wam-step-seq .wass-rand-row {
         grid-column: 1 / -1;
         display: flex;
         padding: 6px 4px;
@@ -646,4 +646,4 @@ export default class WebAudioStepSeq extends HTMLElement {
   }
 }
 
-customElements.define("web-audio-step-seq", WebAudioStepSeq);
+customElements.define("wam-step-seq", WebAudioStepSeq);

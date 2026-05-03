@@ -1,8 +1,8 @@
-import "../ui/web-audio-slider.js";
-import "../ui/web-audio-step-seq.js";
-import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/web-audio-scales.js";
-import WebAudioInstrumentBase from "../global/web-audio-instrument-base.js";
-import { WebAudioControlsBase, createSection } from "../ui/web-audio-controls-base.js";
+import "../ui/wam-slider.js";
+import "../ui/wam-step-seq.js";
+import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/wam-scales.js";
+import WebAudioInstrumentBase from "../global/wam-instrument-base.js";
+import { WebAudioControlsBase, createSection } from "../ui/wam-controls-base.js";
 
 /**
  * WebAudioSynthAcid — TB-303-style monophonic acid bass synthesizer.
@@ -267,7 +267,7 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
  * Audio routing: instrument → analyser → fxUnit → controls._out
  *
  * Usage:
- *   const controls = document.createElement("web-audio-synth-acid-controls");
+ *   const controls = document.createElement("wam-synth-acid-controls");
  *   parent.appendChild(controls);
  *   controls.bind(acid, ctx, { fx: { bpm: 128 } });
  *   controls.setScale(29, "Minor");
@@ -410,7 +410,7 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
   _buildStripActions(strip) {
     const btn = document.createElement("button");
     btn.textContent = "♩";
-    btn.className = "wac-jam-btn";
+    btn.className = "wam-jam-btn";
     btn.title = "Trigger note [B]";
     btn.addEventListener("click", () => this.queueRandomNote());
     strip.appendChild(btn);
@@ -460,7 +460,7 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     this._buildSequencerSection({ onRandomize: () => this.randomize() });
 
     // Step sequencer
-    this._seq = document.createElement("web-audio-step-seq");
+    this._seq = document.createElement("wam-step-seq");
     const noteOpts = scaleNoteOptions(this._rootMidi, this._scaleName, 24, 60);
     this._seq.init({
       steps: WebAudioSynthAcidControls.DEFAULT_PATTERN(),
@@ -641,4 +641,4 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
   }
 }
 
-customElements.define("web-audio-synth-acid-controls", WebAudioSynthAcidControls);
+customElements.define("wam-synth-acid-controls", WebAudioSynthAcidControls);
