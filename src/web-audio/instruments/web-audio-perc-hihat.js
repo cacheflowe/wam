@@ -168,7 +168,7 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
     controls.appendChild(el);
 
     // ---- Sequencer ----
-    this._buildSequencerSection(controls, { onRandomize: () => this.randomize() });
+    this._buildSequencerSection({ onRandomize: () => this.randomize() });
 
     // Step sequencer with open/closed hat support
     this._seq = document.createElement("web-audio-step-seq");

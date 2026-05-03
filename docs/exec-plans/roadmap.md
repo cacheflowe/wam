@@ -69,7 +69,7 @@ Build a library of browser-based instruments that are:
 | **Composition serialization** | High | Full JSON state for multi-instrument arrangements; see **Composition Serialization** section below |
 | **Rename & shorten prefix** | High | `web-audio-` prefix is too verbose; see **Renaming** section below |
 | **MIDI keyboard input** | Medium | Map note-on/off to currently-selected instrument's `trigger()`; see **MIDI** section below |
-| **Channel strip section toggles** | Medium | Independent Controls / Sequencer / FX toggle buttons; see **Channel Strip: Independent Section Toggles** section below |
+| **Channel strip section toggles** | ~~Medium~~ | ~~Independent Controls / Sequencer / FX toggle buttons~~ — **Done 2026-05-03** |
 | **Double-click/tap reset to default** | Medium | Double-click (or double-tap) any UI control (sliders, knobs, dropdowns, toggles) resets it to its default value |
 | **Knob controls / compact UI** | Medium | Replace sliders with compact knob controls for VST-like density; see **UI Direction** section below |
 | **Parametric EQ** | Medium | 3-4 band EQ as first effect in FX unit chain; new `web-audio-eq.js` with engine + UI; see **New Effects** section below |
@@ -98,6 +98,8 @@ Goal: evolve from the current slider-heavy layout toward a more VST-like compact
 - **Knob controls** to replace horizontal sliders — more compact, better use of space. Here are some nice options/inspiration:
   - https://denilson.sa.nom.br/html5-knob/
   - https://nicegui.io/documentation/knob
+  - https://codepen.io/jhnsnc/pen/KXYayG
+  - https://www.cssscript.com/demo/touch-enabled-knob-control-pure-javascript-jim-knopf/
   - https://dev.to/ndesmic/how-to-make-a-rotational-knob-input-with-web-components-43e3
 - **Tighter instrument panels** — current CSS leaves too much empty space
 - **VST-inspired layouts** — group related params visually (osc section, filter section, envelope section)

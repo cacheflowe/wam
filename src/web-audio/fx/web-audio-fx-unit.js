@@ -28,9 +28,6 @@ import "../ui/web-audio-slider.js";
 import "../ui/web-audio-filter-sweep.js";
 import { injectControlsCSS, createSection, createCtrl } from "../ui/web-audio-slider.js";
 
-// Set to false to start FX units expanded by default.
-const FX_UNIT_COLLAPSED_DEFAULT = true;
-
 export default class WebAudioFxUnit extends HTMLElement {
   static #cssInjected = false;
 
@@ -276,20 +273,6 @@ export default class WebAudioFxUnit extends HTMLElement {
     this.innerHTML = "";
     injectControlsCSS();
 
-    const header = document.createElement("div");
-    header.className = "fx-unit-header";
-    const titleSpan = document.createElement("span");
-    titleSpan.textContent = options.title ?? "FX";
-    const chevron = document.createElement("span");
-    chevron.className = "fx-unit-chevron";
-    chevron.textContent = "▾";
-    header.appendChild(titleSpan);
-    header.appendChild(chevron);
-    header.addEventListener("click", () => this.toggleAttribute("data-collapsed"));
-    this.appendChild(header);
-
-    if (FX_UNIT_COLLAPSED_DEFAULT) this.setAttribute("data-collapsed", "");
-
     const mkSelect = (labelText, appendTo, tooltip = null) => {
       const wrap = createCtrl(labelText, { tooltip });
       const sel = document.createElement("select");
@@ -496,31 +479,9 @@ export default class WebAudioFxUnit extends HTMLElement {
         gap: 0;
         padding: 6px 14px 10px;
         background: #0d0d0d;
-        border-top: 1px solid #1e1e1e;
-        border-radius: 0 0 5px 5px;
         font-family: monospace;
         --slider-accent: var(--fx-accent, #0f0);
       }
-      .fx-unit-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        font-size: 0.62em;
-        color: #3a3a3a;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        padding: 6px 0 4px;
-        cursor: pointer;
-        user-select: none;
-      }
-      .fx-unit-chevron {
-        font-size: 2em;
-        color: #555;
-        transition: transform 0.15s ease;
-        line-height: 1;
-      }
-      web-audio-fx-unit[data-collapsed] .fx-unit-chevron { transform: rotate(-90deg); }
-      web-audio-fx-unit[data-collapsed] .wac-section { display: none; }
     `;
     document.head.appendChild(style);
   }

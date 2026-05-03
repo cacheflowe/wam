@@ -497,7 +497,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     controls.appendChild(pitchEl);
 
     // ---- Sequencer Speed ----
-    this._buildSequencerSection(controls, {
+    this._buildSequencerSection({
       onRandomize: () => this.randomize(),
     });
 

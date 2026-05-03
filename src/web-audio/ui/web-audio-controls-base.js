@@ -38,6 +38,13 @@ export class WebAudioControlsBase extends HTMLElement {
     this._rotateIntervalInput = null;
     this._waveSelect = null;
     this._waveSelectProp = "oscType";
+    // Section toggle buttons and their target sections
+    this._ctrlBtn = null;
+    this._seqBtn  = null;
+    this._fxBtn   = null;
+    this._ctrlSection = null;
+    this._seqSection  = null;
+    this._fxSection   = null;
   }
 
   // ---- Override points for subclass identity ----
@@ -64,17 +71,33 @@ export class WebAudioControlsBase extends HTMLElement {
     this.style.setProperty("--slider-accent", color);
     this.style.setProperty("--fx-accent", color);
 
-    // Channel strip — always visible
+    // Channel strip — always visible, no global collapse (sections toggle independently)
     const strip = createChannelStrip(this, {
       title: options.title || this._defaultTitle(),
       getOutGain: () => this._out,
       initialVol: instrument.volume,
       initialPan: 0,
+      noCollapse: true,
     });
     this._stripEl = strip.strip;
     this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted, setPreMuteVolume: strip.setPreMuteVolume };
     this._sliders["volume"] = strip.volSlider;
     this._panSlider = strip.panSlider;
+
+    // Ctrl / Seq / FX section toggle buttons
+    const mkToggle = (label, tooltip) => {
+      const btn = document.createElement("button");
+      btn.className = "wac-toggle-btn";
+      btn.textContent = label;
+      btn.title = tooltip;
+      return btn;
+    };
+    this._ctrlBtn = mkToggle("Ctrl", "Show/hide instrument parameters");
+    this._seqBtn  = mkToggle("Seq",  "Show/hide step sequencer");
+    this._fxBtn   = mkToggle("FX",   "Show/hide effects chain");
+    this._stripEl.appendChild(this._ctrlBtn);
+    this._stripEl.appendChild(this._seqBtn);
+    this._stripEl.appendChild(this._fxBtn);
 
     // Waveform — compact, inside the channel strip
     const waveform = document.createElement("web-audio-waveform");
@@ -82,15 +105,40 @@ export class WebAudioControlsBase extends HTMLElement {
 
     this._buildStripActions(this._stripEl);
 
-    // Expanded panel — hidden when collapsed
-    const expanded = document.createElement("div");
-    expanded.className = "wac-expanded";
-    this.appendChild(expanded);
+    // Three independent sections
+    this._ctrlSection = document.createElement("div");
+    this._ctrlSection.className = "wac-section-ctrl";
+    this._ctrlSection.setAttribute("data-hidden", "");   // default: hidden
+    this.appendChild(this._ctrlSection);
 
-    // Controls wrapper inside expanded
+    this._seqSection = document.createElement("div");
+    this._seqSection.className = "wac-section-seq";
+    // default: visible (no data-hidden)
+    this.appendChild(this._seqSection);
+    this._seqBtn.setAttribute("data-active", "");
+
+    this._fxSection = document.createElement("div");
+    this._fxSection.className = "wac-section-fx";
+    this._fxSection.setAttribute("data-hidden", "");     // default: hidden
+    this.appendChild(this._fxSection);
+
+    // Wire toggle buttons to show/hide their section
+    const wireToggle = (btn, section) => {
+      btn.addEventListener("click", () => {
+        const nowHidden = section.hasAttribute("data-hidden");
+        section.toggleAttribute("data-hidden", !nowHidden);
+        btn.toggleAttribute("data-active", nowHidden);
+        this._emitChange();
+      });
+    };
+    wireToggle(this._ctrlBtn, this._ctrlSection);
+    wireToggle(this._seqBtn,  this._seqSection);
+    wireToggle(this._fxBtn,   this._fxSection);
+
+    // Controls wrapper inside ctrl section
     const controls = document.createElement("div");
     controls.className = "wac-controls";
-    expanded.appendChild(controls);
+    this._ctrlSection.appendChild(controls);
 
     // Slider factory — creates a web-audio-slider, registers in _sliders, returns element
     const mkSlider = (def) => {
@@ -109,8 +157,9 @@ export class WebAudioControlsBase extends HTMLElement {
       return s;
     };
 
-    // Subclass hook — add sections, sequencer, action buttons, etc.
-    this._buildControls(controls, expanded, mkSlider, ctx, options);
+    // Subclass hook — controls goes into ctrl section, seqSection is passed as `expanded`
+    // so subclasses' expanded.appendChild(this._seq) correctly targets the seq section
+    this._buildControls(controls, this._seqSection, mkSlider, ctx, options);
 
     // Delegated slider-input listener
     this.addEventListener("slider-input", (e) => {
@@ -132,8 +181,8 @@ export class WebAudioControlsBase extends HTMLElement {
       }
     });
 
-    // FX unit (inside expanded, overridable — 808 returns null)
-    this._fxUnit = this._createFxUnit(expanded, ctx, options);
+    // FX unit (inside fx section, overridable — 808 returns null)
+    this._fxUnit = this._createFxUnit(this._fxSection, ctx, options);
 
     // Audio routing
     this._setupRouting(instrument, ctx, strip, waveform, color);
@@ -275,7 +324,15 @@ export class WebAudioControlsBase extends HTMLElement {
    * @param {function|null} [opts.onRandomize]  Callback for Rand button; omit to hide it
    * @returns {{ el: HTMLElement, controls: HTMLElement }}  The section element and its controls row
    */
-  _buildSequencerSection(controls, { onRandomize = null } = {}) {
+  /**
+   * Build sequencer controls (Speed, Density, Rotate, Rot.Bars, optional Rand) and
+   * append them to the seq section so they are co-located with the step-seq grid.
+   * Each subclass can extend the returned seqCtrl row (e.g. chord-size select).
+   * @param {object} [opts]
+   * @param {function|null} [opts.onRandomize]  Instrument-specific randomize callback
+   * @returns {{ el: HTMLElement, controls: HTMLElement }}
+   */
+  _buildSequencerSection({ onRandomize = null } = {}) {
     const { el, controls: seqCtrl } = createSection("Sequencer");
 
     const speedWrap = createCtrl("Speed", { tooltip: "Playback rate multiplier for this instrument." });
@@ -347,7 +404,8 @@ export class WebAudioControlsBase extends HTMLElement {
       seqCtrl.appendChild(randWrap);
     }
 
-    controls.appendChild(el);
+    // Append to the seq section so these controls are co-located with the step-seq grid
+    this._seqSection.appendChild(el);
     return { el, controls: seqCtrl };
   }
 
@@ -394,6 +452,11 @@ export class WebAudioControlsBase extends HTMLElement {
       pan: this._pan?.pan.value ?? 0,
       speedMultiplier: this._speedMultiplier,
       patternParams: this._seq?.getPatternParams(),
+      sections: {
+        ctrl: !this._ctrlSection?.hasAttribute("data-hidden"),
+        seq:  !this._seqSection?.hasAttribute("data-hidden"),
+        fx:   !this._fxSection?.hasAttribute("data-hidden"),
+      },
     };
     this._extendJSON(obj);
     return obj;
@@ -431,6 +494,16 @@ export class WebAudioControlsBase extends HTMLElement {
         this._rotateInput.value = obj.patternParams.rotationOffset;
       if (this._rotateIntervalInput && obj.patternParams.rotationIntervalBars != null)
         this._rotateIntervalInput.value = obj.patternParams.rotationIntervalBars;
+    }
+    if (obj.sections) {
+      const applySection = (section, btn, visible) => {
+        if (!section || !btn) return;
+        section.toggleAttribute("data-hidden", !visible);
+        btn.toggleAttribute("data-active", visible);
+      };
+      applySection(this._ctrlSection, this._ctrlBtn, obj.sections.ctrl ?? false);
+      applySection(this._seqSection,  this._seqBtn,  obj.sections.seq  ?? true);
+      applySection(this._fxSection,   this._fxBtn,   obj.sections.fx   ?? false);
     }
   }
 

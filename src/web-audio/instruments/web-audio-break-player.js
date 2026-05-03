@@ -450,23 +450,16 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
       this._tsControls.init(this._instrument, { color: options.color || this._defaultColor() });
     }
 
-    // ---- Jam buttons ----
-    const actionRow = document.createElement("div");
-    actionRow.className = "wac-action-row";
-    for (const [label, seg, key] of [
-      ["K", 0, "K"],
-      ["H", 1, "H"],
-      ["S", 2, "S"],
-    ]) {
+  }
+
+  _buildStripActions(strip) {
+    for (const [label, seg] of [["K", 0], ["H", 1], ["S", 2]]) {
       const btn = document.createElement("button");
-      btn.textContent = `${label} [${key}]`;
-      btn.className = "wac-action-btn";
-      btn.addEventListener("mousedown", () => {
-        this._pendingSegment = seg;
-      });
-      actionRow.appendChild(btn);
+      btn.textContent = label;
+      btn.className = "wac-jam-btn";
+      btn.addEventListener("mousedown", () => { this._pendingSegment = seg; });
+      strip.appendChild(btn);
     }
-    expanded.appendChild(actionRow);
   }
 
   // ---- Slider handling ----

@@ -286,28 +286,7 @@ export function injectControlsCSS() {
       border-radius: 6px;
       font-family: monospace;
     }
-    .wac-play-btn {
-      font-family: monospace;
-      font-size: 0.85em;
-      height: 22px;
-      padding: 0 14px;
-      box-sizing: border-box;
-      background: color-mix(in srgb, var(--slider-accent, #0f0) 10%, #111);
-      color: var(--slider-accent, #0f0);
-      border: 1px solid var(--slider-accent, #0f0);
-      border-radius: 4px;
-      cursor: pointer;
-      white-space: nowrap;
-      letter-spacing: 0.04em;
-    }
-    .wac-play-btn:hover {
-      background: var(--slider-accent, #0f0);
-      color: #000;
-    }
-    .wac-play-btn.wac-playing {
-      background: color-mix(in srgb, var(--slider-accent, #0f0) 20%, #111);
-      border-style: solid;
-    }
+    /* .wac-play-btn appearance defined in the shared control foundation below */
     .wac-transport-row {
       display: flex;
       align-items: center;
@@ -367,59 +346,88 @@ export function injectControlsCSS() {
       gap: 6px;
       width: 100%;
     }
-    .wac-wave-btn {
+    /* ---- Shared control foundation ---- */
+    /* All interactive controls share the same height, font, and box model.
+       <input> elements need the element+class selector (input.wac-num-input) to reach
+       specificity (0,1,1) — matching PicoCSS's input:not(...) rules — and win by
+       source order since this style tag is injected after PicoCSS loads. */
+    .wac-select,
+    input.wac-num-input,
+    .wac-wave-btn,
+    .wac-toggle-btn,
+    .wac-mute-btn,
+    .wac-action-btn,
+    .wac-jam-btn,
+    .wac-play-btn {
       font-family: monospace;
-      font-size: 0.78em;
+      font-size: 0.8em;
       height: 22px;
-      padding: 0 10px;
+      min-height: 22px;
+      line-height: 1;
       box-sizing: border-box;
-      background: #1a1a1a;
-      color: #666;
-      border: 1px solid #333;
-      border-radius: 4px;
+      border-radius: 3px;
       cursor: pointer;
     }
+    /* ---- Passive inputs (select, number, wave) ---- */
+    .wac-select,
+    input.wac-num-input,
+    .wac-wave-btn {
+      background: #1a1a1a;
+      color: #888;
+      border: 1px solid #333;
+    }
+    .wac-select { padding: 0 5px; max-width: 160px; }
+    input.wac-num-input {
+      padding: 0 5px;
+      width: 52px;
+      -moz-appearance: textfield;
+    }
+    input.wac-num-input::-webkit-inner-spin-button,
+    input.wac-num-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .wac-wave-btn { padding: 0 10px; }
     .wac-wave-btn.wac-wave-active {
       color: var(--slider-accent, #0f0);
       border-color: var(--slider-accent, #0f0);
     }
-    .wac-select {
-      font-family: monospace;
-      font-size: 0.82em;
-      height: 22px;
-      padding: 0 5px;
-      box-sizing: border-box;
-      background: #1a1a1a;
-      color: #aaa;
+    /* ---- Neutral toggle buttons (Ctrl / Seq / FX / Mute) ---- */
+    .wac-toggle-btn,
+    .wac-mute-btn {
+      padding: 0 10px;
+      background: transparent;
+      color: #555;
       border: 1px solid #333;
-      border-radius: 3px;
-      cursor: pointer;
-      max-width: 160px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
-    .wac-action-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 14px;
-      border-top: 1px solid #1e1e1e;
+    .wac-toggle-btn[data-active] {
+      background: color-mix(in srgb, var(--slider-accent, #0f0) 15%, transparent);
+      color: var(--slider-accent, #0f0);
+      border-color: var(--slider-accent, #0f0);
     }
-    .wac-action-btn {
-      font-family: monospace;
-      font-size: 0.85em;
-      height: 22px;
-      padding: 0 12px;
-      box-sizing: border-box;
+    .wac-toggle-btn:hover { color: #888; border-color: #555; }
+    .wac-toggle-btn[data-active]:hover {
+      background: color-mix(in srgb, var(--slider-accent, #0f0) 25%, transparent);
+    }
+    .wac-mute-btn.wac-muted { background: #a00; color: #fff; border-color: #a00; }
+    /* ---- Accent buttons (action, jam, play) ---- */
+    .wac-action-btn,
+    .wac-jam-btn,
+    .wac-play-btn {
       background: color-mix(in srgb, var(--slider-accent, #0f0) 10%, #111);
       color: var(--slider-accent, #0f0);
       border: 1px solid var(--slider-accent, #0f0);
-      border-radius: 4px;
-      cursor: pointer;
       white-space: nowrap;
     }
-    .wac-action-btn:hover {
-      background: var(--slider-accent, #0f0);
-      color: #000;
+    .wac-action-btn { padding: 0 12px; }
+    .wac-jam-btn    { padding: 0 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .wac-play-btn   { padding: 0 14px; letter-spacing: 0.04em; }
+    .wac-action-btn:hover,
+    .wac-jam-btn:hover,
+    .wac-play-btn:hover { background: var(--slider-accent, #0f0); color: #000; }
+    .wac-play-btn.wac-playing {
+      background: color-mix(in srgb, var(--slider-accent, #0f0) 20%, #111);
     }
+    /* ---- Labeled control wrapper ---- */
     .wac-ctrl {
       display: flex;
       flex-direction: column;
@@ -433,55 +441,19 @@ export function injectControlsCSS() {
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-    .wac-num-input {
-      font-family: monospace;
-      font-size: 0.82em;
-      height: 22px;
-      padding: 0 4px;
-      box-sizing: border-box;
-      background: #1a1a1a;
-      color: #aaa;
-      border: 1px solid #333;
-      border-radius: 3px;
-      width: 52px;
+    /* ---- Action row ---- */
+    .wac-action-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-top: 1px solid #1e1e1e;
     }
-    .wac-mute-btn {
-      font-family: monospace;
-      font-size: 0.7em;
-      height: 22px;
-      padding: 0 10px;
-      box-sizing: border-box;
-      background: transparent;
-      color: #555;
-      border: 1px solid #333;
-      border-radius: 3px;
-      cursor: pointer;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .wac-mute-btn.wac-muted {
-      background: #a00;
-      color: #fff;
-      border-color: #a00;
-    }
-    .wac-jam-btn {
-      font-family: monospace;
-      font-size: 0.7em;
-      height: 22px;
-      padding: 0 10px;
-      box-sizing: border-box;
-      background: color-mix(in srgb, var(--slider-accent, #0f0) 10%, #111);
-      color: var(--slider-accent, #0f0);
-      border: 1px solid var(--slider-accent, #0f0);
-      border-radius: 3px;
-      cursor: pointer;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .wac-jam-btn:hover {
-      background: var(--slider-accent, #0f0);
-      color: #000;
-    }
+    /* ---- Section visibility ---- */
+    [data-hidden] { display: none !important; }
+    .wac-section-seq { border-top: 1px solid #1d1d1d; }
+    .wac-section-fx  { border-top: 1px solid #1d1d1d; }
+    .wac-section-ctrl[data-hidden] + .wac-section-seq { border-top: none; }
     /* ---- Channel strip ---- */
     .wac-channel-strip {
       display: flex;
@@ -607,24 +579,26 @@ export function createSection(label) {
  * @param {boolean}  [opts.pan=true]   Set false to omit the pan slider (e.g. master bus)
  * @returns {{ volSlider, panSlider, meter, isMuted, setMuted }}
  */
-export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1, initialPan = 0, pan = true }) {
-  if (CHANNEL_STRIP_COLLAPSED_DEFAULT) parentEl.setAttribute("data-collapsed", "");
+export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1, initialPan = 0, pan = true, noCollapse = false }) {
+  if (!noCollapse && CHANNEL_STRIP_COLLAPSED_DEFAULT) parentEl.setAttribute("data-collapsed", "");
 
   const strip = document.createElement("div");
   strip.className = "wac-channel-strip";
 
-  // Name + expand/collapse toggle
+  // Name + optional expand/collapse toggle
   const header = document.createElement("div");
   header.className = "wac-strip-header";
   const nameEl = document.createElement("span");
   nameEl.className = "wac-strip-name";
   nameEl.textContent = title;
-  const chevron = document.createElement("span");
-  chevron.className = "wac-strip-chevron";
-  chevron.textContent = "▾";
   header.appendChild(nameEl);
-  header.appendChild(chevron);
-  header.addEventListener("click", () => parentEl.toggleAttribute("data-collapsed"));
+  if (!noCollapse) {
+    const chevron = document.createElement("span");
+    chevron.className = "wac-strip-chevron";
+    chevron.textContent = "▾";
+    header.appendChild(chevron);
+    header.addEventListener("click", () => parentEl.toggleAttribute("data-collapsed"));
+  }
   strip.appendChild(header);
 
   // Level meter

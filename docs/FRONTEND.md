@@ -74,7 +74,27 @@ All child elements (sliders, step buttons, waveform borders) read `--slider-acce
 
 ### PicoCSS
 
-The app shell uses [PicoCSS](https://picocss.com/) for base typography, forms, and layout. Don't override PicoCSS defaults inside library components — limit component CSS to `.wac-*` scoped selectors.
+The app shell uses [PicoCSS](https://picocss.com/) v2 for base typography, forms, and layout. Limit component CSS to `.wac-*` scoped selectors to avoid collisions.
+
+#### Overriding PicoCSS on `<input>` elements
+
+PicoCSS v2 uses CSS Level 4 `:not(A,B,C,...)` to target form elements with rules like:
+
+```css
+/* specificity: (0,1,1) — one element + one attribute from :not() */
+input:not([type=checkbox],[type=radio],[type=range]) {
+  height: calc(1rem * var(--pico-line-height) + var(--pico-form-element-spacing-vertical) * 2 + ...);
+}
+input:not([type=checkbox],[type=radio],[type=range],[type=file]) {
+  padding: var(--pico-form-element-spacing-vertical) var(--pico-form-element-spacing-horizontal);
+}
+```
+
+A bare class selector like `.wac-num-input` has specificity `(0,1,0)` and **loses** to these rules, even with our style tag injected after PicoCSS.
+
+**The fix**: include the element type in the selector — `input.wac-num-input` — which reaches `(0,1,1)`, tying PicoCSS's specificity. Since `injectControlsCSS()` appends a `<style>` tag via `document.head.appendChild()`, it always lands after the PicoCSS `<link>` in source order. Equal-specificity rules resolve by source order, so ours win. No `!important` needed.
+
+**Rule**: whenever a `.wac-*` class is applied to an `<input>` element, use `input.wac-class` (not just `.wac-class`) in `injectControlsCSS()` to ensure it overrides PicoCSS form element rules. `<button>` and `<select>` are not affected — PicoCSS targets them with lower-specificity selectors that our class rules already beat.
 
 ## Slider Component
 

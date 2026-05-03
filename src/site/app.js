@@ -19,6 +19,11 @@ class CustomApp extends HTMLElement {
   }
 
   init() {
+    this.initHash();
+    document.addEventListener("touchstart", function () {}, false); // enable pseudo styles for mobile
+  }
+
+  initHash() {
     const hash = document.location.hash.replace("%26", "&");
     const parts = hash.substring(1).split("&");
     const demoId = parts[0];

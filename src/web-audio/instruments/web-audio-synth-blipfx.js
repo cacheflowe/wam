@@ -771,7 +771,7 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
 
     // ---- Sequencer ----
     const color = options.color || this._defaultColor();
-    this._buildSequencerSection(controls);
+    this._buildSequencerSection();
 
     // Step sequencer (no note selection — probability controls when blips fire)
     this._seq = document.createElement("web-audio-step-seq");

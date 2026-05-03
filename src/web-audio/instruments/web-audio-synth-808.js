@@ -358,7 +358,7 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
     controls.appendChild(octEl);
 
     // ---- Sequencer ----
-    this._buildSequencerSection(controls, { onRandomize: () => this.randomize() });
+    this._buildSequencerSection({ onRandomize: () => this.randomize() });
 
     // Step sequencer
     this._seq = document.createElement("web-audio-step-seq");

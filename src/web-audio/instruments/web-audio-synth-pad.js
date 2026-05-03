@@ -312,7 +312,7 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     controls.appendChild(voiceEl);
 
     // ---- Sequencer ----
-    const { controls: seqCtrl } = this._buildSequencerSection(controls, { onRandomize: () => this.randomize() });
+    const { controls: seqCtrl } = this._buildSequencerSection({ onRandomize: () => this.randomize() });
 
     const chordWrap = createCtrl("Chord", { tooltip: "Number of notes per step trigger." });
     this._chordSizeSelect = document.createElement("select");
