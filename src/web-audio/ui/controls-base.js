@@ -40,23 +40,29 @@ export class WebAudioControlsBase extends HTMLElement {
     this._waveSelectProp = "oscType";
     // Section toggle buttons and their target sections
     this._ctrlBtn = null;
-    this._seqBtn  = null;
-    this._fxBtn   = null;
+    this._seqBtn = null;
+    this._fxBtn = null;
     this._ctrlSection = null;
-    this._seqSection  = null;
-    this._fxSection   = null;
+    this._seqSection = null;
+    this._fxSection = null;
   }
 
   // ---- Override points for subclass identity ----
 
   /** Default accent color when none provided in options. */
-  _defaultColor() { return "#0f0"; }
+  _defaultColor() {
+    return "#0f0";
+  }
 
   /** Default channel strip title when none provided in options. */
-  _defaultTitle() { return "Instrument"; }
+  _defaultTitle() {
+    return "Instrument";
+  }
 
   /** Title for the FX unit panel. */
-  _fxTitle() { return "FX"; }
+  _fxTitle() {
+    return "FX";
+  }
 
   // ---- Core bind ----
 
@@ -93,8 +99,8 @@ export class WebAudioControlsBase extends HTMLElement {
       return btn;
     };
     this._ctrlBtn = mkToggle("Ctrl", "Show/hide instrument parameters");
-    this._seqBtn  = mkToggle("Seq",  "Show/hide step sequencer");
-    this._fxBtn   = mkToggle("FX",   "Show/hide effects chain");
+    this._seqBtn = mkToggle("Seq", "Show/hide step sequencer");
+    this._fxBtn = mkToggle("FX", "Show/hide effects chain");
     this._stripEl.appendChild(this._ctrlBtn);
     this._stripEl.appendChild(this._seqBtn);
     this._stripEl.appendChild(this._fxBtn);
@@ -108,18 +114,17 @@ export class WebAudioControlsBase extends HTMLElement {
     // Three independent sections
     this._ctrlSection = document.createElement("div");
     this._ctrlSection.className = "wam-section-ctrl";
-    this._ctrlSection.setAttribute("data-hidden", "");   // default: hidden
+    this._ctrlSection.setAttribute("data-hidden", ""); // default: hidden
     this.appendChild(this._ctrlSection);
 
     this._seqSection = document.createElement("div");
     this._seqSection.className = "wam-section-seq";
-    // default: visible (no data-hidden)
+    this._seqSection.setAttribute("data-hidden", ""); // default: hidden
     this.appendChild(this._seqSection);
-    this._seqBtn.setAttribute("data-active", "");
 
     this._fxSection = document.createElement("div");
     this._fxSection.className = "wam-section-fx";
-    this._fxSection.setAttribute("data-hidden", "");     // default: hidden
+    this._fxSection.setAttribute("data-hidden", ""); // default: hidden
     this.appendChild(this._fxSection);
 
     // Wire toggle buttons to show/hide their section
@@ -132,8 +137,8 @@ export class WebAudioControlsBase extends HTMLElement {
       });
     };
     wireToggle(this._ctrlBtn, this._ctrlSection);
-    wireToggle(this._seqBtn,  this._seqSection);
-    wireToggle(this._fxBtn,   this._fxSection);
+    wireToggle(this._seqBtn, this._seqSection);
+    wireToggle(this._fxBtn, this._fxSection);
 
     // Controls wrapper inside ctrl section
     const controls = document.createElement("div");
@@ -149,8 +154,7 @@ export class WebAudioControlsBase extends HTMLElement {
       s.setAttribute("max", def.max);
       s.setAttribute("step", def.step);
       if (def.scale) s.setAttribute("scale", def.scale);
-      const tooltip = def.tooltip
-        ?? (this.constructor.SLIDER_DEFS || []).find(d => d.param === def.param)?.tooltip;
+      const tooltip = def.tooltip ?? (this.constructor.SLIDER_DEFS || []).find((d) => d.param === def.param)?.tooltip;
       if (tooltip) s.setAttribute("data-tooltip", tooltip);
       s.value = instrument[def.param];
       this._sliders[def.param] = s;
@@ -440,9 +444,7 @@ export class WebAudioControlsBase extends HTMLElement {
     const params = {};
     for (const def of this.constructor.SLIDER_DEFS || []) {
       // Volume lives on controls._out, not on the instrument
-      params[def.param] = def.param === "volume"
-        ? (this._out?.gain.value ?? 1)
-        : this._instrument[def.param];
+      params[def.param] = def.param === "volume" ? (this._out?.gain.value ?? 1) : this._instrument[def.param];
     }
     this._extraToJSON(params);
     const obj = {
@@ -454,8 +456,8 @@ export class WebAudioControlsBase extends HTMLElement {
       patternParams: this._seq?.getPatternParams(),
       sections: {
         ctrl: !this._ctrlSection?.hasAttribute("data-hidden"),
-        seq:  !this._seqSection?.hasAttribute("data-hidden"),
-        fx:   !this._fxSection?.hasAttribute("data-hidden"),
+        seq: !this._seqSection?.hasAttribute("data-hidden"),
+        fx: !this._fxSection?.hasAttribute("data-hidden"),
       },
     };
     this._extendJSON(obj);
@@ -502,8 +504,8 @@ export class WebAudioControlsBase extends HTMLElement {
         btn.toggleAttribute("data-active", visible);
       };
       applySection(this._ctrlSection, this._ctrlBtn, obj.sections.ctrl ?? false);
-      applySection(this._seqSection,  this._seqBtn,  obj.sections.seq  ?? true);
-      applySection(this._fxSection,   this._fxBtn,   obj.sections.fx   ?? false);
+      applySection(this._seqSection, this._seqBtn, obj.sections.seq ?? true);
+      applySection(this._fxSection, this._fxBtn, obj.sections.fx ?? false);
     }
   }
 

@@ -25,8 +25,9 @@ import WebAudioSynthPad from "../web-audio/instruments/synth-pad.js";
 import WebAudioSynthBlipFX from "../web-audio/instruments/synth-blipfx.js";
 import WebAudioBreakPlayer from "../web-audio/instruments/break-player.js";
 import WebAudioSamplePlayer from "../web-audio/instruments/sample-player.js";
+import { tryGlobKeys, resolveSamples } from "../web-audio/global/sample-utils.js";
 
-const BASE_PATH = "/audio/breaks/";
+const BASE_PATH = "audio/breaks/";
 const BREAK_FILES = [
   { label: "FunkyDrum (8 bars)", file: "0032-break-FUNKYDRUM_loop_8_.wav" },
   { label: "Shackup (16 bars)", file: "0033-break-shackup_loop_16_.wav" },
@@ -34,29 +35,38 @@ const BREAK_FILES = [
   { label: "Hotpants (4 bars)", file: "0037_SamplepackHotpants_loop_4_.wav" },
 ];
 
-// Auto-discover sample files via Vite glob.
-// Uses { eager: false } on src-relative paths and extracts only the keys (paths).
-// Since files live in public/, Vite serves them at the root — we just strip the prefix.
-function globSamples(paths) {
-  return paths.map((path) => {
-    const file = path.split("/").pop();
-    const label = file.replace(/\.(wav|mp3|ogg|flac)$/i, "").replace(/[-_]/g, " ");
-    // Convert /public/audio/... → /audio/... (Vite serves public/ at root)
-    const url = path.replace(/^\/public/, "");
-    return { label, file: url };
-  });
-}
+const samplesConfig = {
+  kicks: {
+    glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/01-kick/*.wav")),
+    servedAt: "_assets/samples/01-kick/",
+    fallbackDir: "audio/samples/kicks/",
+    fallbackFiles: ["B.DRUM_14.wav", "B.DRUM_17.wav", "B.DRUM_23.wav", "B.DRUM_27.wav"],
+  },
+  snares: {
+    glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/02-snare/*.wav")),
+    servedAt: "_assets/samples/02-snare/",
+    fallbackDir: "audio/samples/snares/",
+    fallbackFiles: ["CLAP_5.wav", "SNARE_5.wav", "SNARE_7.wav", "SNARE_14.wav"],
+  },
+  hits: {
+    glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/04-perc/*.wav")),
+    servedAt: "_assets/samples/04-perc/",
+    fallbackDir: "audio/samples/hits/",
+    fallbackFiles: [
+      "AMINDDR11.wav",
+      "BATA_HI.wav",
+      "BLOCK_1.wav",
+      "BONGO_1.wav",
+      "BOTTLE_1.wav",
+      "COWBELL_1.wav",
+      "ZAP_4.wav",
+    ],
+  },
+};
 
-// Extract just the path keys — we never actually import these files (they're in public/)
-const SAMPLE_FILES_KICKS = globSamples(
-  Object.keys(import.meta.glob("/public/audio/samples/kicks/*.wav")),
-);
-const SAMPLE_FILES_SNARES = globSamples(
-  Object.keys(import.meta.glob("/public/audio/samples/snares/*.wav")),
-);
-const SAMPLE_FILES_HITS = globSamples(
-  Object.keys(import.meta.glob("/public/audio/samples/hits/*.wav")),
-);
+const SAMPLE_FILES_KICKS = resolveSamples(samplesConfig.kicks);
+const SAMPLE_FILES_SNARES = resolveSamples(samplesConfig.snares);
+const SAMPLE_FILES_HITS = resolveSamples(samplesConfig.hits);
 
 /**
  * Registry of available instrument types.

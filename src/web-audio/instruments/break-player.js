@@ -4,6 +4,7 @@ import "../ui/waveform.js";
 import "../fx/pitch-shift.js";
 import "../fx/time-stretch.js";
 import WebAudioInstrumentBase from "../global/instrument-base.js";
+import { loadSample, buildReverseBuffer } from "../global/sample-utils.js";
 import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
 
 /**
@@ -92,12 +93,10 @@ export default class WebAudioBreakPlayer extends WebAudioInstrumentBase {
   async load(url, bars) {
     this.stop();
     this._buffer = null;
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
-    this._buffer = await this.ctx.decodeAudioData(arrayBuffer);
+    this._buffer = await loadSample(this.ctx, url);
     this._bars = bars ?? this._parseBars(url);
     this._originalBpm = (this._bars * 4 * 60) / this._buffer.duration;
-    this._reverseBuffer = this._buildReverseBuffer(this._buffer);
+    this._reverseBuffer = buildReverseBuffer(this.ctx, this._buffer);
     this._returnAtStep = -1;
 
     // Initialize pitch-shift effect node (lazy — only on first load when enabled)
@@ -114,16 +113,6 @@ export default class WebAudioBreakPlayer extends WebAudioInstrumentBase {
   _parseBars(url) {
     const m = url.match(/_loop_(\d+)_/i);
     return m ? parseInt(m[1]) : 4;
-  }
-
-  _buildReverseBuffer(buffer) {
-    const reversed = this.ctx.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
-    for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
-      const src = buffer.getChannelData(ch);
-      const dst = reversed.getChannelData(ch);
-      for (let i = 0; i < src.length; i++) dst[i] = src[src.length - 1 - i];
-    }
-    return reversed;
   }
 
   get loaded() {
@@ -331,9 +320,23 @@ const SPEED_MULTIPLIERS = [
  */
 export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "volume",        label: "Vol",        min: 0, max: 1,    step: 0.01 },
-    { param: "randomChance",  label: "Rand Chance",min: 0, max: 1,    step: 0.01, tooltip: "Probability of jumping to a random segment instead of playing in sequence." },
-    { param: "reverseChance", label: "Reverse",    min: 0, max: 0.25, step: 0.01, tooltip: "Probability of reversing a segment on each hit." },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
+    {
+      param: "randomChance",
+      label: "Rand Chance",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Probability of jumping to a random segment instead of playing in sequence.",
+    },
+    {
+      param: "reverseChance",
+      label: "Reverse",
+      min: 0,
+      max: 0.25,
+      step: 0.01,
+      tooltip: "Probability of reversing a segment on each hit.",
+    },
   ];
 
   constructor() {
@@ -350,9 +353,15 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
 
   // ---- Override points ----
 
-  _defaultColor() { return "#0cc"; }
-  _defaultTitle() { return "Break Player"; }
-  _fxTitle() { return "Break FX"; }
+  _defaultColor() {
+    return "#0cc";
+  }
+  _defaultTitle() {
+    return "Break Player";
+  }
+  _fxTitle() {
+    return "Break FX";
+  }
 
   // ---- Build controls ----
 
@@ -422,7 +431,13 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
     });
 
     this._returnSelect = mkSelect("Return", loopCtrl);
-    for (const [v, lbl] of [[1, "1 step"], [2, "2 steps"], [4, "4 steps"], [8, "8 steps"], [16, "16 steps"]]) {
+    for (const [v, lbl] of [
+      [1, "1 step"],
+      [2, "2 steps"],
+      [4, "4 steps"],
+      [8, "8 steps"],
+      [16, "16 steps"],
+    ]) {
       const opt = document.createElement("option");
       opt.value = v;
       opt.textContent = lbl;
@@ -438,7 +453,7 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
 
     // ---- Mix section ----
     const { el: mixEl, controls: mixCtrl } = createSection("Mix");
-    mixCtrl.appendChild(mkSlider({ param: "randomChance",  label: "Random",  min: 0, max: 1,    step: 0.01 }));
+    mixCtrl.appendChild(mkSlider({ param: "randomChance", label: "Random", min: 0, max: 1, step: 0.01 }));
     mixCtrl.appendChild(mkSlider({ param: "reverseChance", label: "Reverse", min: 0, max: 0.25, step: 0.01 }));
     controls.appendChild(mixEl);
 
@@ -449,15 +464,20 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
       controls.appendChild(this._tsControls);
       this._tsControls.init(this._instrument, { color: options.color || this._defaultColor() });
     }
-
   }
 
   _buildStripActions(strip) {
-    for (const [label, seg] of [["K", 0], ["H", 1], ["S", 2]]) {
+    for (const [label, seg] of [
+      ["K", 0],
+      ["H", 1],
+      ["S", 2],
+    ]) {
       const btn = document.createElement("button");
       btn.textContent = label;
       btn.className = "wam-jam-btn";
-      btn.addEventListener("mousedown", () => { this._pendingSegment = seg; });
+      btn.addEventListener("mousedown", () => {
+        this._pendingSegment = seg;
+      });
       strip.appendChild(btn);
     }
   }
