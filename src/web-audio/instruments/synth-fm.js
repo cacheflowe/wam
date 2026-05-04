@@ -624,13 +624,15 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     return "FM FX";
   }
 
-  _buildStripActions(strip) {
+  _buildStripActions(strip, options = {}) {
+    const key = options.jamKey ?? "n";
     const btn = document.createElement("button");
     btn.textContent = "♫";
     btn.className = "wam-jam-btn";
-    btn.title = "Trigger chord [N]";
+    btn.title = `Trigger chord [${key.toUpperCase()}]`;
     btn.addEventListener("click", () => this.triggerJamChord());
     strip.appendChild(btn);
+    this._bindJamKey(key, () => this.triggerJamChord());
   }
 
   // ---- Bind override to set BPM on instrument ----

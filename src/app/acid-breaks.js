@@ -57,7 +57,6 @@ class WebAudioAcid extends HTMLElement {
     this.buildUI();
     this.addCSS();
     this._initAudio();
-    this._setupKeyboardJam();
   }
 
   // ---- Audio ----
@@ -213,39 +212,6 @@ class WebAudioAcid extends HTMLElement {
         this._snareControls.setActiveStep(step);
       }, uiDelay);
       this._globalStep++;
-    });
-  }
-
-  _setupKeyboardJam() {
-    document.addEventListener("keydown", (e) => {
-      if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
-      const key = e.key.toLowerCase();
-      switch (key) {
-        case " ":
-          e.preventDefault();
-          this._transport.playing ? this._transport.stop() : this._transport.play();
-          break;
-        case "k":
-          this._breakControls?.jumpToSegment(0);
-          break;
-        case "h":
-          this._breakControls?.jumpToSegment(1);
-          break;
-        case "s":
-          this._breakControls?.jumpToSegment(2);
-          break;
-        case "v":
-          if (this._ctx.state === "suspended") this._ctx.resume();
-          this._blipfxControls?.triggerNow();
-          break;
-        case "b":
-          this._acidControls?.queueRandomNote();
-          break;
-        case "n":
-          if (this._ctx.state === "suspended") this._ctx.resume();
-          this._fmControls?.triggerJamChord();
-          break;
-      }
     });
   }
 

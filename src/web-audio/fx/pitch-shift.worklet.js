@@ -74,8 +74,7 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
     // Pre-compute Hanning window lookup table (large, indexed by normalized phase)
     this._window = new Float32Array(WINDOW_TABLE_SIZE);
     for (let i = 0; i < WINDOW_TABLE_SIZE; i++) {
-      this._window[i] =
-        0.5 * (1 - Math.cos((2 * Math.PI * i) / (WINDOW_TABLE_SIZE - 1)));
+      this._window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (WINDOW_TABLE_SIZE - 1)));
     }
   }
 
@@ -111,12 +110,10 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
       const halfGrain = grainSize >>> 1;
       this._tap0.phase = 0;
       this._tap0.localPos = 0;
-      this._tap0.grainStart =
-        (this._writePos - grainSize + BUFFER_SIZE) & BUFFER_MASK;
+      this._tap0.grainStart = (this._writePos - grainSize + BUFFER_SIZE) & BUFFER_MASK;
       this._tap1.phase = halfGrain;
       this._tap1.localPos = 0;
-      this._tap1.grainStart =
-        (this._writePos - grainSize + BUFFER_SIZE) & BUFFER_MASK;
+      this._tap1.grainStart = (this._writePos - grainSize + BUFFER_SIZE) & BUFFER_MASK;
       this._prevGrainSize = grainSize;
     }
 
@@ -138,8 +135,7 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
       let sR = 0;
 
       // Tap 0
-      const readPos0 =
-        (tap0.grainStart + ((tap0.localPos + 0.5) | 0)) & BUFFER_MASK;
+      const readPos0 = (tap0.grainStart + ((tap0.localPos + 0.5) | 0)) & BUFFER_MASK;
       const w0 = win[(tap0.phase * winScale + 0.5) | 0];
       sL += bufL[readPos0] * w0;
       sR += bufR[readPos0] * w0;
@@ -150,13 +146,11 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
       if (tap0.phase >= grainSize) {
         tap0.phase = 0;
         tap0.localPos = 0;
-        tap0.grainStart =
-          (this._writePos - grainSize + BUFFER_SIZE) & BUFFER_MASK;
+        tap0.grainStart = (this._writePos - grainSize + BUFFER_SIZE) & BUFFER_MASK;
       }
 
       // Tap 1
-      const readPos1 =
-        (tap1.grainStart + ((tap1.localPos + 0.5) | 0)) & BUFFER_MASK;
+      const readPos1 = (tap1.grainStart + ((tap1.localPos + 0.5) | 0)) & BUFFER_MASK;
       const w1 = win[(tap1.phase * winScale + 0.5) | 0];
       sL += bufL[readPos1] * w1;
       sR += bufR[readPos1] * w1;
@@ -167,8 +161,7 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
       if (tap1.phase >= grainSize) {
         tap1.phase = 0;
         tap1.localPos = 0;
-        tap1.grainStart =
-          (this._writePos - grainSize + BUFFER_SIZE) & BUFFER_MASK;
+        tap1.grainStart = (this._writePos - grainSize + BUFFER_SIZE) & BUFFER_MASK;
       }
 
       outL[i] = sL;

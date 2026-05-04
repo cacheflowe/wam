@@ -286,21 +286,9 @@ class PlaygroundApp extends HTMLElement {
     this._instruments = [];
 
     this._buildUI();
-
-    this._onKeyDown = (e) => {
-      if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
-      if (e.repeat) return;
-      if (e.key === " ") {
-        e.preventDefault();
-        this._transportEl.playing ? this._transportEl.stop() : this._transportEl.play();
-      }
-    };
-    document.addEventListener("keydown", this._onKeyDown);
   }
 
-  disconnectedCallback() {
-    if (this._onKeyDown) document.removeEventListener("keydown", this._onKeyDown);
-  }
+  disconnectedCallback() {}
 
   // ---- UI ----
 

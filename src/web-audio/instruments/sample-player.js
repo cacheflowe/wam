@@ -527,17 +527,20 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     }
   }
 
-  _buildStripActions(strip) {
+  _buildStripActions(strip, options = {}) {
+    const key = options.jamKey ?? null;
     const btn = document.createElement("button");
     btn.className = "wam-jam-btn";
     btn.textContent = "\u25B6";
-    btn.title = "Trigger sample";
-    btn.addEventListener("mousedown", () => {
+    btn.title = key ? `Trigger sample [${key.toUpperCase()}]` : "Trigger sample";
+    const trigger = () => {
       if (!this._instrument?.loaded) return;
       if (this._ctx?.state === "suspended") this._ctx.resume();
       this._instrument.triggerDrum(0.9, 0.5, this._ctx.currentTime);
-    });
+    };
+    btn.addEventListener("mousedown", trigger);
     strip.appendChild(btn);
+    if (key) this._bindJamKey(key, trigger);
   }
 
   // ---- Scale broadcast ----

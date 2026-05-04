@@ -158,7 +158,9 @@ export default class WebAudioSlider extends HTMLElement {
     this._setDisplayValue(parseFloat(value));
 
     // Return focus to document after dragging so spacebar/key commands aren't swallowed
-    this._range.addEventListener("pointerup", () => { this._range.blur(); });
+    this._range.addEventListener("pointerup", () => {
+      this._range.blur();
+    });
 
     // User interaction only — dispatches slider-input event
     this._range.addEventListener("input", () => {
@@ -286,30 +288,28 @@ export function injectControlsCSS() {
       border-radius: 6px;
       font-family: monospace;
     }
-    /* .wam-play-btn appearance defined in the shared control foundation below */
-    .wam-transport-row {
+    /* ---- Transport strip groups ---- */
+    .wam-strip-bpm-group {
+      display: flex;
+      align-items: center;
+      flex: 2 1 120px;
+      min-width: 100px;
+    }
+    .wam-strip-scale-group {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 10px;
-      flex-wrap: wrap;
-      background: #0a0a14;
+      flex: 0 0 auto;
     }
-    .wam-transport-row wam-slider {
-      flex: 1;
-      min-width: 80px;
-      max-width: 160px;
-    }
-    .wam-transport-row .wam-select {
-      max-width: 90px;
-    }
-    .wam-transport-share-slot {
-      margin-left: auto;
-    }
-    /* Clip channel strip and waveform to the top rounded corners */
-    .wam-channel-strip {
-      border-radius: 5px 5px 0 0;
-      overflow: hidden;
+    .wam-strip-scale-group .wam-select { max-width: 90px; }
+    /* ---- Nav group label ---- */
+    .wam-strip-nav-label {
+      font-size: 0.65em;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+      margin-right: 4px;
     }
     .wam-title {
       font-size: 0.7em;
@@ -458,19 +458,20 @@ export function injectControlsCSS() {
     .wam-channel-strip {
       display: flex;
       align-items: center;
-      gap: 8px 12px;
+      gap: 6px 10px;
       flex-wrap: wrap;
-      padding: 8px 14px;
+      padding: 6px 12px;
       border-bottom: 1px solid #1d1d1d;
+      border-radius: 5px 5px 0 0;
+      overflow: hidden;
     }
-    .wam-strip-header {
+    .wam-strip-name-group {
       display: flex;
       align-items: center;
       gap: 5px;
-      cursor: pointer;
-      user-select: none;
-      flex-shrink: 0;
-      min-width: 72px;
+      flex: 0 1 88px;
+      min-width: 56px;
+      overflow: hidden;
     }
     .wam-strip-name {
       font-size: 0.7em;
@@ -478,29 +479,61 @@ export function injectControlsCSS() {
       text-transform: uppercase;
       letter-spacing: 0.1em;
       opacity: 0.75;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .wam-strip-chevron {
-      font-size: 1.3rem;
+      font-size: 1.1rem;
       color: #555;
       transition: transform 0.15s ease;
       line-height: 1;
+      flex-shrink: 0;
     }
     [data-collapsed] > .wam-channel-strip .wam-strip-chevron { transform: rotate(-90deg); }
-    .wam-channel-strip wam-waveform {
-      flex: 1 1 60px;
-      max-width: 100px;
-      height: 36px;
-      min-width: 50px;
+    .wam-strip-viz-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex: 1 1 90px;
+      max-width: 180px;
+      min-width: 70px;
+    }
+    .wam-strip-viz-group wam-level-meter { flex-shrink: 0; }
+    .wam-strip-viz-group wam-waveform {
+      flex: 1;
+      height: 30px;
+      min-width: 40px;
       background: #080808;
       border-radius: 2px;
-      border: none;
     }
-    .wam-channel-strip wam-slider {
-      flex: 1 1 80px;
-      max-width: 160px;
+    .wam-strip-jam-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 0 0 auto;
     }
-    .wam-channel-strip wam-slider[param="pan"] {
-      max-width: 110px;
+    .wam-strip-jam-group:empty { display: none; }
+    .wam-strip-mix-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 2 1 180px;
+      min-width: 140px;
+    }
+    .wam-strip-mix-group wam-slider             { flex: 2 1 55px; }
+    .wam-strip-mix-group wam-slider[param="pan"] { flex: 1 1 50px; max-width: 88px; }
+    .wam-strip-nav-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 0 0 auto;
+      margin-left: auto;
+    }
+    .wam-strip-nav-group:empty { display: none; }
+    @media (max-width: 520px) {
+      .wam-strip-name-group { flex: 0 0 100%; overflow: visible; padding-bottom: 2px; }
+      .wam-strip-nav-group  { margin-left: 0; }
     }
     /* ---- Expanded / collapsed ---- */
     [data-collapsed] > .wam-expanded { display: none; }
@@ -579,33 +612,48 @@ export function createSection(label) {
  * @param {boolean}  [opts.pan=true]   Set false to omit the pan slider (e.g. master bus)
  * @returns {{ volSlider, panSlider, meter, isMuted, setMuted }}
  */
-export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1, initialPan = 0, pan = true, noCollapse = false }) {
+export function createChannelStrip(
+  parentEl,
+  { title, getOutGain, initialVol = 1, initialPan = 0, pan = true, noCollapse = false },
+) {
   if (!noCollapse && CHANNEL_STRIP_COLLAPSED_DEFAULT) parentEl.setAttribute("data-collapsed", "");
 
   const strip = document.createElement("div");
   strip.className = "wam-channel-strip";
 
-  // Name + optional expand/collapse toggle
-  const header = document.createElement("div");
-  header.className = "wam-strip-header";
+  // Group 1: Name (+ optional collapse chevron)
+  const nameGroup = document.createElement("div");
+  nameGroup.className = "wam-strip-name-group";
   const nameEl = document.createElement("span");
   nameEl.className = "wam-strip-name";
   nameEl.textContent = title;
-  header.appendChild(nameEl);
+  nameGroup.appendChild(nameEl);
   if (!noCollapse) {
     const chevron = document.createElement("span");
     chevron.className = "wam-strip-chevron";
     chevron.textContent = "▾";
-    header.appendChild(chevron);
-    header.addEventListener("click", () => parentEl.toggleAttribute("data-collapsed"));
+    nameGroup.appendChild(chevron);
+    nameGroup.style.cssText += "cursor:pointer;user-select:none;";
+    nameGroup.addEventListener("click", () => parentEl.toggleAttribute("data-collapsed"));
   }
-  strip.appendChild(header);
+  strip.appendChild(nameGroup);
 
-  // Level meter
+  // Group 2: Visualizers — meter here; waveform added later by bind()
+  const vizGroup = document.createElement("div");
+  vizGroup.className = "wam-strip-viz-group";
   const meter = document.createElement("wam-level-meter");
-  strip.appendChild(meter);
+  vizGroup.appendChild(meter);
+  strip.appendChild(vizGroup);
 
-  // Volume slider
+  // Group 3: Jam/trigger buttons — filled by _buildStripActions in bind()
+  const jamGroup = document.createElement("div");
+  jamGroup.className = "wam-strip-jam-group";
+  strip.appendChild(jamGroup);
+
+  // Group 4: Mix — volume, pan, mute
+  const mixGroup = document.createElement("div");
+  mixGroup.className = "wam-strip-mix-group";
+
   const volSlider = document.createElement("wam-slider");
   volSlider.setAttribute("param", "volume");
   volSlider.setAttribute("label", "Vol");
@@ -613,9 +661,8 @@ export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1
   volSlider.setAttribute("max", "1");
   volSlider.setAttribute("step", "0.01");
   volSlider.value = initialVol;
-  strip.appendChild(volSlider);
+  mixGroup.appendChild(volSlider);
 
-  // Pan slider (double-click resets to center)
   let panSlider = null;
   if (pan) {
     panSlider = document.createElement("wam-slider");
@@ -626,53 +673,66 @@ export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1
     panSlider.setAttribute("step", "0.01");
     panSlider.setAttribute("default", "0");
     panSlider.value = initialPan;
-    strip.appendChild(panSlider);
+    mixGroup.appendChild(panSlider);
   }
 
-  // Mute button
   const muteBtn = document.createElement("button");
   muteBtn.className = "wam-mute-btn";
   muteBtn.textContent = "Mute";
-  strip.appendChild(muteBtn);
+  mixGroup.appendChild(muteBtn);
+
+  strip.appendChild(mixGroup);
+
+  // Group 5: Section nav toggles (Ctrl/Seq/FX) — filled by bind()
+  const navGroup = document.createElement("div");
+  navGroup.className = "wam-strip-nav-group";
+  strip.appendChild(navGroup);
 
   parentEl.appendChild(strip);
 
   let muted = false;
   let preMuteVolume = 1;
 
-  muteBtn.addEventListener("click", () => {
-    muted = !muted;
+  const syncMuteButton = () => {
+    muteBtn.classList.toggle("wam-muted", muted);
+    // muteBtn.textContent = muted ? "Muted" : "Mute";
+    muteBtn.textContent = "Mute";
+  };
+
+  const applyMuteState = (nextMuted, { restoreOnUnmute = true } = {}) => {
+    muted = !!nextMuted;
     const out = getOutGain();
     if (muted) {
       preMuteVolume = out?.gain.value ?? 1;
       if (out) out.gain.value = 0;
-    } else {
+    } else if (restoreOnUnmute) {
       if (out) out.gain.value = preMuteVolume;
     }
-    muteBtn.classList.toggle("wam-muted", muted);
-    muteBtn.textContent = muted ? "Muted" : "Mute";
+    syncMuteButton();
+  };
+
+  muteBtn.addEventListener("click", () => {
+    applyMuteState(!muted, { restoreOnUnmute: true });
     parentEl.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
   });
 
   return {
     strip,
+    vizGroup,
+    jamGroup,
+    mixGroup,
+    navGroup,
     volSlider,
     panSlider,
     meter,
     isMuted: () => muted,
-    getVolume: () => muted ? preMuteVolume : (getOutGain()?.gain.value ?? 1),
+    getVolume: () => (muted ? preMuteVolume : (getOutGain()?.gain.value ?? 1)),
     setPreMuteVolume: (v) => {
       preMuteVolume = v;
     },
     setMuted: (v) => {
-      muted = !!v;
-      const out = getOutGain();
-      if (muted) {
-        preMuteVolume = out?.gain.value ?? 1;
-        if (out) out.gain.value = 0;
-      }
-      muteBtn.classList.toggle("wam-muted", muted);
-      muteBtn.textContent = muted ? "Muted" : "Mute";
+      // Keep existing behavior for state restore: unmuting does not overwrite restored volume.
+      applyMuteState(v, { restoreOnUnmute: false });
     },
   };
 }

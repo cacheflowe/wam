@@ -407,13 +407,15 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     return "Acid FX";
   }
 
-  _buildStripActions(strip) {
+  _buildStripActions(strip, options = {}) {
+    const key = options.jamKey ?? "b";
     const btn = document.createElement("button");
     btn.textContent = "♩";
     btn.className = "wam-jam-btn";
-    btn.title = "Trigger note [B]";
+    btn.title = `Trigger note [${key.toUpperCase()}]`;
     btn.addEventListener("click", () => this.queueRandomNote());
     strip.appendChild(btn);
+    this._bindJamKey(key, () => this.queueRandomNote());
   }
 
   _buildControls(controls, expanded, mkSlider, ctx, options) {

@@ -647,13 +647,15 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
   _defaultTitle() { return "BlipFX Sound Effects"; }
   _fxTitle() { return "SFX FX"; }
 
-  _buildStripActions(strip) {
+  _buildStripActions(strip, options = {}) {
+    const key = options.jamKey ?? "v";
     const btn = document.createElement("button");
     btn.textContent = "▶";
     btn.className = "wam-jam-btn";
-    btn.title = "Trigger sound [V]";
+    btn.title = `Trigger sound [${key.toUpperCase()}]`;
     btn.addEventListener("click", () => this.triggerNow());
     strip.appendChild(btn);
+    this._bindJamKey(key, () => this.triggerNow());
   }
 
   // ---- Bind override to capture chance from options ----

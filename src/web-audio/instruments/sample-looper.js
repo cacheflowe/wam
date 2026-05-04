@@ -59,6 +59,7 @@ export default class WebAudioLoopPlayer extends WebAudioInstrumentBase {
    * @param {number} [options.randomChance=0.1]   0–1 probability of a forward jump per step
    * @param {number} [options.reverseChance=0.04] 0–1 probability of a reverse-playback event per step
    * @param {number} [options.volume=0.8]
+   * @param {number} [options.gainBoost=1] Instrument-level gain multiplier (applied before controls output)
    * @param {{label: string, file: string}[]} [options.files=[]] Loop file options for controls.
    * @param {string} [options.basePath=""] Base path prepended when loading selected files.
    */
@@ -94,7 +95,13 @@ export default class WebAudioLoopPlayer extends WebAudioInstrumentBase {
     this._grainStyle = "clean"; // "clean" (512 samples) or "vintage" (2048 samples)
     this._pitchShiftNode = null;
 
-    this._out.gain.value = options.volume ?? 0.8;
+    this._baseVolume = options.volume ?? 0.8;
+    this._gainBoost = options.gainBoost ?? 1;
+    this._applyOutputGain();
+  }
+
+  _applyOutputGain() {
+    this._out.gain.value = this._baseVolume * this._gainBoost;
   }
 
   // ---- Loading ----
@@ -184,6 +191,24 @@ export default class WebAudioLoopPlayer extends WebAudioInstrumentBase {
 
   get detectedLoopSteps() {
     return this._detectedLoopSteps;
+  }
+
+  get volume() {
+    return this._baseVolume;
+  }
+
+  set volume(v) {
+    this._baseVolume = v;
+    this._applyOutputGain();
+  }
+
+  get gainBoost() {
+    return this._gainBoost;
+  }
+
+  set gainBoost(v) {
+    this._gainBoost = v;
+    this._applyOutputGain();
   }
 
   get loaded() {
@@ -327,19 +352,21 @@ export default class WebAudioLoopPlayer extends WebAudioInstrumentBase {
 
   /**
    * Jump immediately to a fixed segment of the buffer (e.g. kick / hat / snare positions).
-   * Cancels any pending return-from-jump so the loop continues from this new position.
    *
    * @param {number} segIndex    0-based segment index (0 = start, 1 = 1/3, 2 = 2/3 for numSegments=3)
    * @param {number} numSegments Number of equal segments to divide the buffer into
    * @param {number} bpm         Current tempo
    * @param {number} atTime      Scheduled AudioContext time
+   * @param {number} [globalStep=-1]  Current sequencer step; if provided, schedules return to
+   *                                  nominal position after `returnSteps` steps (same as random chops).
+   *                                  Pass -1 (default) to stay at the jump position indefinitely.
    */
-  jumpToSegment(segIndex, numSegments, bpm, atTime) {
+  jumpToSegment(segIndex, numSegments, bpm, atTime, globalStep = -1) {
     if (!this._buffer) return;
     const playbackRate = (bpm / this._originalBpm) * this.speedMultiplier * this._stretchRatio;
     const offset = (segIndex / numSegments) * this._buffer.duration;
     this._startSource(offset, atTime, playbackRate, false);
-    this._returnAtStep = -1;
+    this._returnAtStep = globalStep >= 0 ? globalStep + this.returnSteps : -1;
   }
 
   stop(atTime) {
@@ -399,7 +426,15 @@ function formatSpeedMultiplier(value) {
  */
 export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
+    { param: "volume", label: "Vol", min: 0, max: 2, step: 0.01 },
+    {
+      param: "gainBoost",
+      label: "Boost",
+      min: 0.25,
+      max: 2,
+      step: 0.01,
+      tooltip: "Instrument gain multiplier before channel-strip volume.",
+    },
     {
       param: "randomChance",
       label: "Rand Chance",
@@ -546,6 +581,7 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
 
     // ---- Mix section ----
     const { el: mixEl, controls: mixCtrl } = createSection("Mix");
+    mixCtrl.appendChild(mkSlider({ param: "gainBoost", label: "Boost", min: 0.25, max: 2, step: 0.01 }));
     mixCtrl.appendChild(mkSlider({ param: "randomChance", label: "Random", min: 0, max: 1, step: 0.01 }));
     mixCtrl.appendChild(mkSlider({ param: "reverseChance", label: "Reverse", min: 0, max: 0.25, step: 0.01 }));
     controls.appendChild(mixEl);
@@ -559,19 +595,25 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
     }
   }
 
-  _buildStripActions(strip) {
+  _buildStripActions(strip, options = {}) {
+    const keys = options.jamKeys ?? ["z", "x"];
     for (const [label, seg] of [
-      ["A", 0],
-      ["B", 1],
-      ["C", 2],
+      ["K", 0],
+      ["S", 1],
     ]) {
+      const key = keys[seg] ?? null;
       const btn = document.createElement("button");
       btn.textContent = label;
       btn.className = "wam-jam-btn";
+      btn.title = key ? `Jump to segment ${label} [${key.toUpperCase()}]` : `Jump to segment ${label}`;
       btn.addEventListener("mousedown", () => {
         this._pendingSegment = seg;
       });
       strip.appendChild(btn);
+      if (key)
+        this._bindJamKey(key, () => {
+          this._pendingSegment = seg;
+        });
     }
   }
 
@@ -643,7 +685,7 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
     if (!this._instrument?.loaded) return;
     this._globalStep = globalStep;
     if (this._pendingSegment >= 0) {
-      this._instrument.jumpToSegment(this._pendingSegment, 3, bpm, time);
+      this._instrument.jumpToSegment(this._pendingSegment, 4, bpm, time, globalStep);
       this._pendingSegment = -1;
     } else {
       this._instrument.trigger(globalStep, bpm, time);

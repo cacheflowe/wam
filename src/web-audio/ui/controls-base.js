@@ -47,6 +47,13 @@ export class WebAudioControlsBase extends HTMLElement {
     this._seqSection = null;
     this._seqControls = null;
     this._fxSection = null;
+    // Keyboard jam handlers — cleared and re-registered on each bind()
+    this._jamKeyHandlers = [];
+  }
+
+  disconnectedCallback() {
+    for (const h of this._jamKeyHandlers) document.removeEventListener("keydown", h);
+    this._jamKeyHandlers = [];
   }
 
   // ---- Override points for subclass identity ----
@@ -88,10 +95,19 @@ export class WebAudioControlsBase extends HTMLElement {
       noCollapse: true,
     });
     this._stripEl = strip.strip;
-    this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted, setPreMuteVolume: strip.setPreMuteVolume, getVolume: strip.getVolume };
+    this._muteHandle = {
+      isMuted: strip.isMuted,
+      setMuted: strip.setMuted,
+      setPreMuteVolume: strip.setPreMuteVolume,
+      getVolume: strip.getVolume,
+    };
     this._channelStripVolSlider = strip.volSlider;
     this._sliders["volume"] = strip.volSlider;
     this._panSlider = strip.panSlider;
+
+    // Clear any jam key handlers registered by a previous bind() call
+    for (const h of this._jamKeyHandlers) document.removeEventListener("keydown", h);
+    this._jamKeyHandlers = [];
 
     // Ctrl / Seq / FX section toggle buttons
     const mkToggle = (label, tooltip) => {
@@ -104,15 +120,19 @@ export class WebAudioControlsBase extends HTMLElement {
     this._ctrlBtn = mkToggle("Ctrl", "Show/hide instrument parameters");
     this._seqBtn = mkToggle("Seq", "Show/hide step sequencer");
     this._fxBtn = mkToggle("FX", "Show/hide effects chain");
-    this._stripEl.appendChild(this._ctrlBtn);
-    this._stripEl.appendChild(this._seqBtn);
-    this._stripEl.appendChild(this._fxBtn);
+    const navLabel = document.createElement("span");
+    navLabel.className = "wam-strip-nav-label";
+    navLabel.textContent = "UI";
+    strip.navGroup.appendChild(navLabel);
+    strip.navGroup.appendChild(this._ctrlBtn);
+    strip.navGroup.appendChild(this._seqBtn);
+    strip.navGroup.appendChild(this._fxBtn);
 
-    // Waveform — compact, inside the channel strip
+    // Waveform lives in the viz group alongside the level meter
     const waveform = document.createElement("wam-waveform");
-    this._stripEl.appendChild(waveform);
+    strip.vizGroup.appendChild(waveform);
 
-    this._buildStripActions(this._stripEl);
+    this._buildStripActions(strip.jamGroup, options);
 
     // Three independent sections
     this._ctrlSection = document.createElement("div");
@@ -217,7 +237,26 @@ export class WebAudioControlsBase extends HTMLElement {
   }
 
   /** Inject buttons into the always-visible channel strip (e.g. jam trigger). Override in subclass. */
-  _buildStripActions(strip) {}
+  _buildStripActions(strip, options = {}) {}
+
+  /**
+   * Register a global keyboard shortcut that fires `fn` when `key` is pressed.
+   * Automatically resumes a suspended AudioContext. Handlers are removed on disconnect
+   * and re-registered on each bind() call.
+   * @param {string}   key  e.g. "b", "v", " "
+   * @param {function} fn
+   */
+  _bindJamKey(key, fn) {
+    const k = key.toLowerCase();
+    const handler = (e) => {
+      if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+      if (e.key.toLowerCase() !== k) return;
+      if (this._ctx?.state === "suspended") this._ctx.resume();
+      fn(e);
+    };
+    document.addEventListener("keydown", handler);
+    this._jamKeyHandlers.push(handler);
+  }
 
   /** Handle a non-pan slider value change. Default: set on instrument. */
   _onSliderInput(param, value) {
@@ -339,7 +378,7 @@ export class WebAudioControlsBase extends HTMLElement {
    */
   /**
    * Build sequencer controls (Speed, Density, Rotate, Rot.Bars, optional Rand) and
-  * append them to the seq controls container so they are co-located with the step-seq grid.
+   * append them to the seq controls container so they are co-located with the step-seq grid.
    * Each subclass can extend the returned seqCtrl row (e.g. chord-size select).
    * @param {object} [opts]
    * @param {function|null} [opts.onRandomize]  Instrument-specific randomize callback

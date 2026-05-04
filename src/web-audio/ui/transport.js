@@ -35,6 +35,8 @@ export class WebAudioTransportControls extends HTMLElement {
     this._seq = null;
     this._masterGain = null;
     this._fxUnit = null;
+    this._fxBtn = null;
+    this._fxSection = null;
     this._out = null;
     this._volSlider = null;
     this._bpmSlider = null;
@@ -45,6 +47,12 @@ export class WebAudioTransportControls extends HTMLElement {
     this._muteHandle = null;
     this._instruments = [];
     this._playing = false;
+    this._keyHandler = null;
+  }
+
+  disconnectedCallback() {
+    if (this._keyHandler) document.removeEventListener("keydown", this._keyHandler);
+    this._keyHandler = null;
   }
 
   /**
@@ -80,8 +88,14 @@ export class WebAudioTransportControls extends HTMLElement {
       getOutGain: () => this._masterGain,
       initialVol: 1,
       pan: false,
+      noCollapse: true,
     });
-    this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted, setPreMuteVolume: strip.setPreMuteVolume };
+    this._muteHandle = {
+      isMuted: strip.isMuted,
+      setMuted: strip.setMuted,
+      setPreMuteVolume: strip.setPreMuteVolume,
+      getVolume: strip.getVolume,
+    };
     this._volSlider = strip.volSlider;
     this._meter = strip.meter;
 
@@ -97,18 +111,17 @@ export class WebAudioTransportControls extends HTMLElement {
       }
     });
 
-    // ---- Always-visible transport row (between strip and expanded) ----
-    const topRow = document.createElement("div");
-    topRow.className = "wam-transport-row";
-
-    // Play/Stop
+    // ---- Play/Stop button → jam group ----
     this._playBtn = document.createElement("button");
     this._playBtn.className = "wam-play-btn";
     this._playBtn.textContent = "▶ Play";
+    this._playBtn.title = "Play / stop [Space]";
     this._playBtn.addEventListener("click", () => this._playing ? this._stop() : this._play());
-    topRow.appendChild(this._playBtn);
+    strip.jamGroup.appendChild(this._playBtn);
 
-    // BPM
+    // ---- BPM → dedicated strip group (inserted before mix group) ----
+    const bpmGroup = document.createElement("div");
+    bpmGroup.className = "wam-strip-bpm-group";
     this._bpmSlider = document.createElement("wam-slider");
     this._bpmSlider.setAttribute("param", "bpm");
     this._bpmSlider.setAttribute("label", "BPM");
@@ -121,9 +134,10 @@ export class WebAudioTransportControls extends HTMLElement {
       this._setBpm(e.detail.value);
       this._emitChange();
     });
-    topRow.appendChild(this._bpmSlider);
+    bpmGroup.appendChild(this._bpmSlider);
+    strip.strip.insertBefore(bpmGroup, strip.mixGroup);
 
-    // Key/Scale
+    // ---- Key/Scale → dedicated strip group (inserted before mix group) ----
     if (showScales) {
       this._rootSelect = document.createElement("select");
       this._rootSelect.className = "wam-select";
@@ -148,34 +162,58 @@ export class WebAudioTransportControls extends HTMLElement {
       this._rootSelect.addEventListener("change", onScaleChange);
       this._scaleSelect.addEventListener("change", onScaleChange);
 
+      const scaleGroup = document.createElement("div");
+      scaleGroup.className = "wam-strip-scale-group";
       const keyCtrl = createCtrl("Key", { tooltip: "Root note for the global scale. All note instruments transpose to this key." });
       keyCtrl.appendChild(this._rootSelect);
-      topRow.appendChild(keyCtrl);
-
       const scaleCtrl = createCtrl("Scale", { tooltip: "Scale mode applied to all note instruments. Steps are quantized to this scale." });
       scaleCtrl.appendChild(this._scaleSelect);
-      topRow.appendChild(scaleCtrl);
+      scaleGroup.appendChild(keyCtrl);
+      scaleGroup.appendChild(scaleCtrl);
+      strip.strip.insertBefore(scaleGroup, strip.mixGroup);
     }
 
-    // Share URL slot — apps can append a button here
-    this._shareSlot = document.createElement("span");
-    this._shareSlot.className = "wam-transport-share-slot";
-    topRow.appendChild(this._shareSlot);
-
-    this.appendChild(topRow);
-
-    // Waveform — always visible
+    // ---- Waveform → viz group ----
     const waveform = document.createElement("wam-waveform");
-    this.appendChild(waveform);
+    strip.vizGroup.appendChild(waveform);
 
-    // Expanded panel — only Master FX
-    const expanded = document.createElement("div");
-    expanded.className = "wam-expanded";
-    this.appendChild(expanded);
+    // ---- FX toggle + share slot → nav group ----
+    this._fxBtn = document.createElement("button");
+    this._fxBtn.className = "wam-toggle-btn";
+    this._fxBtn.textContent = "FX";
+    this._fxBtn.title = "Show/hide master effects chain";
+    strip.navGroup.appendChild(this._fxBtn);
+
+    this._shareSlot = document.createElement("span");
+    strip.navGroup.appendChild(this._shareSlot);
+
+    // ---- Collapsible FX section ----
+    this._fxSection = document.createElement("div");
+    this._fxSection.className = "wam-section-fx";
+    this._fxSection.setAttribute("data-hidden", "");
+    this.appendChild(this._fxSection);
+
+    this._fxBtn.addEventListener("click", () => {
+      const nowHidden = this._fxSection.hasAttribute("data-hidden");
+      this._fxSection.toggleAttribute("data-hidden", !nowHidden);
+      this._fxBtn.toggleAttribute("data-active", nowHidden);
+      this._emitChange();
+    });
 
     // FX unit
     this._fxUnit = document.createElement("wam-fx-unit");
-    expanded.appendChild(this._fxUnit);
+    this._fxSection.appendChild(this._fxUnit);
+
+    // Spacebar play/stop
+    if (this._keyHandler) document.removeEventListener("keydown", this._keyHandler);
+    this._keyHandler = (e) => {
+      if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+      if (e.key !== " ") return;
+      e.preventDefault();
+      if (this._ctx?.state === "suspended") this._ctx.resume();
+      this._playing ? this._stop() : this._play();
+    };
+    document.addEventListener("keydown", this._keyHandler);
 
     // Audio routing
     this._setupRouting(ctx, waveform, color, bpm, options.fx ?? {});
@@ -290,11 +328,12 @@ export class WebAudioTransportControls extends HTMLElement {
   toJSON() {
     return {
       bpm: this.bpm,
-      masterVolume: this._masterGain?.gain.value ?? 1,
+      masterVolume: this._muteHandle?.getVolume() ?? 1,
       muted: this._muteHandle?.isMuted() ?? false,
       root: this._rootSelect ? parseInt(this._rootSelect.value) : null,
       scale: this._scaleSelect?.value ?? null,
       fx: this._fxUnit?.toJSON(),
+      fxVisible: !this._fxSection?.hasAttribute("data-hidden"),
     };
   }
 
@@ -310,6 +349,10 @@ export class WebAudioTransportControls extends HTMLElement {
     if (obj.scale != null && this._scaleSelect) this._scaleSelect.value = obj.scale;
     if ((obj.root != null || obj.scale != null)) this._broadcastScale();
     if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
+    if (obj.fxVisible != null && this._fxSection && this._fxBtn) {
+      this._fxSection.toggleAttribute("data-hidden", !obj.fxVisible);
+      this._fxBtn.toggleAttribute("data-active", obj.fxVisible);
+    }
   }
 }
 
