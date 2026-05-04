@@ -31,7 +31,7 @@ const samplesConfig = {
   breaks: {
     glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/09-breaks/*.wav")),
     servedAt: "_assets/samples/09-breaks/",
-    fallbackDir: "audio/samples/breaks/",
+    fallbackDir: "public/audio/samples/breaks/",
     fallbackFiles: [
       "funky-drummer-loop-8.wav",
       "shack-up-loop-16.wav",
@@ -42,25 +42,25 @@ const samplesConfig = {
   percloops: {
     glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/10-perc-loops/*.wav")),
     servedAt: "_assets/samples/10-perc-loops/",
-    fallbackDir: "audio/samples/perc-loops/",
+    fallbackDir: "public/audio/samples/perc-loops/",
     fallbackFiles: ["FX_Loops_058_loop_4_.wav", "FX_Loops_068_loop_4_.wav"],
   },
   kicks: {
     glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/01-kick/*.wav")),
     servedAt: "_assets/samples/01-kick/",
-    fallbackDir: "audio/samples/kicks/",
+    fallbackDir: "public/audio/samples/kicks/",
     fallbackFiles: ["B.DRUM_14.wav", "B.DRUM_17.wav", "B.DRUM_23.wav", "B.DRUM_27.wav"],
   },
   snares: {
     glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/02-snare/*.wav")),
     servedAt: "_assets/samples/02-snare/",
-    fallbackDir: "audio/samples/snares/",
+    fallbackDir: "public/audio/samples/snares/",
     fallbackFiles: ["CLAP_5.wav", "SNARE_5.wav", "SNARE_7.wav", "SNARE_14.wav"],
   },
   hits: {
     glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/04-perc/*.wav")),
     servedAt: "_assets/samples/04-perc/",
-    fallbackDir: "audio/samples/hits/",
+    fallbackDir: "public/audio/samples/hits/",
     fallbackFiles: [
       "AMINDDR11.wav",
       "BATA_HI.wav",

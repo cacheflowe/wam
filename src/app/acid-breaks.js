@@ -14,7 +14,7 @@ const loopsConfig = {
   breaks: {
     glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/09-breaks/*.wav")),
     servedAt: "_assets/samples/09-breaks/",
-    fallbackDir: "audio/samples/breaks/",
+    fallbackDir: "public/audio/samples/breaks/",
     fallbackFiles: [
       "funky-drummer-loop-8.wav",
       "shack-up-loop-16.wav",
