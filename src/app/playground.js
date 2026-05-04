@@ -259,16 +259,6 @@ class PlaygroundApp extends HTMLElement {
   // ---- UI ----
 
   _buildUI() {
-    this.innerHTML = "";
-    this.style.cssText =
-      "display:block;min-height:100vh;background:#0d0d16;color:#e0e0f0;font-family:system-ui,sans-serif;";
-
-    // Header
-    // const header = document.createElement("header");
-    // header.className = "container";
-    // header.innerHTML = `<h1 style="margin:0;padding:1rem 0;font-size:1.4rem;letter-spacing:.05em;">🎛 Instrument Playground</h1>`;
-    // this.appendChild(header);
-
     const main = document.createElement("main");
     main.className = "container";
     main.style.cssText = "padding-bottom:4rem;";
