@@ -22,7 +22,7 @@ Build a library of browser-based instruments that are:
 - `WebAudioPercKick` — 808 kick with click + drive
 - `WebAudioPercHihat` — 909-style metallic + noise with open/closed choke
 - `WebAudioPercSnare` — layered snare/clap (tone body + noise snap + buzz)
-- `WebAudioBreakPlayer` — drum loop sampler with time-stretch
+- `WebAudioLoopPlayer` — generalized BPM-synced loop player with time-stretch
 - `WebAudioVocoder` — 16-band phase vocoder with mic input (needs work/testing)
 
 **Effects (complete)**:
@@ -59,6 +59,7 @@ Build a library of browser-based instruments that are:
 | **Build `src/site/app.js` demo harness** | Pre-existing — hash-routed menu wiring all apps; confirmed complete |
 | **Test playground** | Pre-existing — `playground.js` with per-instrument add/remove and shared transport; confirmed complete |
 | **Reorganize `src/web-audio/` into subdirs** | Pre-existing — `instruments/`, `fx/`, `ui/`, `global/` already in place; confirmed complete |
+| **Loop Player migration** | 2026-05-04 — `sample-looper.js` introduced with `WebAudioLoopPlayer`; folder-based loop discovery in apps; later cleanup removed `break-player.js` compatibility alias |
 
 ## Near-Term Goals
 
@@ -82,7 +83,7 @@ Build a library of browser-based instruments that are:
 | MIDI learn | Medium | See **MIDI** section below |
 | Per-instrument product specs | Medium | Fill out individual spec files in [product-specs/](../product-specs/) |
 | Refine existing instruments & effects | Ongoing | Tuning, preset quality, edge cases |
-| **Loop Player (Break Player evolution)** | Medium | Generalize break player into a BPM-synced loop player; see **Loop Player** section below |
+| **Loop Player (Break Player evolution)** | ~~Medium~~ | ~~Generalize break player into a BPM-synced loop player~~ — **Done 2026-05-04** |
 | Add new instruments & effects | Ongoing | See **Possible Future Instruments** section below |
 | npm package publication | Low | Export each instrument as a named module; publish to npm |
 | **Multi-user jamming** | Future | WebSocket shared state for collaborative sessions; explore later |
@@ -159,7 +160,7 @@ Reorganize `src/web-audio/` from a flat list into intent-based subdirectories:
 
 ```
 src/web-audio/
-  instruments/    ← synths + percussion + break player
+  instruments/    ← synths + percussion + loop player
   fx/             ← effects + worklets
   ui/             ← slider, step-seq, waveform
   global/         ← sequencer, scales
@@ -189,15 +190,21 @@ These would live in a `evolution.js` module, usable independently of the step se
 
 ## Loop Player
 
-Goal: evolve `WebAudioBreakPlayer` into a general-purpose BPM-synced loop player that supports any audio loop — not just breakbeats.
+**Status**: Completed 2026-05-04. `WebAudioLoopPlayer` is now the general-purpose BPM-synced loop instrument, replacing the breakbeat-only break player.
 
-**Motivation**: The current break player is hardcoded to a single set of breakbeat files. Users want to play ambient textures, melodic loops, vocal chops, percussion loops, etc. — anything that should lock to transport BPM via time-stretch.
+### What Was Built
 
-**Key changes from current break player**:
-- **Folder-based file discovery** — use Vite glob pattern (like the sampler) to auto-discover loops from configurable `public/audio/loops/` subdirectories
-- **Multiple instances** — register as a normal instrument in the playground/acid-breaks with different loop folders (breaks, textures, vocals, etc.)
-- **Rename** — `WebAudioBreakPlayer` → `WebAudioLoopPlayer` (keep break player as alias or migrate)
-- **Same core engine** — time-stretch, subdivision slicing, BPM sync, return/random/reverse logic all still apply
+`WebAudioLoopPlayer` (`sample-looper.js`) generalizes loop playback to support any audio loop type — breaks, textures, vocals, percussion — not just hardcoded breakbeats. It is a continously playing, timeline-aware instrument that stays locked to transport BPM via time-stretch and offers beat-locked looping with random jumps and reverse playback.
+
+### Migration Details
+
+**Folder-based file discovery** — apps now use Vite glob patterns (like the sampler) to auto-discover loops from configurable `public/audio/loops/` subdirectories (breaks, textures, vocals).
+
+**Multiple instances** — Loop Player registers as a standard instrument in playground and acid-breaks with different loop folders per instance. Each can have distinct playback styles (e.g., breaks with 4-slot subdivision; textures with 8-slot subdivision).
+
+**Rename and cleanup** — `WebAudioBreakPlayer` → `WebAudioLoopPlayer`. Compatibility alias exports/tags were removed; callers now use `sample-looper.js` directly.
+
+**Unchanged core engine** — time-stretch, subdivision slicing, BPM sync, return/random/reverse logic all retained from the original break player. The audio routing and scheduling patterns are identical.
 
 **NOT extending the sampler** — the playback models are fundamentally different:
 - Sampler = one-shot trigger → ADSR → done (fire-and-forget voices)
@@ -205,11 +212,13 @@ Goal: evolve `WebAudioBreakPlayer` into a general-purpose BPM-synced loop player
 
 They share `sample-utils.js` for loading and the Vite glob pattern for file discovery, but the audio engines have nothing in common.
 
-**Implementation phases**:
-1. Refactor break player to accept `files` + `basePath` via options (like sampler does) instead of hardcoded manifest
-2. Add Vite glob discovery for loop folders
-3. Allow multiple instances in playground with different folders
-4. Rename to `WebAudioLoopPlayer` (optional, could wait for prefix rename)
+### Future Enhancements
+
+Potential improvements for future work:
+- Slice editing UI and transient detection
+- Advanced stretch artifact correction modes
+- Crossfaded loop boundaries
+- MIDI-driven slice triggering
 
 ## Jam & Randomize Buttons
 

@@ -22,7 +22,7 @@ These are already configured in `vite.config.js`. When deploying, ensure your CD
 
 ## CORS for Audio Samples
 
-`WebAudioBreakPlayer` fetches `.wav` files via `fetch()` and decodes them with `AudioContext.decodeAudioData()`. Files served from `public/audio/` are same-origin and safe. If samples are ever served from an external CDN:
+`WebAudioLoopPlayer` fetches `.wav` files via `fetch()` and decodes them with `AudioContext.decodeAudioData()`. Files served from `public/audio/` are same-origin and safe. If samples are ever served from an external CDN:
 
 - The CDN must send `Access-Control-Allow-Origin: *` (or the specific origin)
 - The `fetch()` call must use `{ mode: "cors" }`

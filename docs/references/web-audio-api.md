@@ -24,7 +24,7 @@ ctx.destination;    // final output node (speakers)
 | `DelayNode` | Delay effect |
 | `WaveShaperNode` | Distortion (soft-clip curve) |
 | `AnalyserNode` | Waveform and FFT display |
-| `AudioBufferSourceNode` | Sample playback (break player) |
+| `AudioBufferSourceNode` | Sample playback (loop player) |
 | `AudioWorkletNode` | Pitch shift and time-stretch processors |
 | `ChannelMergerNode` | Stereo routing in chorus |
 | `ChannelSplitterNode` | Stereo routing in chorus |

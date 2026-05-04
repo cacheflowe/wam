@@ -69,7 +69,7 @@ src/web-audio/
   web-audio-synth-blipfx.js      Procedural SFX (instrument + controls)
   web-audio-perc-kick.js         808-style kick (instrument + controls)
   web-audio-perc-hihat.js        Noise hihat (instrument + controls)
-  web-audio-break-player.js      Sample loop player (instrument + controls)
+      web-audio-sample-looper.js     Sample loop player (instrument + controls)
   web-audio-fx-reverb.js         Convolution reverb
   web-audio-fx-delay.js          Dub delay (BPM-synced)
   web-audio-fx-chorus.js         Multi-voice chorus

@@ -2,20 +2,29 @@ import WebAudioSequencer from "../web-audio/global/sequencer.js";
 import WebAudioSynthAcid from "../web-audio/instruments/synth-acid.js";
 import WebAudioSynth808 from "../web-audio/instruments/synth-808.js";
 import WebAudioSynthBlipFX from "../web-audio/instruments/synth-blipfx.js";
-import WebAudioBreakPlayer from "../web-audio/instruments/break-player.js";
+import WebAudioLoopPlayer from "../web-audio/instruments/sample-looper.js";
 import WebAudioSynthFM from "../web-audio/instruments/synth-fm.js";
 import WebAudioPercKick from "../web-audio/instruments/perc-kick.js";
 import WebAudioPercHihat from "../web-audio/instruments/perc-hihat.js";
 import WebAudioPercSnare from "../web-audio/instruments/perc-snare.js";
+import { tryGlobKeys, resolveSamples } from "../web-audio/global/sample-utils.js";
 import "../web-audio/ui/transport.js";
 
-const BASE_PATH = "/audio/breaks/";
-const BREAK_FILES = [
-  { label: "FunkyDrum (8 bars)", file: "0032-break-FUNKYDRUM_loop_8_.wav" },
-  { label: "Shackup (16 bars)", file: "0033-break-shackup_loop_16_.wav" },
-  { label: "Think (4 bars)", file: "0034-break-think.badsister_loop_4_.wav" },
-  { label: "Hotpants (4 bars)", file: "0037_SamplepackHotpants_loop_4_.wav" },
-];
+const loopsConfig = {
+  breaks: {
+    glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/09-breaks/*.wav")),
+    servedAt: "_assets/samples/09-breaks/",
+    fallbackDir: "audio/samples/breaks/",
+    fallbackFiles: [
+      "funky-drummer-loop-8.wav",
+      "shack-up-loop-16.wav",
+      "think-bad-sister-loop-4.wav",
+      "hot-pants-loop-4.wav",
+    ],
+  },
+};
+
+const LOOP_FILES_BREAKS = resolveSamples(loopsConfig.breaks);
 
 class WebAudioAcid extends HTMLElement {
   static STORAGE_KEY = "acid-breaks-state";
@@ -118,7 +127,7 @@ class WebAudioAcid extends HTMLElement {
     this._808Controls.connect(this._transport.masterGain);
 
     // Break player
-    this._break = new WebAudioBreakPlayer(this._ctx, {
+    this._break = new WebAudioLoopPlayer(this._ctx, {
       speedMultiplier: 4,
       subdivision: 4,
       returnSteps: 1,
@@ -128,8 +137,8 @@ class WebAudioAcid extends HTMLElement {
       useTimeStretch: true,
     });
     this._breakControls.bind(this._break, this._ctx, {
-      files: BREAK_FILES,
-      basePath: BASE_PATH,
+      files: LOOP_FILES_BREAKS,
+      basePath: "",
       fx: { bpm: 128 },
     });
     this._breakControls.connect(this._transport.masterGain);
@@ -322,9 +331,13 @@ class WebAudioAcid extends HTMLElement {
     navigator.clipboard?.writeText(url).then(
       () => {
         this._shareBtn.textContent = "Copied!";
-        setTimeout(() => { this._shareBtn.textContent = "Share URL"; }, 1500);
+        setTimeout(() => {
+          this._shareBtn.textContent = "Share URL";
+        }, 1500);
       },
-      () => { prompt("Copy this URL:", url); },
+      () => {
+        prompt("Copy this URL:", url);
+      },
     );
   }
 
@@ -349,7 +362,7 @@ class WebAudioAcid extends HTMLElement {
     const breakGroup = document.createElement("div");
     breakGroup.className = "instrument-group break-group";
     this.appendChild(breakGroup);
-    this._breakControls = document.createElement("wam-break-player-controls");
+    this._breakControls = document.createElement("wam-sample-looper-controls");
     breakGroup.appendChild(this._breakControls);
 
     // ---- Kick group ----

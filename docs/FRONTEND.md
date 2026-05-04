@@ -35,12 +35,18 @@ Full details: [design-docs/controls-companion-pattern.md](design-docs/controls-c
 
 Every Controls component includes a permanent channel strip (always visible, not inside the collapsed panel):
 
-- **Volume** — output gain via `_out` GainNode
+- **Volume** — output gain via `controls._out` GainNode (not `instrument.volume`)
 - **Pan** — stereo position via `StereoPannerNode` (`_pan`)
 - **Mute** — toggles `_out.gain` to 0 / restores pre-mute volume
 - **VU meter** — peak level via a dedicated `AnalyserNode`
 
 The strip is created by `createChannelStrip()` (exported from `slider.js`).
+
+### Volume node vs. instrument volume
+
+`controls._out` (the post-FX output gain) is separate from `instrument._out` (the pre-FX instrument output). The channel strip volume slider always controls `controls._out.gain.value`. Do not read or write `this._instrument.volume` for channel strip volume — use `controls._out` directly.
+
+The channel strip's permanent slider reference is `this._channelStripVolSlider`. Note that `this._sliders["volume"]` is overwritten by `mkSlider()` if `"volume"` appears in a subclass's `SLIDER_DEFS` (some instruments expose a second volume slider in their expanded panel). Always use `this._channelStripVolSlider` when you specifically need the channel strip slider.
 
 ## CSS Architecture
 
@@ -257,6 +263,48 @@ fromJSON()  // ← restores params, steps, fx, mute state
 The app collects all controls' JSON into one state object, persisted to `localStorage` (debounced 500ms) and optionally encoded as a base64 URL hash for sharing.
 
 Missing keys in `fromJSON()` fall back to defaults (`?? defaultValue`), so older saved states load cleanly when new parameters are added.
+
+### How a slider change reaches localStorage
+
+```
+user drags slider
+  → wam-slider fires slider-input (bubbles)
+  → controls-base slider-input handler applies audio change
+  → handler calls this._emitChange()
+  → controls-change event bubbles to app
+  → app's controls-change listener calls _debouncedSave()
+  → 500ms later: localStorage.setItem(...)
+```
+
+Any user interaction that should be persisted **must** result in `_emitChange()` being called. The base class `slider-input` handler calls it automatically for all slider params (volume, pan, and SLIDER_DEFS params). Other interactions — selects, buttons, step changes — must call `_emitChange()` explicitly. Do not call `_emitChange()` from `_onSliderInput()` overrides; the base handler already calls it after `_onSliderInput` returns.
+
+### Serializing volume correctly
+
+`toJSON()` serializes volume via `this._muteHandle.getVolume()`, not `this._out.gain.value`. When an instrument is muted, `_out.gain.value` is 0 — serializing it directly would save 0 and cause a silent instrument on restore. `getVolume()` returns `preMuteVolume` when muted (the real intended volume) and `_out.gain.value` otherwise.
+
+### Overriding `_restoreParam`
+
+The base `_restoreParam` handles `"volume"` specially: it updates `_out.gain.value` and `_channelStripVolSlider`. When a subclass overrides `_restoreParam`, call `super._restoreParam(key, val)` for all keys not explicitly handled:
+
+```js
+// Correct
+_restoreParam(key, val) {
+  if (key === "oscType") {
+    this._instrument.oscType = val;
+    this._syncWaveSelect();
+  } else {
+    super._restoreParam(key, val);  // handles volume, gain, sliders
+  }
+}
+
+// Wrong — bypasses _out.gain and channel strip slider for "volume"
+_restoreParam(key, val) {
+  this._instrument[key] = val;
+  if (this._sliders[key]) this._sliders[key].value = val;
+}
+```
+
+The second pattern silently fails to restore the channel strip volume slider and routes volume to the wrong gain node.
 
 ## Related Docs
 

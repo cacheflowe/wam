@@ -660,6 +660,7 @@ export function createChannelStrip(parentEl, { title, getOutGain, initialVol = 1
     panSlider,
     meter,
     isMuted: () => muted,
+    getVolume: () => muted ? preMuteVolume : (getOutGain()?.gain.value ?? 1),
     setPreMuteVolume: (v) => {
       preMuteVolume = v;
     },

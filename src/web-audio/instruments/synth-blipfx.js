@@ -946,8 +946,7 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     } else if (key === "locked") {
       // handled in _restoreExtra
     } else {
-      this._instrument[key] = val;
-      if (this._sliders[key]) this._sliders[key].value = val;
+      super._restoreParam(key, val);
     }
   }
 

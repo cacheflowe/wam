@@ -10,7 +10,7 @@ import "../web-audio/instruments/synth-fm.js";
 import "../web-audio/instruments/synth-mono.js";
 import "../web-audio/instruments/synth-pad.js";
 import "../web-audio/instruments/synth-blipfx.js";
-import "../web-audio/instruments/break-player.js";
+import "../web-audio/instruments/sample-looper.js";
 import "../web-audio/instruments/sample-player.js";
 import "../web-audio/ui/transport.js";
 
@@ -23,19 +23,28 @@ import WebAudioSynthFM from "../web-audio/instruments/synth-fm.js";
 import WebAudioSynthMono from "../web-audio/instruments/synth-mono.js";
 import WebAudioSynthPad from "../web-audio/instruments/synth-pad.js";
 import WebAudioSynthBlipFX from "../web-audio/instruments/synth-blipfx.js";
-import WebAudioBreakPlayer from "../web-audio/instruments/break-player.js";
+import WebAudioLoopPlayer from "../web-audio/instruments/sample-looper.js";
 import WebAudioSamplePlayer from "../web-audio/instruments/sample-player.js";
 import { tryGlobKeys, resolveSamples } from "../web-audio/global/sample-utils.js";
 
-const BASE_PATH = "audio/breaks/";
-const BREAK_FILES = [
-  { label: "FunkyDrum (8 bars)", file: "0032-break-FUNKYDRUM_loop_8_.wav" },
-  { label: "Shackup (16 bars)", file: "0033-break-shackup_loop_16_.wav" },
-  { label: "Think (4 bars)", file: "0034-break-think.badsister_loop_4_.wav" },
-  { label: "Hotpants (4 bars)", file: "0037_SamplepackHotpants_loop_4_.wav" },
-];
-
 const samplesConfig = {
+  breaks: {
+    glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/09-breaks/*.wav")),
+    servedAt: "_assets/samples/09-breaks/",
+    fallbackDir: "audio/samples/breaks/",
+    fallbackFiles: [
+      "funky-drummer-loop-8.wav",
+      "shack-up-loop-16.wav",
+      "think-bad-sister-loop-4.wav",
+      "hot-pants-loop-4.wav",
+    ],
+  },
+  percloops: {
+    glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/10-perc-loops/*.wav")),
+    servedAt: "_assets/samples/10-perc-loops/",
+    fallbackDir: "audio/samples/perc-loops/",
+    fallbackFiles: ["FX_Loops_058_loop_4_.wav", "FX_Loops_068_loop_4_.wav"],
+  },
   kicks: {
     glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/01-kick/*.wav")),
     servedAt: "_assets/samples/01-kick/",
@@ -64,6 +73,8 @@ const samplesConfig = {
   },
 };
 
+const LOOP_FILES_BREAKS = resolveSamples(samplesConfig.breaks);
+const LOOP_FILES_PERCL = resolveSamples(samplesConfig.percloops);
 const SAMPLE_FILES_KICKS = resolveSamples(samplesConfig.kicks);
 const SAMPLE_FILES_SNARES = resolveSamples(samplesConfig.snares);
 const SAMPLE_FILES_HITS = resolveSamples(samplesConfig.hits);
@@ -162,12 +173,12 @@ const INSTRUMENT_TYPES = [
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
-    id: "break",
-    label: "Break Player",
+    id: "loop-breaks",
+    label: "Loop Player (Breaks)",
     color: "#8fa",
     make: (ctx) =>
-      new WebAudioBreakPlayer(ctx, {
-        speedMultiplier: 4,
+      new WebAudioLoopPlayer(ctx, {
+        speedMultiplier: 1,
         subdivision: 4,
         returnSteps: 1,
         randomChance: 0.1,
@@ -175,9 +186,64 @@ const INSTRUMENT_TYPES = [
         volume: 0.8,
         useTimeStretch: true,
       }),
-    tag: "wam-break-player-controls",
-    bindOpts: (bpm) => ({ color: "#8fa", files: BREAK_FILES, basePath: BASE_PATH, fx: { bpm } }),
-    // Break player uses (globalStep, bpm, time) — owner tracks globalStep externally
+    tag: "wam-sample-looper-controls",
+    bindOpts: (bpm) => ({ color: "#8fa", files: LOOP_FILES_BREAKS, basePath: "", fx: { bpm } }),
+    // Loop player uses (globalStep, bpm, time) — owner tracks globalStep externally
+    step: null,
+  },
+  {
+    id: "loop-perc",
+    label: "Loop Player (Perc)",
+    color: "#8df",
+    make: (ctx) =>
+      new WebAudioLoopPlayer(ctx, {
+        speedMultiplier: 1,
+        subdivision: 4,
+        returnSteps: 1,
+        randomChance: 0.1,
+        reverseChance: 0.04,
+        volume: 0.8,
+        useTimeStretch: true,
+      }),
+    tag: "wam-sample-looper-controls",
+    bindOpts: (bpm) => ({ color: "#8df", files: LOOP_FILES_PERCL, basePath: "", fx: { bpm } }),
+    // Loop player uses (globalStep, bpm, time) — owner tracks globalStep externally
+    step: null,
+  },
+  {
+    id: "loop-textures",
+    label: "Loop Player (Textures)",
+    color: "#8df",
+    make: (ctx) =>
+      new WebAudioLoopPlayer(ctx, {
+        speedMultiplier: 1,
+        subdivision: 8,
+        returnSteps: 2,
+        randomChance: 0.05,
+        reverseChance: 0.02,
+        volume: 0.75,
+        useTimeStretch: true,
+      }),
+    tag: "wam-sample-looper-controls",
+    bindOpts: (bpm) => ({ color: "#8df", files: LOOP_FILES_TEXTURES, basePath: "", fx: { bpm } }),
+    step: null,
+  },
+  {
+    id: "loop-vocals",
+    label: "Loop Player (Vocals)",
+    color: "#fd8",
+    make: (ctx) =>
+      new WebAudioLoopPlayer(ctx, {
+        speedMultiplier: 1,
+        subdivision: 8,
+        returnSteps: 2,
+        randomChance: 0.03,
+        reverseChance: 0.01,
+        volume: 0.7,
+        useTimeStretch: true,
+      }),
+    tag: "wam-sample-looper-controls",
+    bindOpts: (bpm) => ({ color: "#fd8", files: LOOP_FILES_VOCALS, basePath: "", fx: { bpm } }),
     step: null,
   },
   {
@@ -332,7 +398,7 @@ class PlaygroundApp extends HTMLElement {
       for (const entry of this._instruments) {
         entry.ctrl.setActiveStep?.(-1);
         entry.ctrl.resetSequencer?.();
-        if (entry.def.id === "break") entry.instrument.stop?.();
+        if (!entry.def.step) entry.instrument.stop?.();
       }
     });
 
@@ -342,7 +408,7 @@ class PlaygroundApp extends HTMLElement {
         if (entry.def.step) {
           entry.def.step(entry.ctrl, step, time, dur);
         } else {
-          // Break player
+          // Loop player
           entry.ctrl.step(this._globalStep, this._transportEl.bpm, time);
         }
       }

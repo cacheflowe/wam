@@ -203,7 +203,7 @@ const GRAIN_STYLES = [
  * and stretchRatio (×0.5/×1/×2). Binds to any object with `pitchShift` and
  * `stretchRatio` property setters — it writes directly to the target object.
  *
- * Used by WebAudioBreakPlayerControls when the break player has useTimeStretch
+ * Used by WebAudioLoopPlayerControls when the loop player has useTimeStretch
  * enabled. The break player's property setters handle the actual audio routing:
  *   - pitchShift → updates the PitchShiftNode AudioParam (with stretchRatio compensation)
  *   - stretchRatio → changes BufferSourceNode playbackRate on next trigger

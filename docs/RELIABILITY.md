@@ -25,10 +25,10 @@ await ctx.audioWorklet.addModule(
 );
 ```
 
-### 3. Audio sample load failure (BreakPlayer)
-**Symptom**: `WebAudioBreakPlayer` is silent or throws on `fetch()`.
+### 3. Audio sample load failure (Loop Player)
+**Symptom**: `WebAudioLoopPlayer` is silent or throws on `fetch()`.
 **Cause**: Sample file not found, CORS headers missing, or context suspended at load time.
-**Mitigation**: Pre-fetch samples after user gesture; check file paths in `public/audio/breaks/`. The break player should catch load errors and surface them.
+**Mitigation**: Pre-fetch samples after user gesture; check file paths in `public/audio/loops/` (or fallback `public/audio/breaks/`). The loop player surfaces load failures via controls-level error events.
 
 ### 4. Memory growth at very high BPMs
 **Symptom**: Page slows over time; audio glitches.

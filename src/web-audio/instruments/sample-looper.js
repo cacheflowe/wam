@@ -8,7 +8,7 @@ import { loadSample, buildReverseBuffer } from "../global/sample-utils.js";
 import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
 
 /**
- * WebAudioBreakPlayer — loads a drum loop, time-stretches it to the target
+ * WebAudioLoopPlayer — loads a loop, time-stretches it to the target
  * BPM, and plays it continuously with optional random playhead jumps that
  * snap to musical subdivisions and automatically return to the nominal
  * (on-track) position after a set number of steps.
@@ -42,14 +42,14 @@ import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-
  *   nominalOffset = (globalStep % loopSteps) / loopSteps * bufferDuration
  *
  * Usage:
- *   const brk = new WebAudioBreakPlayer(ctx, { subdivision: 8, returnSteps: 4 });
- *   await brk.load('../data/audio/breaks/0034-break-think.badsister_loop_4_.wav');
- *   brk.connect(ctx.destination);
+ *   const looper = new WebAudioLoopPlayer(ctx, { subdivision: 8, returnSteps: 4 });
+ *   await looper.load('/audio/loops/breaks/example_loop_4_.wav');
+ *   looper.connect(ctx.destination);
  *
  *   // In sequencer onStep — call on every step:
- *   brk.trigger(globalStep, bpm, time);
+ *   looper.trigger(globalStep, bpm, time);
  */
-export default class WebAudioBreakPlayer extends WebAudioInstrumentBase {
+export default class WebAudioLoopPlayer extends WebAudioInstrumentBase {
   /**
    * @param {AudioContext} ctx
    * @param {object} [options]
@@ -59,11 +59,14 @@ export default class WebAudioBreakPlayer extends WebAudioInstrumentBase {
    * @param {number} [options.randomChance=0.1]   0–1 probability of a forward jump per step
    * @param {number} [options.reverseChance=0.04] 0–1 probability of a reverse-playback event per step
    * @param {number} [options.volume=0.8]
+   * @param {{label: string, file: string}[]} [options.files=[]] Loop file options for controls.
+   * @param {string} [options.basePath=""] Base path prepended when loading selected files.
    */
   constructor(ctx, options = {}) {
     super(ctx, null); // no presets — skip applyPreset
 
-    this.speedMultiplier = options.speedMultiplier ?? 1;
+    this._defaultSpeedMultiplier = options.speedMultiplier ?? 1;
+    this.speedMultiplier = this._defaultSpeedMultiplier;
     this.subdivision = options.subdivision ?? 8;
     this.returnSteps = options.returnSteps ?? 4;
     this.randomChance = options.randomChance ?? 0.1;
@@ -77,6 +80,12 @@ export default class WebAudioBreakPlayer extends WebAudioInstrumentBase {
     this._source = null;
     this._sourcePlaybackRate = -1;
     this._returnAtStep = -1;
+    this._loadError = null;
+    this._detectedLoopSteps = null;
+    this._autoSpeedMultiplier = 1;
+
+    this._files = Array.isArray(options.files) ? options.files : [];
+    this._basePath = options.basePath ?? "";
 
     // Pitch-shift effect (inserted in audio chain when useTimeStretch is enabled)
     this._useTimeStretch = options.useTimeStretch ?? false;
@@ -93,7 +102,14 @@ export default class WebAudioBreakPlayer extends WebAudioInstrumentBase {
   async load(url, bars) {
     this.stop();
     this._buffer = null;
-    this._buffer = await loadSample(this.ctx, url);
+    this._loadError = null;
+    this._setDetectedLoopLength(url);
+    try {
+      this._buffer = await loadSample(this.ctx, url);
+    } catch (e) {
+      this._loadError = e;
+      throw e;
+    }
     this._bars = bars ?? this._parseBars(url);
     this._originalBpm = (this._bars * 4 * 60) / this._buffer.duration;
     this._reverseBuffer = buildReverseBuffer(this.ctx, this._buffer);
@@ -110,9 +126,64 @@ export default class WebAudioBreakPlayer extends WebAudioInstrumentBase {
     return this;
   }
 
+  async loadByFile(file, bars) {
+    if (!file) {
+      this.clearLoadedSample();
+      return this;
+    }
+    return this.load(this._basePath + file, bars);
+  }
+
+  clearLoadedSample() {
+    this.stop();
+    this._buffer = null;
+    this._reverseBuffer = null;
+    this._loadError = null;
+    this._returnAtStep = -1;
+    this._sourcePlaybackRate = -1;
+    return this;
+  }
+
+  setFileCatalog(files, basePath = "") {
+    this._files = Array.isArray(files) ? files : [];
+    this._basePath = basePath;
+  }
+
+  get fileCatalog() {
+    return { files: this._files, basePath: this._basePath };
+  }
+
   _parseBars(url) {
-    const m = url.match(/_loop_(\d+)_/i);
-    return m ? parseInt(m[1]) : 4;
+    const legacyMatch = url.match(/_loop_(\d+)_/i);
+    if (legacyMatch) return parseInt(legacyMatch[1], 10) / 4;
+
+    const stepMatch = /(?:^|[-_.])loop[-_](\d+)(?=\.[^.]+$|[-_.]|$)/i.exec(url ?? "");
+    if (stepMatch) {
+      const loopSteps = parseInt(stepMatch[1], 10);
+      if (Number.isFinite(loopSteps) && loopSteps > 0) return loopSteps / 4;
+    }
+
+    return 4;
+  }
+
+  _setDetectedLoopLength(fileOrUrl) {
+    const match = /(?:^|[-_.])loop[-_](\d+)(?=\.[^.]+$|[-_.]|$)/i.exec(fileOrUrl ?? "");
+    const steps = match ? parseInt(match[1], 10) : null;
+    this._detectedLoopSteps = Number.isFinite(steps) && steps > 0 ? steps : null;
+    this._autoSpeedMultiplier = 1;
+    return { steps: this._detectedLoopSteps, multiplier: this._autoSpeedMultiplier };
+  }
+
+  get autoSpeedMultiplier() {
+    return this._autoSpeedMultiplier;
+  }
+
+  get defaultSpeedMultiplier() {
+    return this._defaultSpeedMultiplier;
+  }
+
+  get detectedLoopSteps() {
+    return this._detectedLoopSteps;
   }
 
   get loaded() {
@@ -296,10 +367,18 @@ const SPEED_MULTIPLIERS = [
   { label: "×1", value: 1 },
   { label: "×2", value: 2 },
   { label: "×4", value: 4 },
+  { label: "×8", value: 8 },
+  { label: "×16", value: 16 },
 ];
 
+const AUTO_SPEED_VALUE = "auto";
+
+function formatSpeedMultiplier(value) {
+  return Number.isInteger(value) ? `${value}` : `${value}`.replace(/\.0+$/, "");
+}
+
 /**
- * WebAudioBreakPlayerControls — portable control panel for WebAudioBreakPlayer.
+ * WebAudioLoopPlayerControls — portable control panel for WebAudioLoopPlayer.
  *
  * Builds file select, speed/subdivision/return selects, sliders (randomChance,
  * reverseChance, volume), jam buttons (K/H/S), FX unit, and waveform.
@@ -307,18 +386,18 @@ const SPEED_MULTIPLIERS = [
  * Audio routing: instrument → analyser → fxUnit → controls._out
  *
  * Usage:
- *   const controls = document.createElement("wam-break-player-controls");
+ *   const controls = document.createElement("wam-sample-looper-controls");
  *   parent.appendChild(controls);
- *   controls.bind(breakPlayer, ctx, {
+ *   controls.bind(loopPlayer, ctx, {
  *     files: [{ label: "Think (4)", file: "0034-break-think.badsister_loop_4_.wav" }],
- *     basePath: "../data/audio/breaks/",
+ *     basePath: "/audio/loops/breaks/",
  *     fx: { bpm: 128 },
  *   });
  *   controls.connect(masterGain);
  *   // On each sequencer tick:
  *   controls.step(globalStep, bpm, time);
  */
-export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
+export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
     { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
     {
@@ -349,6 +428,7 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
     this._basePath = "";
     this._pendingSegment = -1;
     this._globalStep = 0;
+    this._speedMode = AUTO_SPEED_VALUE;
   }
 
   // ---- Override points ----
@@ -357,16 +437,20 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
     return "#0cc";
   }
   _defaultTitle() {
-    return "Break Player";
+    return "Loop Player";
   }
   _fxTitle() {
-    return "Break FX";
+    return "Loop FX";
   }
 
   // ---- Build controls ----
 
   _buildControls(controls, expanded, mkSlider, ctx, options) {
-    this._basePath = options.basePath || "";
+    const catalog = this._instrument.fileCatalog;
+    const files = options.files?.length ? options.files : catalog.files;
+    this._basePath = options.basePath ?? catalog.basePath;
+
+    if (files?.length) this._instrument.setFileCatalog(files, this._basePath);
 
     const mkSelect = (labelText, appendTo) => {
       const wrap = createCtrl(labelText);
@@ -380,7 +464,7 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
     // ---- Loop section ----
     const { el: loopEl, controls: loopCtrl } = createSection("Loop");
 
-    if (options.files?.length) {
+    if (files?.length) {
       const fileWrap = document.createElement("div");
       fileWrap.className = "wam-ctrl wam-ctrl-wide";
       fileWrap.appendChild(Object.assign(document.createElement("label"), { textContent: "Sample" }));
@@ -390,14 +474,14 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
       noneOpt.value = "";
       noneOpt.textContent = "— None —";
       this._fileSelect.appendChild(noneOpt);
-      for (const { label, file } of options.files) {
+      for (const { label, file } of files) {
         const opt = document.createElement("option");
         opt.value = file;
         opt.textContent = label;
         this._fileSelect.appendChild(opt);
       }
       this._fileSelect.addEventListener("change", () => {
-        this._loadFile();
+        this._loadFile({ resetSpeed: true });
         this._emitChange();
       });
       fileWrap.appendChild(this._fileSelect);
@@ -405,15 +489,24 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
     }
 
     this._speedSelect = mkSelect("Speed", loopCtrl);
+    const autoOpt = document.createElement("option");
+    autoOpt.value = AUTO_SPEED_VALUE;
+    this._speedSelect.appendChild(autoOpt);
     for (const { label, value } of SPEED_MULTIPLIERS) {
       const opt = document.createElement("option");
       opt.value = value;
       opt.textContent = label;
-      if (value === this._instrument.speedMultiplier) opt.selected = true;
       this._speedSelect.appendChild(opt);
     }
+    this._refreshAutoSpeedOption(this._fileSelect?.value || "");
+    this._speedSelect.value = this._speedMode;
     this._speedSelect.addEventListener("change", () => {
-      this._instrument.speedMultiplier = parseFloat(this._speedSelect.value);
+      if (this._speedSelect.value === AUTO_SPEED_VALUE) {
+        this._applyAutoSpeed(this._fileSelect?.value || "");
+      } else {
+        this._speedMode = "manual";
+        this._instrument.speedMultiplier = parseFloat(this._speedSelect.value);
+      }
       this._emitChange();
     });
 
@@ -468,9 +561,9 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
 
   _buildStripActions(strip) {
     for (const [label, seg] of [
-      ["K", 0],
-      ["H", 1],
-      ["S", 2],
+      ["A", 0],
+      ["B", 1],
+      ["C", 2],
     ]) {
       const btn = document.createElement("button");
       btn.textContent = label;
@@ -486,23 +579,55 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
 
   _onSliderInput(param, value) {
     this._instrument[param] = value;
-    this._emitChange();
+  }
+
+  _refreshAutoSpeedOption(file) {
+    if (!this._instrument || !this._speedSelect) return;
+    this._instrument._setDetectedLoopLength(file);
+    const autoOpt = this._speedSelect.querySelector(`option[value="${AUTO_SPEED_VALUE}"]`);
+    if (!autoOpt) return;
+    const steps = this._instrument.detectedLoopSteps;
+    autoOpt.textContent = steps ? `Auto (natural x1, loop-${steps})` : "Auto (natural x1)";
+  }
+
+  _applyAutoSpeed(file) {
+    this._speedMode = AUTO_SPEED_VALUE;
+    this._refreshAutoSpeedOption(file);
+    this._instrument.speedMultiplier = this._instrument.autoSpeedMultiplier;
+    if (this._speedSelect) this._speedSelect.value = AUTO_SPEED_VALUE;
   }
 
   // ---- File loading ----
 
-  _loadFile() {
+  _loadFile({ resetSpeed = false } = {}) {
     if (!this._instrument || !this._fileSelect) return;
     const file = this._fileSelect.value;
-    if (file) this._instrument.load(this._basePath + file);
-    else this._instrument.stop();
+    if (!file) {
+      this._instrument.clearLoadedSample();
+      if (resetSpeed || this._speedMode === AUTO_SPEED_VALUE) this._applyAutoSpeed("");
+      return;
+    }
+    if (resetSpeed || this._speedMode === AUTO_SPEED_VALUE) {
+      this._applyAutoSpeed(file);
+    } else {
+      this._refreshAutoSpeedOption(file);
+    }
+    this._instrument.loadByFile(file).catch(() => {
+      this.dispatchEvent(
+        new CustomEvent("controls-error", {
+          bubbles: true,
+          composed: true,
+          detail: { message: `Failed to load loop file: ${file}` },
+        }),
+      );
+    });
   }
 
-  /** Programmatically select a break file by filename. */
+  /** Programmatically select a loop file by filename. */
   selectFile(filename) {
     if (this._fileSelect) {
       this._fileSelect.value = filename;
-      this._loadFile();
+      this._loadFile({ resetSpeed: true });
     }
   }
 
@@ -531,16 +656,17 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
   }
 
   setActiveStep() {
-    /* no-op — break player has no step grid */
+    /* no-op — loop player has no step grid */
   }
   setScale() {
-    /* no-op — break player doesn't use notes */
+    /* no-op — loop player doesn't use notes */
   }
 
   // ---- Serialization ----
 
   _extendJSON(obj) {
     obj.file = this._fileSelect?.value || "";
+    obj.speedMode = this._speedMode;
     obj.speedMultiplier = this._instrument.speedMultiplier;
     obj.subdivision = this._instrument.subdivision;
     obj.returnSteps = this._instrument.returnSteps;
@@ -548,10 +674,7 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
   }
 
   _restoreExtra(obj) {
-    if (obj.speedMultiplier != null) {
-      this._instrument.speedMultiplier = obj.speedMultiplier;
-      if (this._speedSelect) this._speedSelect.value = obj.speedMultiplier;
-    }
+    this._speedMode = obj.speedMode == null || obj.speedMode === AUTO_SPEED_VALUE ? AUTO_SPEED_VALUE : "manual";
     if (obj.subdivision != null) {
       this._instrument.subdivision = obj.subdivision;
       if (this._subdivSelect) this._subdivSelect.value = obj.subdivision;
@@ -562,7 +685,15 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
     }
     if (obj.file && this._fileSelect) {
       this._fileSelect.value = obj.file;
-      this._loadFile();
+      this._loadFile({ resetSpeed: false });
+    } else if (this._speedMode === AUTO_SPEED_VALUE) {
+      this._applyAutoSpeed("");
+    }
+    if (this._speedMode === AUTO_SPEED_VALUE) {
+      this._applyAutoSpeed(obj.file || this._fileSelect?.value || "");
+    } else if (obj.speedMultiplier != null) {
+      this._instrument.speedMultiplier = obj.speedMultiplier;
+      if (this._speedSelect) this._speedSelect.value = `${obj.speedMultiplier}`;
     }
     // Backwards-compat: old format stored pitchShift in params and stretchRatio at top level
     if (!obj.ts && (obj.params?.pitchShift != null || obj.stretchRatio != null)) {
@@ -573,4 +704,6 @@ export class WebAudioBreakPlayerControls extends WebAudioControlsBase {
   }
 }
 
-customElements.define("wam-break-player-controls", WebAudioBreakPlayerControls);
+if (!customElements.get("wam-sample-looper-controls")) {
+  customElements.define("wam-sample-looper-controls", WebAudioLoopPlayerControls);
+}

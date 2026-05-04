@@ -31,6 +31,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._pan = null;
     this._panSlider = null;
     this._muteHandle = null;
+    this._channelStripVolSlider = null;
     this._speedMultiplier = 1;
     this._speedSelect = null;
     this._densityInput = null;
@@ -44,6 +45,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._fxBtn = null;
     this._ctrlSection = null;
     this._seqSection = null;
+    this._seqControls = null;
     this._fxSection = null;
   }
 
@@ -86,7 +88,8 @@ export class WebAudioControlsBase extends HTMLElement {
       noCollapse: true,
     });
     this._stripEl = strip.strip;
-    this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted, setPreMuteVolume: strip.setPreMuteVolume };
+    this._muteHandle = { isMuted: strip.isMuted, setMuted: strip.setMuted, setPreMuteVolume: strip.setPreMuteVolume, getVolume: strip.getVolume };
+    this._channelStripVolSlider = strip.volSlider;
     this._sliders["volume"] = strip.volSlider;
     this._panSlider = strip.panSlider;
 
@@ -121,6 +124,11 @@ export class WebAudioControlsBase extends HTMLElement {
     this._seqSection.className = "wam-section-seq";
     this._seqSection.setAttribute("data-hidden", ""); // default: hidden
     this.appendChild(this._seqSection);
+
+    // Sequencer wrapper matches Ctrl padding/layout
+    this._seqControls = document.createElement("div");
+    this._seqControls.className = "wam-controls";
+    this._seqSection.appendChild(this._seqControls);
 
     this._fxSection = document.createElement("div");
     this._fxSection.className = "wam-section-fx";
@@ -161,9 +169,9 @@ export class WebAudioControlsBase extends HTMLElement {
       return s;
     };
 
-    // Subclass hook — controls goes into ctrl section, seqSection is passed as `expanded`
-    // so subclasses' expanded.appendChild(this._seq) correctly targets the seq section
-    this._buildControls(controls, this._seqSection, mkSlider, ctx, options);
+    // Subclass hook — controls goes into ctrl section, seqControls is passed as `expanded`
+    // so subclasses' expanded.appendChild(this._seq) targets the padded seq content area
+    this._buildControls(controls, this._seqControls, mkSlider, ctx, options);
 
     // Delegated slider-input listener
     this.addEventListener("slider-input", (e) => {
@@ -183,6 +191,7 @@ export class WebAudioControlsBase extends HTMLElement {
       } else {
         this._onSliderInput(param, value);
       }
+      this._emitChange();
     });
 
     // FX unit (inside fx section, overridable — 808 returns null)
@@ -330,7 +339,7 @@ export class WebAudioControlsBase extends HTMLElement {
    */
   /**
    * Build sequencer controls (Speed, Density, Rotate, Rot.Bars, optional Rand) and
-   * append them to the seq section so they are co-located with the step-seq grid.
+  * append them to the seq controls container so they are co-located with the step-seq grid.
    * Each subclass can extend the returned seqCtrl row (e.g. chord-size select).
    * @param {object} [opts]
    * @param {function|null} [opts.onRandomize]  Instrument-specific randomize callback
@@ -408,8 +417,8 @@ export class WebAudioControlsBase extends HTMLElement {
       seqCtrl.appendChild(randWrap);
     }
 
-    // Append to the seq section so these controls are co-located with the step-seq grid
-    this._seqSection.appendChild(el);
+    // Append to the seq controls wrapper so these controls share standard panel padding
+    this._seqControls?.appendChild(el);
     return { el, controls: seqCtrl };
   }
 
@@ -443,9 +452,11 @@ export class WebAudioControlsBase extends HTMLElement {
     if (!this._instrument) return null;
     const params = {};
     for (const def of this.constructor.SLIDER_DEFS || []) {
-      // Volume lives on controls._out, not on the instrument
-      params[def.param] = def.param === "volume" ? (this._out?.gain.value ?? 1) : this._instrument[def.param];
+      params[def.param] = this._instrument[def.param];
     }
+    // Volume lives on controls._out, not on the instrument. Serialize it separately,
+    // using getVolume() so a muted instrument doesn't save 0.
+    params.volume = this._muteHandle?.getVolume() ?? 1;
     this._extraToJSON(params);
     const obj = {
       params,
@@ -513,6 +524,7 @@ export class WebAudioControlsBase extends HTMLElement {
   _restoreParam(key, val) {
     if (key === "volume") {
       if (this._out) this._out.gain.value = val;
+      if (this._channelStripVolSlider) this._channelStripVolSlider.value = val;
     } else {
       this._instrument[key] = val;
     }

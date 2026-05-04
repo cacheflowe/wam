@@ -41,7 +41,7 @@ class WebAudioSynthAcid {
 | `WebAudioSynthBlipFX` | `synth-blipfx.js` | SFX | 6 waveforms, FM, bit-crush, randomization |
 | `WebAudioPercKick` | `perc-kick.js` | Percussion | Sine sweep, pitch envelope |
 | `WebAudioPercHihat` | `perc-hihat.js` | Percussion | Bandpass noise, open/closed character |
-| `WebAudioBreakPlayer` | `break-player.js` | Sampler | Loop playback, time-stretch, reverse, random jumps |
+| `WebAudioLoopPlayer` | `sample-looper.js` | Loop player | Continuous loop playback, BPM sync, time-stretch, reverse, random jumps |
 
 ### Fire-and-Forget Voice Architecture
 

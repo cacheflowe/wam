@@ -11,7 +11,7 @@
 | [BlipFX SFX Synth](synth-blipfx.md) | Active | Justin Gitlin | `synth-blipfx.js` |
 | [Kick Drum](perc-kick.md) | Active | Justin Gitlin | `perc-kick.js` |
 | [Hi-Hat](perc-hihat.md) | Active | Justin Gitlin | `perc-hihat.js` |
-| [Break Player](break-player.md) | Active | Justin Gitlin | `break-player.js` |
+| [Loop Player](loop-player.md) | Active | Justin Gitlin | `sample-looper.js` |
 | [FX Unit](fx-unit.md) | Active | Justin Gitlin | `fx-unit.js` |
 | [Step Sequencer](step-sequencer.md) | Active | Justin Gitlin | `sequencer.js`, `step-seq.js` |
 

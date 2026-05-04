@@ -27,7 +27,7 @@
  * latency. The circular buffer is still filled so switching to non-zero pitch
  * mid-playback is seamless.
  *
- * Used by: WebAudioPitchShift (main-thread wrapper) → WebAudioBreakPlayer
+ * Used by: WebAudioPitchShift (main-thread wrapper) → WebAudioLoopPlayer
  *
  * AudioParams:
  *   pitchShift  — semitones (-24 to +24), k-rate

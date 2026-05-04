@@ -13,13 +13,13 @@ Last reviewed: 2026-04-27
 | 4 | `src/site/app.js` not yet created | High — no runnable demo | High | Justin Gitlin | Near-term |
 | 5 | Delay BPM-change click | Low — audible click when BPM changes while delay is active | Low | TODO | — |
 | 6 | No JSDoc on effects classes | Low — instruments have JSDoc, effects mostly don't | Low | TODO | — |
-| 7 | Break player load error not surfaced | Medium — fails silently if WAV fetch fails | Medium | TODO | — |
 
 ## Resolved Debt
 
 | # | Item | Resolved | Notes |
 |---|---|---|---|
 | — | No initial docs | 2026-04-27 | Harness engineering doc system established |
+| 7 | Loop player load error not surfaced | 2026-05-04 | Controls now dispatch `controls-error` on failed loop file load; build/runtime failure mode is visible |
 
 ## Adding Items
 

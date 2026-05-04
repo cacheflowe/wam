@@ -42,7 +42,9 @@ Effects & Utilities           WebAudioFxDelay, WebAudioFxUnit, WebAudioSequencer
 | `synth-blipfx.js` | `WebAudioSynthBlipFX` | SFX | Procedural sound effects with 6 waveforms, FM, bit-crush, randomization |
 | `perc-kick.js` | `WebAudioPercKick` | Percussion | 808-style kick via sine sweep |
 | `perc-hihat.js` | `WebAudioPercHihat` | Percussion | Bandpass-filtered noise with open/closed character |
-| `break-player.js` | `WebAudioBreakPlayer` | Sampler | Drum loop player with time-stretch, random jumps, reverse, BPM sync |
+| `sample-looper.js` | `WebAudioLoopPlayer` | Loop player | General-purpose BPM-synced loop player with time-stretch, random jumps, reverse |
+
+No compatibility alias is maintained; use `sample-looper.js` (`WebAudioLoopPlayer` / `WebAudioLoopPlayerControls`) directly.
 
 Each instrument file also exports a `*Controls` companion class (e.g., `WebAudioSynthAcidControls`), registered as a custom element.
 
