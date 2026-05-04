@@ -652,7 +652,10 @@ class WebAudioGenerativeAmbient extends HTMLElement {
       if (this._sliderRefs[key]) this._sliderRefs[key].value = this._p[key];
     }
     if (performance.now() >= this._autoNextChange) this._pickNewAutoTarget();
-    if (this._started) this._updateEffects();
+    if (this._started) {
+      this._ms = this._musicalState();
+      this._updateEffects();
+    }
     this._autoRaf = requestAnimationFrame(() => this._tickAutoPilot());
   }
 
