@@ -211,42 +211,6 @@ const INSTRUMENT_TYPES = [
     step: null,
   },
   {
-    id: "loop-textures",
-    label: "Loop Player (Textures)",
-    color: "#8df",
-    make: (ctx) =>
-      new WebAudioLoopPlayer(ctx, {
-        speedMultiplier: 1,
-        subdivision: 8,
-        returnSteps: 2,
-        randomChance: 0.05,
-        reverseChance: 0.02,
-        volume: 0.75,
-        useTimeStretch: true,
-      }),
-    tag: "wam-sample-looper-controls",
-    bindOpts: (bpm) => ({ color: "#8df", files: LOOP_FILES_TEXTURES, basePath: "", fx: { bpm } }),
-    step: null,
-  },
-  {
-    id: "loop-vocals",
-    label: "Loop Player (Vocals)",
-    color: "#fd8",
-    make: (ctx) =>
-      new WebAudioLoopPlayer(ctx, {
-        speedMultiplier: 1,
-        subdivision: 8,
-        returnSteps: 2,
-        randomChance: 0.03,
-        reverseChance: 0.01,
-        volume: 0.7,
-        useTimeStretch: true,
-      }),
-    tag: "wam-sample-looper-controls",
-    bindOpts: (bpm) => ({ color: "#fd8", files: LOOP_FILES_VOCALS, basePath: "", fx: { bpm } }),
-    step: null,
-  },
-  {
     id: "sampler-kicks",
     label: "Sampler (Kicks)",
     color: "#f8a",
@@ -284,6 +248,8 @@ class PlaygroundApp extends HTMLElement {
 
     // Live instrument entries: [{ def, ctrl, instrument }]
     this._instruments = [];
+    // Instruments waiting for the next bar boundary before joining the active list
+    this._pendingInstruments = [];
 
     this._buildUI();
   }
@@ -298,10 +264,10 @@ class PlaygroundApp extends HTMLElement {
       "display:block;min-height:100vh;background:#0d0d16;color:#e0e0f0;font-family:system-ui,sans-serif;";
 
     // Header
-    const header = document.createElement("header");
-    header.className = "container";
-    header.innerHTML = `<h1 style="margin:0;padding:1rem 0;font-size:1.4rem;letter-spacing:.05em;">🎛 Instrument Playground</h1>`;
-    this.appendChild(header);
+    // const header = document.createElement("header");
+    // header.className = "container";
+    // header.innerHTML = `<h1 style="margin:0;padding:1rem 0;font-size:1.4rem;letter-spacing:.05em;">🎛 Instrument Playground</h1>`;
+    // this.appendChild(header);
 
     const main = document.createElement("main");
     main.className = "container";
@@ -318,10 +284,6 @@ class PlaygroundApp extends HTMLElement {
     // Add-instrument palette
     const palette = document.createElement("section");
     palette.style.cssText = "margin-bottom:1.5rem;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;";
-    const paletteLabel = document.createElement("span");
-    paletteLabel.textContent = "Add: ";
-    paletteLabel.style.cssText = "font-size:.85rem;opacity:.6;margin-right:.25rem;";
-    palette.appendChild(paletteLabel);
 
     for (const def of INSTRUMENT_TYPES) {
       const btn = document.createElement("button");
@@ -376,6 +338,9 @@ class PlaygroundApp extends HTMLElement {
     this._transportEl.addEventListener("transport-play", () => {
       if (this._ctx.state === "suspended") this._ctx.resume();
       this._globalStep = 0;
+      // Flush any pending instruments — everything resets on play anyway
+      for (const entry of this._pendingInstruments) this._instruments.push(entry);
+      this._pendingInstruments = [];
       for (const entry of this._instruments) {
         entry.ctrl.resetSequencer?.();
         entry.instrument.reset?.();
@@ -383,6 +348,9 @@ class PlaygroundApp extends HTMLElement {
     });
 
     this._transportEl.addEventListener("transport-stop", () => {
+      // Pending instruments never played; move them to active so stop/reset hits them too
+      for (const entry of this._pendingInstruments) this._instruments.push(entry);
+      this._pendingInstruments = [];
       for (const entry of this._instruments) {
         entry.ctrl.setActiveStep?.(-1);
         entry.ctrl.resetSequencer?.();
@@ -391,6 +359,16 @@ class PlaygroundApp extends HTMLElement {
     });
 
     this._seq.onStep((step, time) => {
+      // Activate pending instruments on bar boundary so they start in phase
+      if (step === 0 && this._pendingInstruments.length > 0) {
+        for (const entry of this._pendingInstruments) {
+          entry.ctrl.resetSequencer?.();
+          entry.instrument.reset?.();
+          this._instruments.push(entry);
+        }
+        this._pendingInstruments = [];
+      }
+
       const dur = this._seq.stepDurationSec();
       for (const entry of this._instruments) {
         if (entry.def.step) {
@@ -428,7 +406,12 @@ class PlaygroundApp extends HTMLElement {
     this._transportEl.broadcastScale();
 
     const entry = { def, ctrl, instrument };
-    this._instruments.push(entry);
+    // If the transport is running, hold until the next bar so the pattern starts in phase
+    if (this._transportEl.playing) {
+      this._pendingInstruments.push(entry);
+    } else {
+      this._instruments.push(entry);
+    }
 
     // Wrapper row
     const row = document.createElement("div");
@@ -437,7 +420,7 @@ class PlaygroundApp extends HTMLElement {
     const removeBtn = document.createElement("button");
     removeBtn.textContent = "✕ Remove";
     removeBtn.style.cssText =
-      "position:absolute;top:.5rem;right:.5rem;background:#ff334422;border:1px solid #ff334466;color:#f88;padding:.2rem .5rem;border-radius:4px;cursor:pointer;font-size:.75rem;z-index:1;";
+      "position:absolute;top:-.5rem;right:-.5rem;background:#ff334422;border:1px solid #ff334466;color:#f88;padding:.2rem .5rem;border-radius:4px;cursor:pointer;font-size:.75rem;z-index:1;";
     removeBtn.addEventListener("click", () => this._removeInstrument(entry, row));
 
     row.appendChild(removeBtn);
@@ -453,6 +436,7 @@ class PlaygroundApp extends HTMLElement {
     entry.ctrl.disconnect();
     this._instrumentList.removeChild(row);
     this._instruments = this._instruments.filter((e) => e !== entry);
+    this._pendingInstruments = this._pendingInstruments.filter((e) => e !== entry);
     if (this._instruments.length === 0) {
       this._emptyMsg.style.display = "";
     }
