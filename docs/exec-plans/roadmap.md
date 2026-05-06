@@ -66,13 +66,15 @@ Build a library of browser-based instruments that are:
 | Goal | Priority | Notes |
 |---|---|---|
 | **Vocoder polish & testing** | High | Gate threshold added, needs more testing; latency optimization; carrier routing verified |
-| **FM synth quality** | High | FM sounds inferior to Mono — investigate why; retune presets; fix silent presets |
+| **Playground composition saving** | High | Persist current instrument arrangement (like `acid-breaks`), local song list, easy sharing |
 | **Composition serialization** | High | Full JSON state for multi-instrument arrangements; see **Composition Serialization** section below |
+| **Knob controls / compact UI** | Medium | Replace sliders with compact knob controls for VST-like density; see **UI Direction** section below |
+| **FM synth quality** | High | FM sounds inferior to Mono — investigate why; retune presets; fix silent presets |
 | **Rename & shorten prefix** | ~~High~~ | ~~`web-audio-` prefix too verbose~~ — **Done 2026-05-03** |
 | **MIDI keyboard input** | Medium | Map note-on/off to currently-selected instrument's `trigger()`; see **MIDI** section below |
 | **Channel strip section toggles** | ~~Medium~~ | ~~Independent Controls / Sequencer / FX toggle buttons~~ — **Done 2026-05-03** |
 | **Double-click/tap reset to default** | Medium | Double-click (or double-tap) any UI control (sliders, knobs, dropdowns, toggles) resets it to its default value |
-| **Knob controls / compact UI** | Medium | Replace sliders with compact knob controls for VST-like density; see **UI Direction** section below |
+| **Ad hoc audio loading** | Medium | Drop an audio file (or use file input selector) onto `sample-looper.js` and `sample-player.js` controls to load custom user audio |
 | **Parametric EQ** | Medium | 3-4 band EQ as first effect in FX unit chain; new `eq.js` with engine + UI; see **New Effects** section below |
 | **MediaRecorder video+audio capture** | Medium | Record window/interface as video+audio; transport-aware loop recording; see **MediaRecorder Recording** section below |
 | Responsive volume / overload protection | Medium | See **Responsive Volume** section below |
