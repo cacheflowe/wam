@@ -26,6 +26,7 @@ import WebAudioSynthBlipFX from "../web-audio/instruments/synth-blipfx.js";
 import WebAudioLoopPlayer from "../web-audio/instruments/sample-looper.js";
 import WebAudioSamplePlayer from "../web-audio/instruments/sample-player.js";
 import { tryGlobKeys, resolveSamples } from "../web-audio/global/sample-utils.js";
+import "../web-audio/ui/arrangement-library.js";
 
 const samplesConfig = {
   breaks: {
@@ -239,22 +240,30 @@ const INSTRUMENT_TYPES = [
   },
 ];
 
-class PlaygroundApp extends HTMLElement {
+export default class PlaygroundApp extends HTMLElement {
+  static STORAGE_KEY = "wam_playground_settings";
+
   connectedCallback() {
     this._ctx = null;
     this._transport = null;
     this._seq = null;
     this._globalStep = 0;
 
-    // Live instrument entries: [{ def, ctrl, instrument }]
+    // Live instrument entries: [{ def, ctrl, instrument, instanceId }]
     this._instruments = [];
     // Instruments waiting for the next bar boundary before joining the active list
     this._pendingInstruments = [];
 
+    this._instanceCounter = 0;
+    this._isLoadingState = false;
+
     this._buildUI();
+    this._loadInitialState();
   }
 
-  disconnectedCallback() {}
+  disconnectedCallback() {
+    this.removeEventListener("controls-change", this._onControlsChange);
+  }
 
   // ---- UI ----
 
@@ -263,6 +272,44 @@ class PlaygroundApp extends HTMLElement {
     main.className = "container";
     main.style.cssText = "padding-bottom:4rem;";
     this.appendChild(main);
+
+    // Arrangement library
+    const libRow = document.createElement("section");
+    libRow.style.cssText = "margin-bottom:1.5rem;";
+
+    const detailsEl = document.createElement("details");
+    // Optionally remove 'open' attribute if you want it collapsed by default
+    // detailsEl.open = true;
+
+    const summaryEl = document.createElement("summary");
+    summaryEl.innerHTML = `Arrangements & Saves <span id="current-song-label" style="opacity:0.8; margin-left:0.5rem; font-weight:normal; color:#4f8;"></span>`;
+    detailsEl.appendChild(summaryEl);
+    this._currentSongLabel = summaryEl.querySelector("#current-song-label");
+
+    this._libraryEl = document.createElement("wam-arrangement-library");
+    detailsEl.appendChild(this._libraryEl);
+
+    // Connect library events
+    this._libraryEl.addEventListener("arrangement-save", (e) => {
+      this._setCurrentSongName(e.detail.name);
+      e.detail.callback(this._getState());
+    });
+    this._libraryEl.addEventListener("arrangement-load", (e) => {
+      if (this._transportEl.playing) {
+        this._queuedState = e.detail.state;
+        this._queuedSongName = e.detail.name;
+        this._setCurrentSongName(this._currentSongName + ` (Next: ${e.detail.name})`);
+      } else {
+        this._setCurrentSongName(e.detail.name);
+        this._applyState(e.detail.state);
+      }
+    });
+    this._libraryEl.addEventListener("arrangement-export", (e) => {
+      e.detail.callback(this._getState());
+    });
+
+    libRow.appendChild(detailsEl);
+    main.appendChild(libRow);
 
     // Transport row
     const transportRow = document.createElement("section");
@@ -301,8 +348,12 @@ class PlaygroundApp extends HTMLElement {
     this._emptyMsg.style.cssText = "opacity:.4;font-style:italic;";
     this._instrumentList.appendChild(this._emptyMsg);
 
-    // Init audio (lazy on first add, but create transport now)
-    this._initAudio();
+    // Save/load listeners
+    this._onControlsChange = () => {
+      if (!this._isLoadingState) this._debouncedSave();
+    };
+    this.addEventListener("controls-change", this._onControlsChange);
+    this._transportEl.addEventListener("transport-change", this._onControlsChange);
   }
 
   // ---- Audio ----
@@ -325,6 +376,10 @@ class PlaygroundApp extends HTMLElement {
     });
     this._transportEl.connect(this._ctx.destination);
 
+    this._transportEl.addEventListener("transport-share-click", () => {
+      this._shareURL();
+    });
+
     this._transportEl.addEventListener("transport-play", () => {
       if (this._ctx.state === "suspended") this._ctx.resume();
       this._globalStep = 0;
@@ -338,6 +393,13 @@ class PlaygroundApp extends HTMLElement {
     });
 
     this._transportEl.addEventListener("transport-stop", () => {
+      // Clear any queued song so we don't accidentally load it on next play
+      if (this._queuedState) {
+        this._queuedState = null;
+        this._setCurrentSongName(this._queuedSongName); // Restore intended next name
+        this._queuedSongName = null;
+      }
+
       // Pending instruments never played; move them to active so stop/reset hits them too
       for (const entry of this._pendingInstruments) this._instruments.push(entry);
       this._pendingInstruments = [];
@@ -349,6 +411,14 @@ class PlaygroundApp extends HTMLElement {
     });
 
     this._seq.onStep((step, time) => {
+      // Process DJ style arrangement chaining over measure boundary
+      if (step === 0 && this._queuedState) {
+        this._applyState(this._queuedState);
+        this._setCurrentSongName(this._queuedSongName);
+        this._queuedState = null;
+        this._queuedSongName = null;
+      }
+
       // Activate pending instruments on bar boundary so they start in phase
       if (step === 0 && this._pendingInstruments.length > 0) {
         for (const entry of this._pendingInstruments) {
@@ -382,7 +452,7 @@ class PlaygroundApp extends HTMLElement {
 
   // ---- Add / Remove ----
 
-  _addInstrument(def) {
+  _addInstrument(def, triggerSave = true) {
     if (!this._ctx) this._initAudio();
     if (this._ctx.state === "suspended") this._ctx.resume();
 
@@ -395,7 +465,9 @@ class PlaygroundApp extends HTMLElement {
     this._transportEl.registerInstrument(ctrl);
     this._transportEl.broadcastScale();
 
-    const entry = { def, ctrl, instrument };
+    const instanceId = this._instanceCounter++;
+    const entry = { def, ctrl, instrument, instanceId };
+
     // If the transport is running, hold until the next bar so the pattern starts in phase
     if (this._transportEl.playing) {
       this._pendingInstruments.push(entry);
@@ -419,16 +491,160 @@ class PlaygroundApp extends HTMLElement {
     entry.row = row;
 
     this._emptyMsg.style.display = "none";
+    if (triggerSave && !this._isLoadingState) this._debouncedSave();
+
+    return entry;
   }
 
   _removeInstrument(entry, row) {
     this._transportEl.unregisterInstrument(entry.ctrl);
     entry.ctrl.disconnect();
-    this._instrumentList.removeChild(row);
+    if (row && row.parentNode === this._instrumentList) {
+      this._instrumentList.removeChild(row);
+    }
     this._instruments = this._instruments.filter((e) => e !== entry);
     this._pendingInstruments = this._pendingInstruments.filter((e) => e !== entry);
-    if (this._instruments.length === 0) {
+    if (this._instruments.length === 0 && this._pendingInstruments.length === 0) {
       this._emptyMsg.style.display = "";
+    }
+    if (!this._isLoadingState) this._debouncedSave();
+  }
+
+  // ---- State Serialization ----
+
+  _setCurrentSongName(name) {
+    this._currentSongName = name || null;
+    if (this._currentSongLabel) {
+      if (this._currentSongName) {
+        this._currentSongLabel.textContent = `— Playing: ${this._currentSongName}`;
+        // Sync the input in the library element so "Save Current" doesn't require retyping
+        if (this._libraryEl && this._libraryEl._nameInput) {
+          this._libraryEl._nameInput.value = this._currentSongName;
+        }
+      } else {
+        this._currentSongLabel.textContent = "";
+      }
+    }
+  }
+
+  async _applyState(state) {
+    this._isLoadingState = true;
+
+    if (state.songName !== undefined) {
+      this._setCurrentSongName(state.songName);
+    }
+
+    // 1. Clear existing
+    for (const entry of [...this._instruments, ...this._pendingInstruments]) {
+      this._transportEl.unregisterInstrument(entry.ctrl);
+      entry.ctrl.disconnect();
+      if (entry.row && entry.row.parentNode === this._instrumentList) {
+        this._instrumentList.removeChild(entry.row);
+      }
+    }
+    this._instruments = [];
+    this._pendingInstruments = [];
+
+    // 2. Load transport state
+    if (state.transport) {
+      this._transportEl.fromJSON(state.transport);
+    }
+
+    // 3. Load instruments
+    if (state.instruments && Array.isArray(state.instruments)) {
+      for (const instDef of state.instruments) {
+        const typeDef = INSTRUMENT_TYPES.find((t) => t.id === instDef.id);
+        if (typeDef) {
+          const entry = this._addInstrument(typeDef, false);
+          if (entry && instDef.state) {
+            entry.ctrl.fromJSON(instDef.state);
+          }
+        }
+      }
+    }
+
+    if (this._instruments.length === 0 && this._pendingInstruments.length === 0) {
+      this._emptyMsg.style.display = "";
+    }
+
+    this._isLoadingState = false;
+    this._debouncedSave();
+  }
+
+  _getState() {
+    const state = {
+      v: 1,
+      songName: this._currentSongName || null,
+      transport: this._transportEl.toJSON(),
+      instruments: [],
+    };
+    // Save active and pending instruments
+    for (const entry of this._instruments.concat(this._pendingInstruments)) {
+      state.instruments.push({
+        id: entry.def.id,
+        instanceId: entry.instanceId,
+        state: entry.ctrl.toJSON(),
+      });
+    }
+    return state;
+  }
+
+  _debouncedSave() {
+    clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(() => this._saveToLocalStorage(), 500);
+  }
+
+  _saveToLocalStorage() {
+    try {
+      localStorage.setItem(PlaygroundApp.STORAGE_KEY, JSON.stringify(this._getState()));
+    } catch (e) {
+      // quota exceeded or private mode — ignore
+    }
+  }
+
+  _loadFromLocalStorage() {
+    try {
+      const raw = localStorage.getItem(PlaygroundApp.STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  _loadFromURL() {
+    try {
+      const hash = location.hash;
+      if (!hash.startsWith("#s=")) return null;
+      const json = atob(hash.slice(3).replace(/-/g, "+").replace(/_/g, "/"));
+      return JSON.parse(json);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  _shareURL() {
+    const json = JSON.stringify(this._getState());
+    const b64 = btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const url = `${location.origin}${location.pathname}#s=${b64}`;
+    navigator.clipboard?.writeText(url).then(
+      () => {
+        // Find existing share btn and update text if possible,
+        // but transport 'share-click' handles its own text updates as well.
+      },
+      () => prompt("Copy this URL:", url),
+    );
+  }
+
+  async _loadInitialState() {
+    this._initAudio(); // Ensure transport is created
+
+    const pendingState = this._loadFromURL() || this._loadFromLocalStorage();
+    if (!pendingState) return;
+
+    try {
+      await this._applyState(pendingState);
+    } catch (e) {
+      console.warn("Failed to load saved configuration", e);
     }
   }
 }

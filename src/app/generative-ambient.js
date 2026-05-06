@@ -184,7 +184,10 @@ class WebAudioGenerativeAmbient extends HTMLElement {
     this._onKeyDown = (e) => {
       if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
       if (e.repeat) return;
-      if (e.key === " ") { e.preventDefault(); this._toggle(); }
+      if (e.key === " ") {
+        e.preventDefault();
+        this._toggle();
+      }
     };
     document.addEventListener("keydown", this._onKeyDown);
   }
@@ -530,7 +533,7 @@ class WebAudioGenerativeAmbient extends HTMLElement {
     // Drone LFO: unhealthy = faster/wider sweep (anxious); healthy = slow/gentle
     this._drone.setLFO(
       0.01 + (1 - health) * 0.12, // unhealthy: faster 0.13Hz; healthy: slow 0.01Hz
-      100 + (1 - health) * 900,   // unhealthy: wider sweep; healthy: subtle
+      100 + (1 - health) * 900, // unhealthy: wider sweep; healthy: subtle
     );
 
     this._syncDebugControls();
@@ -812,8 +815,20 @@ class WebAudioGenerativeAmbient extends HTMLElement {
 
     const INSTRUMENTS = [
       { label: "Pad A", tag: "wam-synth-pad-controls", inst: this._pad, color: "#aa66ff", dest: this._padChorus.input },
-      { label: "Pad B", tag: "wam-synth-mono-controls", inst: this._padB, color: "#6688ff", dest: this._padBDelay.input },
-      { label: "Melody", tag: "wam-synth-mono-controls", inst: this._melody, color: "#99eeff", dest: this._melDelay.input },
+      {
+        label: "Pad B",
+        tag: "wam-synth-mono-controls",
+        inst: this._padB,
+        color: "#6688ff",
+        dest: this._padBDelay.input,
+      },
+      {
+        label: "Melody",
+        tag: "wam-synth-mono-controls",
+        inst: this._melody,
+        color: "#99eeff",
+        dest: this._melDelay.input,
+      },
       { label: "FM", tag: "wam-synth-fm-controls", inst: this._fm, color: "#eeccff", dest: this._fmReverb.input },
     ];
 

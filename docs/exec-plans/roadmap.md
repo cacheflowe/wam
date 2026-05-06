@@ -49,6 +49,7 @@ Build a library of browser-based instruments that are:
 
 | Goal | Completed |
 |---|---|
+| **Composition serialization (Phase 1/2)** | 2026-05-05 — Schema designed, `playground.js` now auto-saves arrangement state to `localStorage` and supports Base64 URL share codes via the transport panel. |
 | **Octave controls on all note instruments** | 2026-05-02 — `octaveOffset`/`octaveJumpProb` added to Mono, Pad, 808; FM already had them |
 | **Chord synths → single-note capable** | 2026-05-02 — FM and Pad chord selector now includes "1 note" option; sequencer bypasses chord builder when size=1 |
 | **Transport spacebar everywhere** | 2026-05-02 — Spacebar play/stop added to Playground, Generative Music, Generative Ambient, Plants apps |
@@ -66,8 +67,7 @@ Build a library of browser-based instruments that are:
 | Goal | Priority | Notes |
 |---|---|---|
 | **Vocoder polish & testing** | High | Gate threshold added, needs more testing; latency optimization; carrier routing verified |
-| **Playground composition saving** | High | Persist current instrument arrangement (like `acid-breaks`), local song list, easy sharing |
-| **Composition serialization** | High | Full JSON state for multi-instrument arrangements; see **Composition Serialization** section below |
+| **Composition serialization & saving (Phase 3+)** | High | Complete IndexedDB integration for local song tree library within the Playground UI. |
 | **Knob controls / compact UI** | Medium | Replace sliders with compact knob controls for VST-like density; see **UI Direction** section below |
 | **FM synth quality** | High | FM sounds inferior to Mono — investigate why; retune presets; fix silent presets |
 | **Rename & shorten prefix** | ~~High~~ | ~~`web-audio-` prefix too verbose~~ — **Done 2026-05-03** |
@@ -405,10 +405,11 @@ Once single-arrangement serialization is solid, this structure could extend to c
 
 ### Implementation Phases
 
-1. **Phase 1 — Schema design** — plan the JSON structure, audit existing `toJSON()`/`fromJSON()` across all instruments and FX, identify gaps
-2. **Phase 2 — Playground save/load** — IndexedDB arrangement library with save/load/delete in the playground UI
-3. **Phase 3 — Share codes** — compressed Base64 export/import (generalize acid-breaks share URL approach)
-4. **Phase 4 — Multi-section** — arrangement timeline with section transitions (future)
+1. ~~**Phase 1 — Schema design** — plan the JSON structure, audit existing `toJSON()`/`fromJSON()` across all instruments and FX, identify gaps~~ (Done 2026-05-05)
+2. ~~**Phase 2 — Playground save/load** — localStorage integration in the playground UI~~ (Done 2026-05-05)
+3. ~~**Phase 3 — Share codes** — compressed Base64 export/import (generalize acid-breaks share URL approach)~~ (Done 2026-05-05)
+4. **Phase 4 — Save/Load Library UI** — Build IndexedDB integration allowing users to save and browse a named "Library" of shared songs locally within the browser.
+5. **Phase 5 — Multi-section** — arrangement timeline with section transitions (future)
 
 ## Multi-User Jamming (Future)
 
