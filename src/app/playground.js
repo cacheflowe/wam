@@ -458,6 +458,13 @@ export default class PlaygroundApp extends HTMLElement {
 
     const bpm = this._transportEl.bpm ?? 128;
     const instrument = def.make(this._ctx);
+
+    // Apply a sensible default volume to prevent a wall of max-gain sound when adding new instruments.
+    // If we're loading state (triggerSave === false), the `ctrl.fromJSON()` later will overwrite this anyway.
+    if (triggerSave) {
+      instrument.volume = 0.25;
+    }
+
     const ctrl = document.createElement(def.tag);
 
     ctrl.bind(instrument, this._ctx, def.bindOpts(bpm));
