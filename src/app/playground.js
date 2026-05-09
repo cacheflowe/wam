@@ -30,11 +30,13 @@ import "../web-audio/ui/arrangement-library.js";
 
 import electroBreakState from "../data/songs/electro-break.json";
 import letsGoState from "../data/songs/lets-go.json";
+import client04State from "../data/songs/client-04.json";
 const SAMPLE_SONGS = resolveSongs(
   tryGlobModules(() => import.meta.glob("../data/songs/*.json", { eager: true })),
   [
     { name: "Electro Break", state: electroBreakState },
     { name: "Lets Go", state: letsGoState },
+    { name: "Client 04", state: client04State },
   ],
 );
 console.log(SAMPLE_SONGS);
