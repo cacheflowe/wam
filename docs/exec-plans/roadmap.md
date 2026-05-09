@@ -61,21 +61,23 @@ Build a library of browser-based instruments that are:
 | **Test playground** | Pre-existing — `playground.js` with per-instrument add/remove and shared transport; confirmed complete |
 | **Reorganize `src/web-audio/` into subdirs** | Pre-existing — `instruments/`, `fx/`, `ui/`, `global/` already in place; confirmed complete |
 | **Loop Player migration** | 2026-05-04 — `sample-looper.js` introduced with `WebAudioLoopPlayer`; folder-based loop discovery in apps; later cleanup removed `break-player.js` compatibility alias |
+| **Rename & shorten prefix** | 2026-05-03 — Replaced verbose `web-audio-` prefix on all file names, Web Component tag names, and CSS class namespaces with `wam-` (Web Audio Module) |
+| **Channel strip section toggles** | 2026-05-03 — Independent Controls / Sequencer / FX toggle buttons replace single expand/collapse drawer; state persisted in JSON |
+| **Loop Player (Break Player evolution)** | 2026-05-04 — Generalized break player into BPM-synced `WebAudioLoopPlayer` supporting any audio loop type |
+| **Composition serialization & saving (Phase 3+)** | 2026-05-09 — Full IndexedDB integration via `arrangement-library.js` with CRUD, drag-to-reorder, export/import, clipboard support, and sample songs; wired into Playground UI |
 
 ## Near-Term Goals
 
 | Goal | Priority | Notes |
 |---|---|---|
 | **Vocoder polish & testing** | High | Gate threshold added, needs more testing; latency optimization; carrier routing verified |
-| **Composition serialization & saving (Phase 3+)** | High | Complete IndexedDB integration for local song tree library within the Playground UI. |
 | **Knob controls / compact UI** | Medium | Replace sliders with compact knob controls for VST-like density; see **UI Direction** section below |
 | **FM synth quality** | High | FM sounds inferior to Mono — investigate why; retune presets; fix silent presets |
-| **Rename & shorten prefix** | ~~High~~ | ~~`web-audio-` prefix too verbose~~ — **Done 2026-05-03** |
 | **MIDI keyboard input** | Medium | Map note-on/off to currently-selected instrument's `trigger()`; see **MIDI** section below |
-| **Channel strip section toggles** | ~~Medium~~ | ~~Independent Controls / Sequencer / FX toggle buttons~~ — **Done 2026-05-03** |
 | **Double-click/tap reset to default** | Medium | Double-click (or double-tap) any UI control (sliders, knobs, dropdowns, toggles) resets it to its default value |
 | **Ad hoc audio loading** | Medium | Drop an audio file (or use file input selector) onto `sample-looper.js` and `sample-player.js` controls to load custom user audio |
 | **Parametric EQ** | Medium | 3-4 band EQ as first effect in FX unit chain; new `eq.js` with engine + UI; see **New Effects** section below |
+| **Sidechain compressor** | Medium | Duck instrument gain based on another instrument's amplitude; instrument selector UI (like vocoder carrier routing); see **New Effects** section below |
 | **MediaRecorder video+audio capture** | Medium | Record window/interface as video+audio; transport-aware loop recording; see **MediaRecorder Recording** section below |
 | Responsive volume / overload protection | Medium | See **Responsive Volume** section below |
 | Acid-breaks UI grid layout | Medium | Container queries for responsive panel grid; see **Layout** section below |
@@ -85,7 +87,6 @@ Build a library of browser-based instruments that are:
 | MIDI learn | Medium | See **MIDI** section below |
 | Per-instrument product specs | Medium | Fill out individual spec files in [product-specs/](../product-specs/) |
 | Refine existing instruments & effects | Ongoing | Tuning, preset quality, edge cases |
-| **Loop Player (Break Player evolution)** | ~~Medium~~ | ~~Generalize break player into a BPM-synced loop player~~ — **Done 2026-05-04** |
 | Add new instruments & effects | Ongoing | See **Possible Future Instruments** section below |
 | npm package publication | Low | Export each instrument as a named module; publish to npm |
 | **Multi-user jamming** | Future | WebSocket shared state for collaborative sessions; explore later |
@@ -408,7 +409,7 @@ Once single-arrangement serialization is solid, this structure could extend to c
 1. ~~**Phase 1 — Schema design** — plan the JSON structure, audit existing `toJSON()`/`fromJSON()` across all instruments and FX, identify gaps~~ (Done 2026-05-05)
 2. ~~**Phase 2 — Playground save/load** — localStorage integration in the playground UI~~ (Done 2026-05-05)
 3. ~~**Phase 3 — Share codes** — compressed Base64 export/import (generalize acid-breaks share URL approach)~~ (Done 2026-05-05)
-4. **Phase 4 — Save/Load Library UI** — Build IndexedDB integration allowing users to save and browse a named "Library" of shared songs locally within the browser.
+4. ~~**Phase 4 — Save/Load Library UI** — Build IndexedDB integration allowing users to save and browse a named "Library" of shared songs locally within the browser.~~ (Done 2026-05-09)
 5. **Phase 5 — Multi-section** — arrangement timeline with section transitions (future)
 
 ## Multi-User Jamming (Future)

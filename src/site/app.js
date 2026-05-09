@@ -1,12 +1,11 @@
 import PicoTheme from "./pico-theme.js";
 
 // import apps
-import "../app/acid-breaks.js";
+import "../app/playground.js";
 import "../app/generative-music.js";
 import "../app/generative-music-plants.js";
 import "../app/generative-ambient.js";
 import "../app/vocoder.js";
-import "../app/playground.js";
 
 class CustomApp extends HTMLElement {
   connectedCallback() {
@@ -61,12 +60,11 @@ class CustomApp extends HTMLElement {
         <section>
           <header><h1>wam</h1></header>
           <div>
-            <a href="#acid-breaks" role="button">Acid Breaks</a><br /><br />
+            <a href="#playground-app" role="button">Instrument Playground</a><br /><br />
             <a href="#generative-music" role="button">Generative Music</a><br /><br />
             <a href="#generative-music-plants" role="button">Plantasia</a><br /><br />
             <a href="#generative-ambient" role="button">Generative Ambient</a><br /><br />
-            <a href="#vocoder-app" role="button">Vocoder</a><br /><br />
-            <a href="#playground-app" role="button">Instrument Playground</a>
+            <a href="#vocoder-app" role="button">Vocoder</a>
           </div>
         </section>
       </main>

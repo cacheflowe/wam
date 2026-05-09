@@ -427,6 +427,38 @@ export function injectControlsCSS() {
     .wam-play-btn.wam-playing {
       background: color-mix(in srgb, var(--slider-accent, #0f0) 20%, #111);
     }
+    /* ---- Record button ---- */
+    .wam-rec-btn {
+      font-family: monospace;
+      font-size: 0.8em;
+      height: 22px;
+      min-height: 22px;
+      line-height: 1;
+      box-sizing: border-box;
+      border-radius: 3px;
+      cursor: pointer;
+      padding: 0 10px;
+      background: color-mix(in srgb, #c00 10%, #111);
+      color: #c00;
+      border: 1px solid #c00;
+      white-space: nowrap;
+    }
+    .wam-rec-btn:hover { background: #c00; color: #fff; }
+    .wam-rec-btn.wam-recording {
+      background: #c00;
+      color: #fff;
+      animation: wam-rec-pulse 1s ease-in-out infinite;
+    }
+    @keyframes wam-rec-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .wam-rec-timer {
+      font-family: monospace;
+      font-size: 0.75em;
+      color: #c00;
+      min-width: 2.5em;
+    }
     /* ---- Labeled control wrapper ---- */
     .wam-ctrl {
       display: flex;

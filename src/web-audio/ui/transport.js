@@ -1,5 +1,6 @@
 import "./slider.js";
 import "./waveform.js";
+import "./recorder.js";
 import "../fx/fx-unit.js";
 import { injectControlsCSS, createChannelStrip, createCtrl } from "./slider.js";
 import { NOTE_NAMES, SCALES } from "../global/scales.js";
@@ -48,6 +49,7 @@ export class WebAudioTransportControls extends HTMLElement {
     this._instruments = [];
     this._playing = false;
     this._keyHandler = null;
+    this._recorderEl = null;
   }
 
   disconnectedCallback() {
@@ -118,6 +120,10 @@ export class WebAudioTransportControls extends HTMLElement {
     this._playBtn.title = "Play / stop [Space]";
     this._playBtn.addEventListener("click", () => this._playing ? this._stop() : this._play());
     strip.jamGroup.appendChild(this._playBtn);
+
+    // ---- Recorder → jam group ----
+    this._recorderEl = document.createElement("wam-recorder");
+    strip.jamGroup.appendChild(this._recorderEl);
 
     // ---- BPM → dedicated strip group (inserted before mix group) ----
     const bpmGroup = document.createElement("div");
@@ -234,6 +240,11 @@ export class WebAudioTransportControls extends HTMLElement {
     this._meter?.setAnalyser(meterAnalyser);
 
     waveform.init(analyser, color);
+
+    // Recorder — taps the post-FX output
+    this._recorderEl.init(ctx);
+    this._recorderEl.connectFrom(this._fxUnit);
+    this._recorderEl.seq = this._seq;
   }
 
   // ---- Routing ----
@@ -242,6 +253,9 @@ export class WebAudioTransportControls extends HTMLElement {
 
   /** Slot element where apps can append a share/export button. */
   get shareSlot() { return this._shareSlot; }
+
+  /** The recorder element for external access. */
+  get recorder() { return this._recorderEl; }
 
   connect(node) {
     this._out?.connect(node.input ?? node);

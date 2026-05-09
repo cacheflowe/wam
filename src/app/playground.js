@@ -39,7 +39,6 @@ const SAMPLE_SONGS = resolveSongs(
     { name: "Client 04", state: client04State },
   ],
 );
-console.log(SAMPLE_SONGS);
 
 const samplesConfig = {
   breaks: {
