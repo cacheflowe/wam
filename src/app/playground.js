@@ -25,8 +25,19 @@ import WebAudioSynthPad from "../web-audio/instruments/synth-pad.js";
 import WebAudioSynthBlipFX from "../web-audio/instruments/synth-blipfx.js";
 import WebAudioLoopPlayer from "../web-audio/instruments/sample-looper.js";
 import WebAudioSamplePlayer from "../web-audio/instruments/sample-player.js";
-import { tryGlobKeys, resolveSamples } from "../web-audio/global/sample-utils.js";
+import { tryGlobKeys, tryGlobModules, resolveSamples, resolveSongs } from "../web-audio/global/sample-utils.js";
 import "../web-audio/ui/arrangement-library.js";
+
+import electroBreakState from "../data/songs/electro-break.json";
+import letsGoState from "../data/songs/lets-go.json";
+const SAMPLE_SONGS = resolveSongs(
+  tryGlobModules(() => import.meta.glob("../data/songs/*.json", { eager: true })),
+  [
+    { name: "Electro Break", state: electroBreakState },
+    { name: "Lets Go", state: letsGoState },
+  ],
+);
+console.log(SAMPLE_SONGS);
 
 const samplesConfig = {
   breaks: {
@@ -310,6 +321,7 @@ export default class PlaygroundApp extends HTMLElement {
 
     libRow.appendChild(detailsEl);
     main.appendChild(libRow);
+    this._libraryEl.setSampleSongs(SAMPLE_SONGS);
 
     // Transport row
     const transportRow = document.createElement("section");

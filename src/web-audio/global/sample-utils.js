@@ -100,6 +100,37 @@ export function tryGlobKeys(fn) {
 }
 
 /**
+ * Like tryGlobKeys but returns the full module map (keys + values).
+ * Used for eager JSON globs where content is needed, not just paths.
+ * @param {() => Record<string, unknown>} fn
+ * @returns {Record<string, unknown>}
+ */
+export function tryGlobModules(fn) {
+  try {
+    return fn();
+  } catch (e) {
+    return {};
+  }
+}
+
+/**
+ * Resolve a list of {name, state} song entries from an eager glob map or a hard-coded fallback.
+ * @param {Record<string, object>} globModules - result of tryGlobModules
+ * @param {{name: string, state: object}[]} fallback - hard-coded fallback songs
+ * @returns {{name: string, state: object}[]}
+ */
+export function resolveSongs(globModules, fallback) {
+  const entries = Object.entries(globModules);
+  if (!entries.length) return fallback;
+  return entries.map(([path, state]) => ({
+    name: (state.songName || path.split("/").pop().replace(".json", "").replace(/-/g, " ")).replace(/\b\w/g, (c) =>
+      c.toUpperCase()
+    ),
+    state,
+  }));
+}
+
+/**
  * Use glob result if non-empty, otherwise use the committed fallback list.
  * Supports either positional args or a config object:
  *   resolveSamples(globPaths, servedAt, fallback)

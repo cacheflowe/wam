@@ -24,6 +24,7 @@ export default class WebAudioArrangementLibrary extends HTMLElement {
   constructor() {
     super();
     this._built = false;
+    this._sampleSongs = [];
   }
 
   connectedCallback() {
@@ -95,9 +96,60 @@ export default class WebAudioArrangementLibrary extends HTMLElement {
     this._fileInput.addEventListener("change", (e) => this._handleImport(e));
     this.appendChild(this._fileInput);
 
+    this._sampleSongsContainer = document.createElement("div");
+    this._sampleSongsContainer.style.cssText = "margin-bottom: 1rem;";
+    this.appendChild(this._sampleSongsContainer);
+    this._renderSampleSongs();
+
     this._listContainer = document.createElement("div");
     this._listContainer.style.cssText = "display: flex; flex-direction: column; gap: 0.5rem;";
     this.appendChild(this._listContainer);
+  }
+
+  setSampleSongs(songs) {
+    this._sampleSongs = songs || [];
+    if (this._built) this._renderSampleSongs();
+  }
+
+  _renderSampleSongs() {
+    if (!this._sampleSongsContainer) return;
+    this._sampleSongsContainer.innerHTML = "";
+    if (!this._sampleSongs.length) return;
+
+    const row = document.createElement("div");
+    row.style.cssText = "display: flex; align-items: center; gap: 0.5rem;";
+
+    const label = document.createElement("label");
+    label.textContent = "Sample Songs:";
+    label.style.cssText = "font-size: 0.8rem; color: #778; white-space: nowrap;";
+    row.appendChild(label);
+
+    const select = document.createElement("select");
+    select.style.cssText =
+      "flex: 1; background: #1a1a1a; color: #aaa; border: 1px solid #333; padding: 0 5px; font-family: monospace; font-size: 0.8em; height: 22px; border-radius: 3px; cursor: pointer;";
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "-- select a song --";
+    select.appendChild(placeholder);
+
+    for (const song of this._sampleSongs) {
+      const opt = document.createElement("option");
+      opt.value = song.name;
+      opt.textContent = song.name;
+      select.appendChild(opt);
+    }
+
+    select.addEventListener("change", () => {
+      const song = this._sampleSongs.find((s) => s.name === select.value);
+      if (song) {
+        this._fireLoad(song.state, song.name);
+        select.value = "";
+      }
+    });
+
+    row.appendChild(select);
+    this._sampleSongsContainer.appendChild(row);
   }
 
   async _refreshList() {
