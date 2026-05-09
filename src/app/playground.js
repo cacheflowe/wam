@@ -28,9 +28,9 @@ import WebAudioSamplePlayer from "../web-audio/instruments/sample-player.js";
 import { tryGlobKeys, tryGlobModules, resolveSamples, resolveSongs } from "../web-audio/global/sample-utils.js";
 import "../web-audio/ui/arrangement-library.js";
 
-import electroBreakState from "../data/songs/electro-break.json";
-import letsGoState from "../data/songs/lets-go.json";
-import client04State from "../data/songs/client-04.json";
+import electroBreakState from "../data/songs/electro-break.json" with { type: "json" };
+import letsGoState from "../data/songs/lets-go.json" with { type: "json" };
+import client04State from "../data/songs/client-04.json" with { type: "json" };
 const SAMPLE_SONGS = resolveSongs(
   tryGlobModules(() => import.meta.glob("../data/songs/*.json", { eager: true })),
   [
