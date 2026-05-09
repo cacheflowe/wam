@@ -120,13 +120,14 @@ export class WebAudioControlsBase extends HTMLElement {
     this._ctrlBtn = mkToggle("Ctrl", "Show/hide instrument parameters");
     this._seqBtn = mkToggle("Seq", "Show/hide step sequencer");
     this._fxBtn = mkToggle("FX", "Show/hide effects chain");
-    const navLabel = document.createElement("span");
-    navLabel.className = "wam-strip-nav-label";
-    navLabel.textContent = "UI";
-    strip.navGroup.appendChild(navLabel);
-    strip.navGroup.appendChild(this._ctrlBtn);
-    strip.navGroup.appendChild(this._seqBtn);
-    strip.navGroup.appendChild(this._fxBtn);
+    const navWrap = createCtrl("Panels", { tooltip: "Toggle instrument UI sections." });
+    const navBtns = document.createElement("div");
+    navBtns.style.cssText = "display:flex;gap:4px;";
+    navBtns.appendChild(this._ctrlBtn);
+    navBtns.appendChild(this._seqBtn);
+    navBtns.appendChild(this._fxBtn);
+    navWrap.appendChild(navBtns);
+    strip.navGroup.appendChild(navWrap);
 
     // Waveform lives in the viz group alongside the level meter
     const waveform = document.createElement("wam-waveform");

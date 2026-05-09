@@ -118,12 +118,12 @@ export class WebAudioTransportControls extends HTMLElement {
     this._playBtn.className = "wam-play-btn";
     this._playBtn.textContent = "▶ Play";
     this._playBtn.title = "Play / stop [Space]";
-    this._playBtn.addEventListener("click", () => this._playing ? this._stop() : this._play());
+    this._playBtn.addEventListener("click", () => (this._playing ? this._stop() : this._play()));
     strip.jamGroup.appendChild(this._playBtn);
 
-    // ---- Recorder → jam group ----
+    // ---- Recorder → own row below the strip ----
     this._recorderEl = document.createElement("wam-recorder");
-    strip.jamGroup.appendChild(this._recorderEl);
+    this.appendChild(this._recorderEl);
 
     // ---- BPM → dedicated strip group (inserted before mix group) ----
     const bpmGroup = document.createElement("div");
@@ -164,15 +164,22 @@ export class WebAudioTransportControls extends HTMLElement {
         this._scaleSelect.appendChild(opt);
       }
 
-      const onScaleChange = () => { this._broadcastScale(); this._emitChange(); };
+      const onScaleChange = () => {
+        this._broadcastScale();
+        this._emitChange();
+      };
       this._rootSelect.addEventListener("change", onScaleChange);
       this._scaleSelect.addEventListener("change", onScaleChange);
 
       const scaleGroup = document.createElement("div");
       scaleGroup.className = "wam-strip-scale-group";
-      const keyCtrl = createCtrl("Key", { tooltip: "Root note for the global scale. All note instruments transpose to this key." });
+      const keyCtrl = createCtrl("Key", {
+        tooltip: "Root note for the global scale. All note instruments transpose to this key.",
+      });
       keyCtrl.appendChild(this._rootSelect);
-      const scaleCtrl = createCtrl("Scale", { tooltip: "Scale mode applied to all note instruments. Steps are quantized to this scale." });
+      const scaleCtrl = createCtrl("Scale", {
+        tooltip: "Scale mode applied to all note instruments. Steps are quantized to this scale.",
+      });
       scaleCtrl.appendChild(this._scaleSelect);
       scaleGroup.appendChild(keyCtrl);
       scaleGroup.appendChild(scaleCtrl);
@@ -187,8 +194,9 @@ export class WebAudioTransportControls extends HTMLElement {
     this._fxBtn = document.createElement("button");
     this._fxBtn.className = "wam-toggle-btn";
     this._fxBtn.textContent = "FX";
-    this._fxBtn.title = "Show/hide master effects chain";
-    strip.navGroup.appendChild(this._fxBtn);
+    const fxWrap = createCtrl("Effects", { tooltip: "Show/hide master effects chain." });
+    fxWrap.appendChild(this._fxBtn);
+    strip.navGroup.appendChild(fxWrap);
 
     this._shareSlot = document.createElement("span");
     strip.navGroup.appendChild(this._shareSlot);
@@ -249,13 +257,19 @@ export class WebAudioTransportControls extends HTMLElement {
 
   // ---- Routing ----
 
-  get masterGain() { return this._masterGain; }
+  get masterGain() {
+    return this._masterGain;
+  }
 
   /** Slot element where apps can append a share/export button. */
-  get shareSlot() { return this._shareSlot; }
+  get shareSlot() {
+    return this._shareSlot;
+  }
 
   /** The recorder element for external access. */
-  get recorder() { return this._recorderEl; }
+  get recorder() {
+    return this._recorderEl;
+  }
 
   connect(node) {
     this._out?.connect(node.input ?? node);
@@ -270,14 +284,18 @@ export class WebAudioTransportControls extends HTMLElement {
   }
 
   unregisterInstrument(controls) {
-    this._instruments = this._instruments.filter(c => c !== controls);
+    this._instruments = this._instruments.filter((c) => c !== controls);
     return this;
   }
 
   // ---- BPM ----
 
-  get bpm() { return this._bpmSlider ? parseFloat(this._bpmSlider.value) : 128; }
-  set bpm(v) { this._setBpm(v); }
+  get bpm() {
+    return this._bpmSlider ? parseFloat(this._bpmSlider.value) : 128;
+  }
+  set bpm(v) {
+    this._setBpm(v);
+  }
 
   _setBpm(v) {
     if (this._bpmSlider) this._bpmSlider.value = v;
@@ -299,19 +317,29 @@ export class WebAudioTransportControls extends HTMLElement {
     const root = parseInt(this._rootSelect.value);
     const scale = this._scaleSelect.value;
     for (const c of this._instruments) c.setScale?.(root, scale);
-    this.dispatchEvent(new CustomEvent("transport-scale-change", {
-      bubbles: true,
-      detail: { root, scale },
-    }));
+    this.dispatchEvent(
+      new CustomEvent("transport-scale-change", {
+        bubbles: true,
+        detail: { root, scale },
+      }),
+    );
   }
 
   // ---- Play / Stop ----
 
-  get playing() { return this._playing; }
+  get playing() {
+    return this._playing;
+  }
 
-  play()  { this._play(); }
-  stop()  { this._stop(); }
-  broadcastScale() { this._broadcastScale(); }
+  play() {
+    this._play();
+  }
+  stop() {
+    this._stop();
+  }
+  broadcastScale() {
+    this._broadcastScale();
+  }
 
   _play() {
     this._playing = true;
@@ -361,7 +389,7 @@ export class WebAudioTransportControls extends HTMLElement {
     if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
     if (obj.root != null && this._rootSelect) this._rootSelect.value = obj.root;
     if (obj.scale != null && this._scaleSelect) this._scaleSelect.value = obj.scale;
-    if ((obj.root != null || obj.scale != null)) this._broadcastScale();
+    if (obj.root != null || obj.scale != null) this._broadcastScale();
     if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
     if (obj.fxVisible != null && this._fxSection && this._fxBtn) {
       this._fxSection.toggleAttribute("data-hidden", !obj.fxVisible);

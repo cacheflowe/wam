@@ -303,14 +303,6 @@ export function injectControlsCSS() {
     }
     .wam-strip-scale-group .wam-select { max-width: 90px; }
     /* ---- Nav group label ---- */
-    .wam-strip-nav-label {
-      font-size: 0.65em;
-      color: #444;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      white-space: nowrap;
-      margin-right: 4px;
-    }
     .wam-title {
       font-size: 0.7em;
       color: var(--slider-accent, #555);
@@ -376,7 +368,11 @@ export function injectControlsCSS() {
       color: #888;
       border: 1px solid #333;
     }
-    .wam-select { padding: 0 5px; max-width: 160px; }
+    .wam-select { 
+      padding: 0 5px; 
+      min-width:100px; 
+      max-width: 160px; 
+    }
     input.wam-num-input {
       padding: 0 5px;
       width: 52px;
@@ -459,12 +455,24 @@ export function injectControlsCSS() {
       color: #c00;
       min-width: 2.5em;
     }
+    .wam-rec-video-btn:not(.wam-recording) {
+      background: color-mix(in srgb, #c80 10%, #111);
+      color: #c80;
+      border-color: #c80;
+    }
+    .wam-rec-video-btn:not(.wam-recording):hover { background: #c80; color: #000; }
+    .wam-rec-loop-select {
+      width: 100px;
+      min-width: 100px;
+      padding: 0 2px;
+      text-align: center;
+    }
     /* ---- Labeled control wrapper ---- */
     .wam-ctrl {
       display: flex;
       flex-direction: column;
       gap: 4px;
-      min-width: 110px;
+      min-width: 80px;
     }
     .wam-ctrl-wide { min-width: 220px; }
     .wam-ctrl label {
@@ -472,6 +480,9 @@ export function injectControlsCSS() {
       color: #555;
       text-transform: uppercase;
       letter-spacing: 0.05em;
+    }
+    .wam-ctrl > :nth-child(2) {
+      margin-bottom: var(--pico-spacing);
     }
     /* ---- Action row ---- */
     .wam-action-row {
@@ -495,7 +506,7 @@ export function injectControlsCSS() {
       padding: 6px 12px;
       border-bottom: 1px solid #1d1d1d;
       border-radius: 5px 5px 0 0;
-      overflow: hidden;
+      overflow: visible;
     }
     .wam-strip-name-group {
       display: flex;
@@ -548,7 +559,7 @@ export function injectControlsCSS() {
     .wam-strip-jam-group:empty { display: none; }
     .wam-strip-mix-group {
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       gap: 6px;
       flex: 2 1 180px;
       min-width: 140px;
@@ -557,11 +568,12 @@ export function injectControlsCSS() {
     .wam-strip-mix-group wam-slider[param="pan"] { flex: 1 1 50px; max-width: 88px; }
     .wam-strip-nav-group {
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       gap: 4px;
       flex: 0 0 auto;
       margin-left: auto;
     }
+    .wam-strip-nav-group .wam-ctrl { min-width: auto; }
     .wam-strip-nav-group:empty { display: none; }
     @media (max-width: 520px) {
       .wam-strip-name-group { flex: 0 0 100%; overflow: visible; padding-bottom: 2px; }
@@ -711,7 +723,9 @@ export function createChannelStrip(
   const muteBtn = document.createElement("button");
   muteBtn.className = "wam-mute-btn";
   muteBtn.textContent = "Mute";
-  mixGroup.appendChild(muteBtn);
+  const muteWrap = createCtrl("Mute", { tooltip: "Mute/unmute this channel." });
+  muteWrap.appendChild(muteBtn);
+  mixGroup.appendChild(muteWrap);
 
   strip.appendChild(mixGroup);
 

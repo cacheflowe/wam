@@ -9,6 +9,8 @@
   --font-weight: 400;
   --border-radius: 0;
   --text-bg: rgba(255, 255, 255, 0.6);
+  /* pico overrides */
+  --pico-form-element-spacing-horizontal: 0.2rem;
 }
 
 @media only screen and (prefers-color-scheme: dark) {
