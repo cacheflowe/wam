@@ -39,7 +39,7 @@ export default class WebAudioStepSeq extends HTMLElement {
     if (WebAudioStepSeq.#cssInjected) return;
     WebAudioStepSeq.#cssInjected = true;
     const style = document.createElement("style");
-    style.textContent = `
+    style.textContent = /* css */ `
       wam-step-seq {
         display: grid;
         grid-template-columns: repeat(var(--seq-cols, 16), 1fr);
@@ -67,8 +67,7 @@ export default class WebAudioStepSeq extends HTMLElement {
         background: none;
         border: 1px solid color-mix(in srgb, var(--seq-color, #0f0) 50%, transparent);
         color: color-mix(in srgb, var(--seq-color, #0f0) 50%, transparent);
-        border-radius: 50%;
-        width: 22px;
+        width: 100%;
         height: 22px;
         font-size: 0.7rem;
         cursor: pointer;
@@ -563,7 +562,9 @@ export default class WebAudioStepSeq extends HTMLElement {
   setNoteOptions(opts) {
     if (!opts || !opts.length) {
       // Hide note selects when no options (e.g. drum mode)
-      this._noteSelects.forEach((sel) => { sel.style.display = "none"; });
+      this._noteSelects.forEach((sel) => {
+        sel.style.display = "none";
+      });
       return;
     }
     const vals = opts.map(([, m]) => m);

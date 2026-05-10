@@ -4,16 +4,16 @@
  * Center = bypass. Left half = LP sweep (20kHz→80Hz log).
  * Right half = HP sweep (20Hz→8kHz log).
  *
- * Value display shows "LP 2.4k" / "open" / "HP 380" with mode-colored text.
- * Visually matches <wam-slider> exactly; only the value display differs.
+ * Wraps a <wam-knob> internally for the rotary knob UI, with a custom
+ * value display showing "LP 2.4k" / "open" / "HP 380" with mode-colored text.
  *
- * Dispatches: slider-input { param, value: -1..1 }
+ * Dispatches: knob-input { param, value: -1..1 }
  *
  * Usage:
- *   <wam-filter-sweep param="filterSweep" label="Filter"></filter-sweep>
+ *   <wam-filter-sweep param="filterSweep" label="Filter"></wam-filter-sweep>
  */
 
-import WebAudioSlider from "./slider.js";
+import "./knob.js";
 import { sweepToLpFreq, sweepToHpFreq } from "../fx/fx-filter.js";
 
 function fmtFreq(hz) {
@@ -27,88 +27,57 @@ export default class WebAudioFilterSweep extends HTMLElement {
 
   constructor() {
     super();
-    this._range = null;
+    this._knob = null;
     this._valEl = null;
     this._built = false;
   }
 
   connectedCallback() {
-    WebAudioSlider._injectCSS();
     WebAudioFilterSweep.#injectCSS();
     if (!this._built) this._build();
   }
 
   get value() {
-    return this._range ? parseFloat(this._range.value) : 0;
+    return this._knob ? this._knob.value : 0;
   }
 
   set value(v) {
     const num = Math.max(-1, Math.min(1, parseFloat(v) || 0));
-    if (this._range) this._range.value = num;
+    if (this._knob) this._knob.value = num;
+    this.setAttribute("value", num);
     this._updateDisplay(num);
   }
 
   _build() {
     this._built = true;
-    const color = this.getAttribute("color");
-    if (color) this.style.setProperty("--slider-accent", color);
 
-    // Top row — identical structure to WebAudioSlider
-    const top = document.createElement("div");
-    top.className = "wam-top";
-
-    const lbl = document.createElement("label");
-    lbl.className = "wam-label";
-
-    const labelText = document.createElement("span");
-    labelText.className = "wam-label-text";
-    labelText.textContent = (this.getAttribute("label") || "Filter") + " ";
+    const param = this.getAttribute("param") || "filterSweep";
+    const label = this.getAttribute("label") || "Filter";
     const tooltip = this.getAttribute("data-tooltip");
+    const initVal = parseFloat(this.getAttribute("value") || "0");
+
+    // Embedded knob — bipolar range -1..1
+    this._knob = document.createElement("wam-knob");
+    this._knob.setAttribute("param", param);
+    this._knob.setAttribute("label", label);
+    this._knob.setAttribute("min", "-1");
+    this._knob.setAttribute("max", "1");
+    this._knob.setAttribute("step", "0.001");
+    this._knob.setAttribute("default", "0");
     if (tooltip) {
-      labelText.setAttribute("data-tooltip", tooltip);
+      this._knob.setAttribute("data-tooltip", tooltip);
       this.removeAttribute("data-tooltip");
     }
+    this._knob.value = initVal;
+    this.appendChild(this._knob);
 
-    this._valEl = document.createElement("span");
-    this._valEl.className = "wam-val";
+    // Custom value display (replaces the knob's built-in numeric display)
+    this._valEl = this._knob.querySelector(".wam-knob-value");
+    this._updateDisplay(initVal);
 
-    lbl.appendChild(labelText);
-    lbl.appendChild(this._valEl);
-    top.appendChild(lbl);
-    this.appendChild(top);
-
-    // Range input — identical to WebAudioSlider's range
-    this._range = document.createElement("input");
-    this._range.type = "range";
-    this._range.className = "wam-range";
-    this._range.min = -1;
-    this._range.max = 1;
-    this._range.step = 0.001;
-    this._range.value = parseFloat(this.getAttribute("value") || "0");
-    this.appendChild(this._range);
-
-    this._updateDisplay(parseFloat(this._range.value));
-
-    this._range.addEventListener("input", () => {
-      const v = parseFloat(this._range.value);
-      this._updateDisplay(v);
-      this.dispatchEvent(
-        new CustomEvent("slider-input", {
-          bubbles: true,
-          detail: { param: this.getAttribute("param") || "filterSweep", value: v },
-        }),
-      );
-    });
-
-    this._range.addEventListener("dblclick", () => {
-      this._range.value = 0;
-      this._updateDisplay(0);
-      this.dispatchEvent(
-        new CustomEvent("slider-input", {
-          bubbles: true,
-          detail: { param: this.getAttribute("param") || "filterSweep", value: 0 },
-        }),
-      );
+    // Listen for knob-input and update display
+    this._knob.addEventListener("knob-input", (e) => {
+      this._updateDisplay(e.detail.value);
     });
   }
 
@@ -132,15 +101,11 @@ export default class WebAudioFilterSweep extends HTMLElement {
     const s = document.createElement("style");
     s.textContent = `
       wam-filter-sweep {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        min-width: 80px;
-        font-family: monospace;
+        display: contents;
       }
-      wam-filter-sweep .wam-val[data-mode="open"] { color: #555; }
-      wam-filter-sweep .wam-val[data-mode="lp"]   { color: #48f; transition: color 0.1s; }
-      wam-filter-sweep .wam-val[data-mode="hp"]   { color: #fa6; transition: color 0.1s; }
+      wam-filter-sweep .wam-knob-value[data-mode="open"] { color: #555; }
+      wam-filter-sweep .wam-knob-value[data-mode="lp"]   { color: #48f; transition: color 0.1s; }
+      wam-filter-sweep .wam-knob-value[data-mode="hp"]   { color: #fa6; transition: color 0.1s; }
     `;
     document.head.appendChild(s);
   }

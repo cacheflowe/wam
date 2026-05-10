@@ -26,7 +26,7 @@ import WebAudioFxChorus from "./fx-chorus.js";
 import WebAudioFxFilter from "./fx-filter.js";
 import "../ui/slider.js";
 import "../ui/filter-sweep.js";
-import { injectControlsCSS, createSection, createCtrl } from "../ui/slider.js";
+import { injectControlsCSS, createSection } from "../ui/slider.js";
 
 export default class WebAudioFxUnit extends HTMLElement {
   static #cssInjected = false;
@@ -155,7 +155,7 @@ export default class WebAudioFxUnit extends HTMLElement {
       chorusFeedback: this._chorus?.feedback ?? 0,
       chorusWet: this._chorus?.wet ?? 0,
       chorusSpread: this._chorus?.spread ?? 1,
-      chorusShape: this._chorus?.shape ?? "sine",
+      chorusShape: ["sine", "triangle"].indexOf(this._chorus?.shape ?? "sine"),
       filterSweep: this._filter?.sweep ?? 0,
       filterQ: this._filter?.q ?? 0.7,
     };
@@ -165,37 +165,37 @@ export default class WebAudioFxUnit extends HTMLElement {
     if (!obj) return;
     if (obj.reverbWet != null && this._reverb) {
       this._reverb.wet = obj.reverbWet;
-      const s = this.querySelector('wam-slider[param="reverbWet"]');
+      const s = this.querySelector('wam-knob[param="reverbWet"]');
       if (s) s.value = obj.reverbWet;
     }
     if (obj.reverbPreDelay != null && this._reverb) {
       this._reverb.preDelay = obj.reverbPreDelay;
-      const s = this.querySelector('wam-slider[param="reverbPreDelay"]');
+      const s = this.querySelector('wam-knob[param="reverbPreDelay"]');
       if (s) s.value = obj.reverbPreDelay;
     }
     if (obj.reverbHpFreq != null && this._reverb) {
       this._reverb.hpFreq = obj.reverbHpFreq;
-      const s = this.querySelector('wam-slider[param="reverbHpFreq"]');
+      const s = this.querySelector('wam-knob[param="reverbHpFreq"]');
       if (s) s.value = obj.reverbHpFreq;
     }
     if (obj.reverbLpFreq != null && this._reverb) {
       this._reverb.lpFreq = obj.reverbLpFreq;
-      const s = this.querySelector('wam-slider[param="reverbLpFreq"]');
+      const s = this.querySelector('wam-knob[param="reverbLpFreq"]');
       if (s) s.value = obj.reverbLpFreq;
     }
     if (obj.delayInterval != null && this._delay) {
       this._delay.interval = obj.delayInterval;
-      const sel = this.querySelector('select[data-param="delayInterval"]');
-      if (sel) sel.value = obj.delayInterval;
+      const s = this.querySelector('wam-knob[param="delayInterval"]');
+      if (s) s.value = obj.delayInterval;
     }
     if (obj.delayFeedback != null && this._delay) {
       this._delay.feedback = obj.delayFeedback;
-      const s = this.querySelector('wam-slider[param="delayFeedback"]');
+      const s = this.querySelector('wam-knob[param="delayFeedback"]');
       if (s) s.value = obj.delayFeedback;
     }
     if (obj.delayMix != null && this._delay) {
       this._delay.wet = obj.delayMix;
-      const s = this.querySelector('wam-slider[param="delayMix"]');
+      const s = this.querySelector('wam-knob[param="delayMix"]');
       if (s) s.value = obj.delayMix;
     }
     if (obj.delayFilterSweep != null && this._delay) {
@@ -208,48 +208,56 @@ export default class WebAudioFxUnit extends HTMLElement {
     }
     if (obj.delayModulation != null && this._delay) {
       this._delay.modulation = obj.delayModulation;
-      const s = this.querySelector('wam-slider[param="delayModulation"]');
+      const s = this.querySelector('wam-knob[param="delayModulation"]');
       if (s) s.value = obj.delayModulation;
     }
     if (obj.chorusVoices != null && this._chorus) {
       this._chorus.voices = obj.chorusVoices;
-      const sel = this.querySelector('select[data-param="chorusVoices"]');
-      if (sel) sel.value = obj.chorusVoices;
+      const s = this.querySelector('wam-knob[param="chorusVoices"]');
+      if (s) s.value = obj.chorusVoices;
     }
     if (obj.chorusRate != null && this._chorus) {
       this._chorus.rate = obj.chorusRate;
-      const s = this.querySelector('wam-slider[param="chorusRate"]');
+      const s = this.querySelector('wam-knob[param="chorusRate"]');
       if (s) s.value = obj.chorusRate;
     }
     if (obj.chorusDepth != null && this._chorus) {
       this._chorus.depth = obj.chorusDepth;
-      const s = this.querySelector('wam-slider[param="chorusDepth"]');
+      const s = this.querySelector('wam-knob[param="chorusDepth"]');
       if (s) s.value = obj.chorusDepth;
     }
     if (obj.chorusDelay != null && this._chorus) {
       this._chorus.delay = obj.chorusDelay;
-      const s = this.querySelector('wam-slider[param="chorusDelay"]');
+      const s = this.querySelector('wam-knob[param="chorusDelay"]');
       if (s) s.value = obj.chorusDelay;
     }
     if (obj.chorusFeedback != null && this._chorus) {
       this._chorus.feedback = obj.chorusFeedback;
-      const s = this.querySelector('wam-slider[param="chorusFeedback"]');
+      const s = this.querySelector('wam-knob[param="chorusFeedback"]');
       if (s) s.value = obj.chorusFeedback;
     }
     if (obj.chorusSpread != null && this._chorus) {
       this._chorus.spread = obj.chorusSpread;
-      const s = this.querySelector('wam-slider[param="chorusSpread"]');
+      const s = this.querySelector('wam-knob[param="chorusSpread"]');
       if (s) s.value = obj.chorusSpread;
     }
     if (obj.chorusWet != null && this._chorus) {
       this._chorus.wet = obj.chorusWet;
-      const s = this.querySelector('wam-slider[param="chorusWet"]');
+      const s = this.querySelector('wam-knob[param="chorusWet"]');
       if (s) s.value = obj.chorusWet;
     }
     if (obj.chorusShape != null && this._chorus) {
-      this._chorus.shape = obj.chorusShape;
-      const sel = this.querySelector('select[data-param="chorusShape"]');
-      if (sel) sel.value = obj.chorusShape;
+      // backwards-compat: old saves stored string ("sine"/"triangle"), new saves store index
+      const shapes = ["sine", "triangle"];
+      if (typeof obj.chorusShape === "string") {
+        this._chorus.shape = obj.chorusShape;
+        const s = this.querySelector('wam-knob[param="chorusShape"]');
+        if (s) s.value = Math.max(0, shapes.indexOf(obj.chorusShape));
+      } else {
+        this._chorus.shape = shapes[Math.round(obj.chorusShape)] || "sine";
+        const s = this.querySelector('wam-knob[param="chorusShape"]');
+        if (s) s.value = obj.chorusShape;
+      }
     }
     if (obj.filterSweep != null && this._filter) {
       this._filter.sweep = obj.filterSweep;
@@ -262,7 +270,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     }
     if (obj.filterQ != null && this._filter) {
       this._filter.q = obj.filterQ;
-      const s = this.querySelector('wam-slider[param="filterQ"]');
+      const s = this.querySelector('wam-knob[param="filterQ"]');
       if (s) s.value = obj.filterQ;
     }
   }
@@ -272,15 +280,6 @@ export default class WebAudioFxUnit extends HTMLElement {
   _buildUI(options) {
     this.innerHTML = "";
     injectControlsCSS();
-
-    const mkSelect = (labelText, appendTo, tooltip = null) => {
-      const wrap = createCtrl(labelText, { tooltip });
-      const sel = document.createElement("select");
-      sel.className = "wam-select";
-      wrap.appendChild(sel);
-      appendTo.appendChild(wrap);
-      return sel;
-    };
 
     // ---- Filter ----
     const { el: filtEl, controls: filtCtrl } = createSection("Filter");
@@ -300,18 +299,9 @@ export default class WebAudioFxUnit extends HTMLElement {
     delCtrl.appendChild(this._addSlider("delayMix", "Mix", 0, 1, 0.01, options.delayMix ?? 0, {
       tooltip: "Delay wet/dry mix. 0 = dry only, 1 = delay only.",
     }));
-    const intervalSelect = mkSelect("Interval", delCtrl, "Delay time as a rhythmic fraction. Syncs to the current BPM.");
-    intervalSelect.dataset.param = "delayInterval";
-    WebAudioFxDelay.INTERVALS.forEach(({ label, beats }) => {
-      const opt = document.createElement("option");
-      opt.value = beats;
-      opt.textContent = label;
-      if (beats === (options.delayInterval ?? 0.75)) opt.selected = true;
-      intervalSelect.appendChild(opt);
-    });
-    intervalSelect.addEventListener("change", () => {
-      if (this._delay) this._delay.interval = parseFloat(intervalSelect.value);
-    });
+    delCtrl.appendChild(this._addSlider("delayInterval", "Interval", 0.25, 2, 0.25, options.delayInterval ?? 0.75, {
+      tooltip: "Delay time as a rhythmic fraction. Syncs to the current BPM.",
+    }));
     delCtrl.appendChild(this._addSlider("delayFeedback", "Feedbk", 0, 0.9, 0.01, options.delayFeedback ?? 0.35, {
       tooltip: "How much of the delay output feeds back into the input. High values = long, cascading repeats.",
     }));
@@ -331,30 +321,14 @@ export default class WebAudioFxUnit extends HTMLElement {
     chorCtrl.appendChild(this._addSlider("chorusWet", "Wet", 0, 1, 0.01, options.chorusWet ?? 0, {
       tooltip: "Chorus wet/dry mix. 0 = dry, 1 = full chorus effect.",
     }));
-    const voicesSelect = mkSelect("Voices", chorCtrl, "Number of chorus voices. More voices = thicker, denser modulation.");
-    voicesSelect.dataset.param = "chorusVoices";
-    for (let v = 1; v <= 6; v++) {
-      const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v;
-      if (v === (options.chorusVoices ?? 3)) opt.selected = true;
-      voicesSelect.appendChild(opt);
-    }
-    voicesSelect.addEventListener("change", () => {
-      if (this._chorus) this._chorus.voices = parseInt(voicesSelect.value);
-    });
-    const shapeSelect = mkSelect("Shape", chorCtrl, "LFO waveform for modulation. Sine = smooth sweep, triangle = slightly sharper.");
-    shapeSelect.dataset.param = "chorusShape";
-    ["sine", "triangle"].forEach((s) => {
-      const opt = document.createElement("option");
-      opt.value = s;
-      opt.textContent = s;
-      if (s === (options.chorusShape ?? "sine")) opt.selected = true;
-      shapeSelect.appendChild(opt);
-    });
-    shapeSelect.addEventListener("change", () => {
-      if (this._chorus) this._chorus.shape = shapeSelect.value;
-    });
+    chorCtrl.appendChild(this._addSlider("chorusVoices", "Voices", 1, 6, 1, options.chorusVoices ?? 3, {
+      tooltip: "Number of chorus voices. More voices = thicker, denser modulation.",
+    }));
+    const CHORUS_SHAPES = ["sine", "triangle"];
+    const shapeIdx = CHORUS_SHAPES.indexOf(options.chorusShape ?? "sine");
+    chorCtrl.appendChild(this._addSlider("chorusShape", "Shape", 0, 1, 1, Math.max(0, shapeIdx), {
+      tooltip: "LFO waveform. 0 = sine (smooth sweep), 1 = triangle (slightly sharper).",
+    }));
     chorCtrl.appendChild(
       this._addSlider("chorusRate", "Rate", 0.05, 10, 0.01, options.chorusRate ?? 0.8, {
         scale: "log",
@@ -397,8 +371,8 @@ export default class WebAudioFxUnit extends HTMLElement {
     );
     this.appendChild(revEl);
 
-    // Delegated listener for all sliders
-    this.addEventListener("slider-input", (e) => {
+    // Delegated listener for all knobs and sliders
+    const handleFxInput = (e) => {
       const { param, value } = e.detail;
       switch (param) {
         case "reverbWet":
@@ -422,8 +396,14 @@ export default class WebAudioFxUnit extends HTMLElement {
         case "delayFilterSweep":
           if (this._delay) this._delay.filterSweep = value;
           break;
+        case "delayInterval":
+          if (this._delay) this._delay.interval = value;
+          break;
         case "delayModulation":
           if (this._delay) this._delay.modulation = value;
+          break;
+        case "chorusVoices":
+          if (this._chorus) this._chorus.voices = Math.round(value);
           break;
         case "chorusRate":
           if (this._chorus) this._chorus.rate = value;
@@ -440,6 +420,9 @@ export default class WebAudioFxUnit extends HTMLElement {
         case "chorusSpread":
           if (this._chorus) this._chorus.spread = value;
           break;
+        case "chorusShape":
+          if (this._chorus) this._chorus.shape = ["sine", "triangle"][Math.round(value)] || "sine";
+          break;
         case "chorusWet":
           if (this._chorus) this._chorus.wet = value;
           break;
@@ -450,11 +433,13 @@ export default class WebAudioFxUnit extends HTMLElement {
           if (this._filter) this._filter.q = value;
           break;
       }
-    });
+    };
+    this.addEventListener("knob-input", handleFxInput);
+    this.addEventListener("slider-input", handleFxInput);
   }
 
   _addSlider(param, label, min, max, step, value, opts = {}) {
-    const slider = document.createElement("wam-slider");
+    const slider = document.createElement("wam-knob");
     slider.setAttribute("param", param);
     slider.setAttribute("label", label);
     slider.setAttribute("min", min);

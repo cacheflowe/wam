@@ -174,15 +174,17 @@ export class WebAudioControlsBase extends HTMLElement {
     controls.className = "wam-controls";
     this._ctrlSection.appendChild(controls);
 
-    // Slider factory — creates a wam-slider, registers in _sliders, returns element
+    // Slider factory — creates a wam-slider or wam-knob, registers in _sliders, returns element
     const mkSlider = (def) => {
-      const s = document.createElement("wam-slider");
+      const tag = def.knob === false ? "wam-slider" : "wam-knob";
+      const s = document.createElement(tag);
       s.setAttribute("param", def.param);
       s.setAttribute("label", def.label);
       s.setAttribute("min", def.min);
       s.setAttribute("max", def.max);
       s.setAttribute("step", def.step);
       if (def.scale) s.setAttribute("scale", def.scale);
+      if (def.color) s.setAttribute("color", def.color);
       const tooltip = def.tooltip ?? (this.constructor.SLIDER_DEFS || []).find((d) => d.param === def.param)?.tooltip;
       if (tooltip) s.setAttribute("data-tooltip", tooltip);
       s.value = instrument[def.param];
@@ -194,13 +196,12 @@ export class WebAudioControlsBase extends HTMLElement {
     // so subclasses' expanded.appendChild(this._seq) targets the padded seq content area
     this._buildControls(controls, this._seqControls, mkSlider, ctx, options);
 
-    // Delegated slider-input listener
-    this.addEventListener("slider-input", (e) => {
+    // Delegated slider-input / knob-input listener
+    const handleInput = (e) => {
       if (!this._instrument) return;
       const { param, value } = e.detail;
       if (param === "volume") {
         if (this._muteHandle?.isMuted()) {
-          // While muted, update the stored volume so unmute restores it
           this._muteHandle.setPreMuteVolume(value);
         } else {
           if (this._out) this._out.gain.value = value;
@@ -213,7 +214,9 @@ export class WebAudioControlsBase extends HTMLElement {
         this._onSliderInput(param, value);
       }
       this._emitChange();
-    });
+    };
+    this.addEventListener("knob-input", handleInput);
+    this.addEventListener("slider-input", handleInput);
 
     // FX unit (inside fx section, overridable — 808 returns null)
     this._fxUnit = this._createFxUnit(this._fxSection, ctx, options);

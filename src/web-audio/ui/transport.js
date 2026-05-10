@@ -101,7 +101,7 @@ export class WebAudioTransportControls extends HTMLElement {
     this._volSlider = strip.volSlider;
     this._meter = strip.meter;
 
-    this.addEventListener("slider-input", (e) => {
+    const handleVolInput = (e) => {
       if (e.detail.param === "volume") {
         if (this._muteHandle.isMuted()) {
           this._muteHandle.setPreMuteVolume(e.detail.value);
@@ -111,7 +111,9 @@ export class WebAudioTransportControls extends HTMLElement {
         this._emitChange();
         e.stopPropagation();
       }
-    });
+    };
+    this.addEventListener("knob-input", handleVolInput);
+    this.addEventListener("slider-input", handleVolInput);
 
     // ---- Play/Stop button → jam group ----
     this._playBtn = document.createElement("button");

@@ -429,8 +429,12 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
 
     // ---- Filter ----
     const { el: filterEl, controls: filterCtrl } = createSection("Filter");
-    filterCtrl.appendChild(mkSlider({ param: "cutoff", label: "Cutoff", min: 50, max: 10000, step: 1, scale: "log" }));
-    filterCtrl.appendChild(mkSlider({ param: "resonance", label: "Resonance", min: 0.1, max: 30, step: 0.1 }));
+    filterCtrl.appendChild(
+      mkSlider({ param: "cutoff", label: "Cutoff", min: 50, max: 10000, step: 1, scale: "log" }),
+    );
+    filterCtrl.appendChild(
+      mkSlider({ param: "resonance", label: "Resonance", min: 0.1, max: 30, step: 0.1 }),
+    );
     filterCtrl.appendChild(mkSlider({ param: "envMod", label: "Env Mod", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(filterEl);
 
@@ -442,8 +446,12 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
 
     // ---- Character ----
     const { el: charEl, controls: charCtrl } = createSection("Character");
-    charCtrl.appendChild(mkSlider({ param: "distortion", label: "Distortion", min: 0, max: 1, step: 0.01 }));
-    charCtrl.appendChild(mkSlider({ param: "portamento", label: "Portamento", min: 0, max: 0.5, step: 0.001 }));
+    charCtrl.appendChild(
+      mkSlider({ param: "distortion", label: "Distortion", min: 0, max: 1, step: 0.01 }),
+    );
+    charCtrl.appendChild(
+      mkSlider({ param: "portamento", label: "Portamento", min: 0, max: 0.5, step: 0.001 }),
+    );
     controls.appendChild(charEl);
 
     // ---- Unison ----
@@ -455,7 +463,9 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     // ---- Octave ----
     const { el: octEl, controls: octCtrl } = createSection("Octave");
     octCtrl.appendChild(mkSlider({ param: "octaveOffset", label: "Offset", min: -2, max: 2, step: 1 }));
-    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0, max: 1, step: 0.01 }));
+    octCtrl.appendChild(
+      mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0, max: 1, step: 0.01 }),
+    );
     controls.appendChild(octEl);
 
     // ---- Sequencer ----
@@ -554,7 +564,12 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
             if (ratchet > 1) {
               const ratchetDuration = subStepDur / ratchet;
               for (let i = 0; i < ratchet; i++) {
-                this._instrument.trigger(s.note, ratchetDuration * 0.9, s.accent && i === 0, subTime + i * ratchetDuration);
+                this._instrument.trigger(
+                  s.note,
+                  ratchetDuration * 0.9,
+                  s.accent && i === 0,
+                  subTime + i * ratchetDuration,
+                );
               }
             } else {
               this._instrument.trigger(s.note, subStepDur, s.accent, subTime);

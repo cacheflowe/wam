@@ -1,4 +1,5 @@
 import "./level-meter.js";
+import "./knob.js";
 
 // Set to false to start all channel strips expanded by default.
 export const CHANNEL_STRIP_COLLAPSED_DEFAULT = true;
@@ -564,8 +565,8 @@ export function injectControlsCSS() {
       flex: 2 1 180px;
       min-width: 140px;
     }
-    .wam-strip-mix-group wam-slider             { flex: 2 1 55px; }
-    .wam-strip-mix-group wam-slider[param="pan"] { flex: 1 1 50px; max-width: 88px; }
+    .wam-strip-mix-group wam-knob             { flex: 0 0 auto; }
+    .wam-strip-mix-group wam-knob[param="pan"] { flex: 0 0 auto; }
     .wam-strip-nav-group {
       display: flex;
       align-items: flex-end;
@@ -698,7 +699,7 @@ export function createChannelStrip(
   const mixGroup = document.createElement("div");
   mixGroup.className = "wam-strip-mix-group";
 
-  const volSlider = document.createElement("wam-slider");
+  const volSlider = document.createElement("wam-knob");
   volSlider.setAttribute("param", "volume");
   volSlider.setAttribute("label", "Vol");
   volSlider.setAttribute("min", "0");
@@ -709,7 +710,7 @@ export function createChannelStrip(
 
   let panSlider = null;
   if (pan) {
-    panSlider = document.createElement("wam-slider");
+    panSlider = document.createElement("wam-knob");
     panSlider.setAttribute("param", "pan");
     panSlider.setAttribute("label", "Pan");
     panSlider.setAttribute("min", "-1");
