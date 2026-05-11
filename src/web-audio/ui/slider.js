@@ -313,6 +313,12 @@ export function injectControlsCSS() {
       padding: 10px 14px 0;
     }
     .wam-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding: 6px 14px 10px;
+    }
+    .wam-section-ctrl > .wam-controls {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 8px;
