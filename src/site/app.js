@@ -19,7 +19,6 @@ class CustomApp extends HTMLElement {
 
   init() {
     this.initServiceWorker();
-    this.initInstallPrompt();
     this.initHash();
     document.addEventListener("touchstart", function () {}, false); // enable pseudo styles for mobile
   }
@@ -28,54 +27,6 @@ class CustomApp extends HTMLElement {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js");
     }
-  }
-
-  // ---- PWA install prompt ----
-
-  initInstallPrompt() {
-    // Skip if already running as installed PWA
-    if (window.matchMedia("(display-mode: standalone)").matches) return;
-    if (navigator.standalone) return; // Safari standalone check
-
-    // Chrome/Edge: capture the native install prompt
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault();
-      this._deferredInstallPrompt = e;
-      this._showInstallButton();
-    });
-
-    // iOS Safari: no native prompt, show manual instructions
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    if (isIOS) this._showInstallButton(true);
-  }
-
-  _showInstallButton(isIOS = false) {
-    // Avoid duplicate buttons
-    if (this.querySelector(".wam-install-btn")) return;
-
-    const btn = document.createElement("button");
-    btn.className = "wam-install-btn";
-    btn.textContent = "📲 Install App";
-    btn.style.cssText = "margin-top: 1rem;";
-
-    btn.addEventListener("click", () => {
-      if (isIOS) {
-        alert('Tap the Share button in Safari, then choose "Add to Home Screen".');
-      } else if (this._deferredInstallPrompt) {
-        this._deferredInstallPrompt.prompt();
-        this._deferredInstallPrompt.userChoice.then(() => {
-          this._deferredInstallPrompt = null;
-          btn.remove();
-        });
-      }
-    });
-
-    // Insert after the nav links on the intro page, or at the top
-    const section = this.querySelector("section div") || this;
-    section.appendChild(btn);
-
-    // Hide if the user installs via browser UI
-    window.addEventListener("appinstalled", () => btn.remove());
   }
 
   initHash() {
