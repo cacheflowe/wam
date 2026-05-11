@@ -473,10 +473,10 @@ export default class WebAudioFxUnit extends HTMLElement {
     const style = document.createElement("style");
     style.textContent = `
       wam-fx-unit {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-        padding: 6px 14px 10px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 8px;
+        padding: 8px 14px 10px;
         background: #0d0d0d;
         font-family: monospace;
         --slider-accent: var(--fx-accent, #0f0);

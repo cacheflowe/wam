@@ -228,7 +228,7 @@ export default class WebAudioSlider extends HTMLElement {
     if (WebAudioSlider.#cssInjected) return;
     WebAudioSlider.#cssInjected = true;
     const s = document.createElement("style");
-    s.textContent = `
+    s.textContent = /* css */ `
       wam-slider {
         display: flex;
         flex-direction: column;
@@ -311,29 +311,28 @@ export function injectControlsCSS() {
       text-transform: uppercase;
       letter-spacing: 0.1em;
       padding: 10px 14px 0;
-      opacity: 0.6;
     }
     .wam-controls {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-      padding: 6px 14px 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+      padding: 8px 14px 10px;
     }
     .wam-section {
       display: flex;
       flex-direction: column;
       gap: 6px;
-      padding: 6px 0;
-    }
-    .wam-section + .wam-section {
-      border-top: 1px solid #1d1d1d;
+      padding: 8px;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.02);
     }
     .wam-section .wam-title { padding: 0; }
     .wam-section-controls {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-start;
-      gap: 8px 14px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+      align-items: start;
+      gap: 8px 6px;
     }
     .wam-wave-row {
       display: flex;
@@ -474,9 +473,10 @@ export function injectControlsCSS() {
       display: flex;
       flex-direction: column;
       gap: 4px;
-      min-width: 80px;
+      min-width: 0;
+      grid-column: span 2;
     }
-    .wam-ctrl-wide { min-width: 220px; }
+    .wam-ctrl-wide { grid-column: span 4; }
     .wam-ctrl label {
       font-size: 0.7em;
       color: #555;

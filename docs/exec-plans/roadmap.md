@@ -68,6 +68,7 @@ Build a library of browser-based instruments that are:
 | **Knob controls / compact UI** | 2026-05-11 — `<wam-knob>` SVG rotary knob component replaces sliders across all instruments, FX, channel strips, and filter sweep; `<wam-param-display>` floating overlay for touch feedback |
 | **Reverb overhaul** | 2026-05-11 — Improved IR synthesis with early reflections, frequency-dependent decay (damping), stereo decorrelation (width), normalization; 3 new controls (Decay, Damping, Width) exposed in FX unit UI |
 | **Event-driven control everywhere** | 2026-05-11 — All parameter changes flow through `knob-input` events via delegated listener; `_registerSelect()`/`_registerToggle()` base-class helpers eliminate per-instrument boilerplate; presets, restore, and automation all use the same event path |
+| **UI grid layout** | 2026-05-11 — `.wam-controls` and `wam-fx-unit` use CSS Grid (`auto-fill, minmax(200px, 1fr)`) for responsive section columns; `.wam-section` bordered cards; `.wam-section-controls` nested grid for knob layout; `.wam-ctrl`/`.wam-ctrl-wide` column spanning |
 
 ## Near-Term Goals
 
@@ -82,7 +83,6 @@ Build a library of browser-based instruments that are:
 | **Sidechain compressor** | Medium | Duck instrument gain based on another instrument's amplitude; instrument selector UI (like vocoder carrier routing); see **New Effects** section below |
 | **MediaRecorder video+audio capture** | Medium | Record window/interface as video+audio; transport-aware loop recording; see **MediaRecorder Recording** section below |
 | Responsive volume / overload protection | Medium | See **Responsive Volume** section below |
-| Acid-breaks UI grid layout | Medium | Container queries for responsive panel grid; see **Layout** section below |
 | Pattern evolution tools | Medium | Slow morph / mutation of sequences over time; see **Pattern Evolution** section below |
 | **Humanization tools** | Medium | Swing, trigger delay, velocity variation, timing jitter, ghost notes; see **Humanization** section below |
 | **Auto-normalization / gain staging** | Medium | Per-instrument default volumes and red-line protection; see **Auto-Normalization** section below |

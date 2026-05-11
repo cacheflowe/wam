@@ -355,7 +355,7 @@ export default class WebAudioKnob extends HTMLElement {
     if (WebAudioKnob.#cssInjected) return;
     WebAudioKnob.#cssInjected = true;
     const s = document.createElement("style");
-    s.textContent = `
+    s.textContent = /* css */ `
       wam-knob {
         display: flex;
         flex-direction: column;
