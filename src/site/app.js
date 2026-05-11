@@ -18,8 +18,15 @@ class CustomApp extends HTMLElement {
   }
 
   init() {
+    this.initServiceWorker();
     this.initHash();
     document.addEventListener("touchstart", function () {}, false); // enable pseudo styles for mobile
+  }
+
+  initServiceWorker() {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js");
+    }
   }
 
   initHash() {

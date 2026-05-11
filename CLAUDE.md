@@ -48,6 +48,7 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for system context, audio graph, and do
 | Quality rubric | [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md) |
 | Reliability & failure modes | [docs/RELIABILITY.md](docs/RELIABILITY.md) |
 | Security & browser context | [docs/SECURITY.md](docs/SECURITY.md) |
+| PWA & offline support | [docs/PWA.md](docs/PWA.md) |
 | Design decisions | [docs/design-docs/index.md](docs/design-docs/index.md) |
 | Feature specs | [docs/product-specs/index.md](docs/product-specs/index.md) |
 | Roadmap | [docs/exec-plans/roadmap.md](docs/exec-plans/roadmap.md) |
