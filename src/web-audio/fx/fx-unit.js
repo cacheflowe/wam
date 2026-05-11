@@ -286,77 +286,111 @@ export default class WebAudioFxUnit extends HTMLElement {
     const sweep = document.createElement("wam-filter-sweep");
     sweep.setAttribute("param", "filterSweep");
     sweep.setAttribute("label", "Sweep");
-    sweep.setAttribute("data-tooltip", "Combined HP+LP filter sweep. Left = cut lows, right = cut highs, center = bypass.");
+    sweep.setAttribute(
+      "data-tooltip",
+      "Combined HP+LP filter sweep. Left = cut lows, right = cut highs, center = bypass.",
+    );
     sweep.value = options.filterSweep ?? 0;
     filtCtrl.appendChild(sweep);
-    filtCtrl.appendChild(this._addSlider("filterQ", "Q", 0.5, 15, 0.1, options.filterQ ?? 0.7, {
-      tooltip: "Filter resonance. Higher values add a peak at the cutoff, creating a sharper, more nasal tone.",
-    }));
+    filtCtrl.appendChild(
+      this._addSlider("filterQ", "Q", 0.5, 15, 0.1, options.filterQ ?? 0.7, {
+        tooltip: "Filter resonance. Higher values add a peak at the cutoff, creating a sharper, more nasal tone.",
+      }),
+    );
     this.appendChild(filtEl);
 
     // ---- Delay ----
     const { el: delEl, controls: delCtrl } = createSection("Delay");
-    delCtrl.appendChild(this._addSlider("delayMix", "Mix", 0, 1, 0.01, options.delayMix ?? 0, {
-      tooltip: "Delay wet/dry mix. 0 = dry only, 1 = delay only.",
-    }));
-    delCtrl.appendChild(this._addSlider("delayInterval", "Interval", 0.25, 2, 0.25, options.delayInterval ?? 0.75, {
-      tooltip: "Delay time as a rhythmic fraction. Syncs to the current BPM.",
-    }));
-    delCtrl.appendChild(this._addSlider("delayFeedback", "Feedbk", 0, 0.9, 0.01, options.delayFeedback ?? 0.35, {
-      tooltip: "How much of the delay output feeds back into the input. High values = long, cascading repeats.",
-    }));
+    delCtrl.appendChild(
+      this._addSlider("delayMix", "Mix", 0, 1, 0.01, options.delayMix ?? 0, {
+        tooltip: "Delay wet/dry mix. 0 = dry only, 1 = delay only.",
+      }),
+    );
+    delCtrl.appendChild(
+      this._addSlider("delayInterval", "Interval", 0.25, 2, 0.25, options.delayInterval ?? 0.75, {
+        tooltip: "Delay time as a rhythmic fraction. Syncs to the current BPM.",
+      }),
+    );
+    delCtrl.appendChild(
+      this._addSlider("delayFeedback", "Feedbk", 0, 0.9, 0.01, options.delayFeedback ?? 0.35, {
+        tooltip: "How much of the delay output feeds back into the input. High values = long, cascading repeats.",
+      }),
+    );
     const delayFilterSweep = document.createElement("wam-filter-sweep");
     delayFilterSweep.setAttribute("param", "delayFilterSweep");
     delayFilterSweep.setAttribute("label", "Dub Filt");
-    delayFilterSweep.setAttribute("data-tooltip", "Filter applied to the delay feedback path. Creates dub-style filtered echoes.");
+    delayFilterSweep.setAttribute(
+      "data-tooltip",
+      "Filter applied to the delay feedback path. Creates dub-style filtered echoes.",
+    );
     delayFilterSweep.value = options.delayFilterSweep ?? 0;
     delCtrl.appendChild(delayFilterSweep);
-    delCtrl.appendChild(this._addSlider("delayModulation", "Mod", 0, 1, 0.01, 0, {
-      tooltip: "LFO modulation depth on the delay time. Adds a chorus-like pitch wobble to the echoes.",
-    }));
+    delCtrl.appendChild(
+      this._addSlider("delayModulation", "Mod", 0, 1, 0.01, 0, {
+        tooltip: "LFO modulation depth on the delay time. Adds a chorus-like pitch wobble to the echoes.",
+      }),
+    );
     this.appendChild(delEl);
 
     // ---- Chorus ----
     const { el: chorEl, controls: chorCtrl } = createSection("Chorus");
-    chorCtrl.appendChild(this._addSlider("chorusWet", "Wet", 0, 1, 0.01, options.chorusWet ?? 0, {
-      tooltip: "Chorus wet/dry mix. 0 = dry, 1 = full chorus effect.",
-    }));
-    chorCtrl.appendChild(this._addSlider("chorusVoices", "Voices", 1, 6, 1, options.chorusVoices ?? 3, {
-      tooltip: "Number of chorus voices. More voices = thicker, denser modulation.",
-    }));
+    chorCtrl.appendChild(
+      this._addSlider("chorusWet", "Wet", 0, 1, 0.01, options.chorusWet ?? 0, {
+        tooltip: "Chorus wet/dry mix. 0 = dry, 1 = full chorus effect.",
+      }),
+    );
+    chorCtrl.appendChild(
+      this._addSlider("chorusVoices", "Voices", 1, 6, 1, options.chorusVoices ?? 3, {
+        tooltip: "Number of chorus voices. More voices = thicker, denser modulation.",
+      }),
+    );
     const CHORUS_SHAPES = ["sine", "triangle"];
     const shapeIdx = CHORUS_SHAPES.indexOf(options.chorusShape ?? "sine");
-    chorCtrl.appendChild(this._addSlider("chorusShape", "Shape", 0, 1, 1, Math.max(0, shapeIdx), {
-      tooltip: "LFO waveform. 0 = sine (smooth sweep), 1 = triangle (slightly sharper).",
-    }));
+    chorCtrl.appendChild(
+      this._addSlider("chorusShape", "Shape", 0, 1, 1, Math.max(0, shapeIdx), {
+        tooltip: "LFO waveform. 0 = sine (smooth sweep), 1 = triangle (slightly sharper).",
+      }),
+    );
     chorCtrl.appendChild(
       this._addSlider("chorusRate", "Rate", 0.05, 10, 0.01, options.chorusRate ?? 0.8, {
         scale: "log",
         tooltip: "LFO speed in Hz. Slow = gentle shimmer, fast = vibrato-like wobble.",
       }),
     );
-    chorCtrl.appendChild(this._addSlider("chorusDepth", "Depth", 0, 1, 0.01, options.chorusDepth ?? 0.5, {
-      tooltip: "Amount of pitch modulation per voice. Higher = more pronounced detuning.",
-    }));
-    chorCtrl.appendChild(this._addSlider("chorusDelay", "Delay", 1, 50, 0.1, options.chorusDelay ?? 10, {
-      tooltip: "Base delay offset per voice in ms. Longer = more spacious, wider stereo image.",
-    }));
-    chorCtrl.appendChild(this._addSlider("chorusFeedback", "Feedbk", 0, 0.9, 0.01, options.chorusFeedback ?? 0, {
-      tooltip: "Feedback within chorus voices. Higher values add resonance and metallic coloring.",
-    }));
-    chorCtrl.appendChild(this._addSlider("chorusSpread", "Spread", 0, 1, 0.01, options.chorusSpread ?? 1, {
-      tooltip: "Stereo spread of chorus voices. 0 = mono, 1 = full stereo width.",
-    }));
+    chorCtrl.appendChild(
+      this._addSlider("chorusDepth", "Depth", 0, 1, 0.01, options.chorusDepth ?? 0.5, {
+        tooltip: "Amount of pitch modulation per voice. Higher = more pronounced detuning.",
+      }),
+    );
+    chorCtrl.appendChild(
+      this._addSlider("chorusDelay", "Delay", 1, 50, 0.1, options.chorusDelay ?? 10, {
+        tooltip: "Base delay offset per voice in ms. Longer = more spacious, wider stereo image.",
+      }),
+    );
+    chorCtrl.appendChild(
+      this._addSlider("chorusFeedback", "Feedbk", 0, 0.9, 0.01, options.chorusFeedback ?? 0, {
+        tooltip: "Feedback within chorus voices. Higher values add resonance and metallic coloring.",
+      }),
+    );
+    chorCtrl.appendChild(
+      this._addSlider("chorusSpread", "Spread", 0, 1, 0.01, options.chorusSpread ?? 1, {
+        tooltip: "Stereo spread of chorus voices. 0 = mono, 1 = full stereo width.",
+      }),
+    );
     this.appendChild(chorEl);
 
     // ---- Reverb ----
     const { el: revEl, controls: revCtrl } = createSection("Reverb");
-    revCtrl.appendChild(this._addSlider("reverbWet", "Wet", 0, 1, 0.01, options.reverbWet ?? 0, {
-      tooltip: "Reverb wet/dry mix. 0 = dry, 1 = reverb only.",
-    }));
-    revCtrl.appendChild(this._addSlider("reverbPreDelay", "Pre-dly", 0, 80, 1, options.reverbPreDelay ?? 0, {
-      tooltip: "Pre-delay before the reverb tail in ms. Adds space between the source and its reflections.",
-    }));
+    revCtrl.appendChild(
+      this._addSlider("reverbWet", "Wet", 0, 1, 0.01, options.reverbWet ?? 0, {
+        tooltip: "Reverb wet/dry mix. 0 = dry, 1 = reverb only.",
+      }),
+    );
+    revCtrl.appendChild(
+      this._addSlider("reverbPreDelay", "Pre-dly", 0, 80, 1, options.reverbPreDelay ?? 0, {
+        tooltip: "Pre-delay before the reverb tail in ms. Adds space between the source and its reflections.",
+      }),
+    );
     revCtrl.appendChild(
       this._addSlider("reverbHpFreq", "HP", 20, 800, 1, options.reverbHpFreq ?? 80, {
         scale: "log",

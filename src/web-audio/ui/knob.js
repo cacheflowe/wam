@@ -199,7 +199,7 @@ export default class WebAudioKnob extends HTMLElement {
         this.dispatchEvent(
           new CustomEvent("knob-input", {
             bubbles: true,
-            detail: { param, value: def },
+            detail: { param, label, value: def },
           }),
         );
       });
@@ -218,7 +218,7 @@ export default class WebAudioKnob extends HTMLElement {
         this.dispatchEvent(
           new CustomEvent("knob-input", {
             bubbles: true,
-            detail: { param, value: stepped },
+            detail: { param, label, value: stepped },
           }),
         );
       },
@@ -235,6 +235,7 @@ export default class WebAudioKnob extends HTMLElement {
     const max = parseFloat(this.getAttribute("max") || "1");
     const step = parseFloat(this.getAttribute("step") || "0.01");
     const param = this.getAttribute("param") || "";
+    const label = this.getAttribute("label") || "";
 
     const dy = this._dragStartY - e.clientY; // up = positive
     const dx = e.clientX - this._dragStartX; // right = positive
@@ -261,7 +262,7 @@ export default class WebAudioKnob extends HTMLElement {
     this.dispatchEvent(
       new CustomEvent("knob-input", {
         bubbles: true,
-        detail: { param, value: newValue },
+        detail: { param, label, value: newValue },
       }),
     );
   }

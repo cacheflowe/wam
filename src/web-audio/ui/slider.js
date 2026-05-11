@@ -1,5 +1,6 @@
 import "./level-meter.js";
 import "./knob.js";
+import "./param-display.js";
 
 // Set to false to start all channel strips expanded by default.
 export const CHANNEL_STRIP_COLLAPSED_DEFAULT = true;
@@ -172,7 +173,7 @@ export default class WebAudioSlider extends HTMLElement {
       this.dispatchEvent(
         new CustomEvent("slider-input", {
           bubbles: true,
-          detail: { param, value: v },
+          detail: { param, label, value: v },
         }),
       );
     });
@@ -185,7 +186,7 @@ export default class WebAudioSlider extends HTMLElement {
         this.dispatchEvent(
           new CustomEvent("slider-input", {
             bubbles: true,
-            detail: { param, value: def },
+            detail: { param, label, value: def },
           }),
         );
       });
