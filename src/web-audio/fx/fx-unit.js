@@ -105,6 +105,8 @@ export default class WebAudioFxUnit extends HTMLElement {
       preDelay: options.reverbPreDelay ?? 0,
       hpFreq: options.reverbHpFreq ?? 80,
       lpFreq: options.reverbLpFreq ?? 8000,
+      damping: options.reverbDamping ?? 0.5,
+      width: options.reverbWidth ?? 1,
     });
 
     this._in.connect(this._filter.input);
@@ -140,9 +142,12 @@ export default class WebAudioFxUnit extends HTMLElement {
   toJSON() {
     return {
       reverbWet: this._reverb?.wet ?? 0,
+      reverbDecay: this._reverb?.decay ?? 2.5,
       reverbPreDelay: this._reverb?.preDelay ?? 0,
       reverbHpFreq: this._reverb?.hpFreq ?? 80,
       reverbLpFreq: this._reverb?.lpFreq ?? 8000,
+      reverbDamping: this._reverb?.damping ?? 0.5,
+      reverbWidth: this._reverb?.width ?? 1,
       delayInterval: this._delay?.interval ?? 0.75,
       delayFeedback: this._delay?.feedback ?? 0.35,
       delayMix: this._delay?.wet ?? 0,
@@ -182,6 +187,21 @@ export default class WebAudioFxUnit extends HTMLElement {
       this._reverb.lpFreq = obj.reverbLpFreq;
       const s = this.querySelector('wam-knob[param="reverbLpFreq"]');
       if (s) s.value = obj.reverbLpFreq;
+    }
+    if (obj.reverbDecay != null && this._reverb) {
+      this._reverb.decay = obj.reverbDecay;
+      const s = this.querySelector('wam-knob[param="reverbDecay"]');
+      if (s) s.value = obj.reverbDecay;
+    }
+    if (obj.reverbDamping != null && this._reverb) {
+      this._reverb.damping = obj.reverbDamping;
+      const s = this.querySelector('wam-knob[param="reverbDamping"]');
+      if (s) s.value = obj.reverbDamping;
+    }
+    if (obj.reverbWidth != null && this._reverb) {
+      this._reverb.width = obj.reverbWidth;
+      const s = this.querySelector('wam-knob[param="reverbWidth"]');
+      if (s) s.value = obj.reverbWidth;
     }
     if (obj.delayInterval != null && this._delay) {
       this._delay.interval = obj.delayInterval;
@@ -387,6 +407,21 @@ export default class WebAudioFxUnit extends HTMLElement {
       }),
     );
     revCtrl.appendChild(
+      this._addSlider("reverbDecay", "Decay", 0.1, 8, 0.1, options.reverbDecay ?? 2.5, {
+        tooltip: "Reverb tail length in seconds. Longer = larger room.",
+      }),
+    );
+    revCtrl.appendChild(
+      this._addSlider("reverbDamping", "Damping", 0, 1, 0.01, options.reverbDamping ?? 0.5, {
+        tooltip: "High-frequency decay rate in the tail. Higher = darker, warmer room. Lower = bright, shimmery.",
+      }),
+    );
+    revCtrl.appendChild(
+      this._addSlider("reverbWidth", "Width", 0, 1, 0.01, options.reverbWidth ?? 1, {
+        tooltip: "Stereo width of the reverb. 0 = mono, 1 = full stereo spread.",
+      }),
+    );
+    revCtrl.appendChild(
       this._addSlider("reverbPreDelay", "Pre-dly", 0, 80, 1, options.reverbPreDelay ?? 0, {
         tooltip: "Pre-delay before the reverb tail in ms. Adds space between the source and its reflections.",
       }),
@@ -398,9 +433,9 @@ export default class WebAudioFxUnit extends HTMLElement {
       }),
     );
     revCtrl.appendChild(
-      this._addSlider("reverbLpFreq", "Damp", 2000, 20000, 1, options.reverbLpFreq ?? 8000, {
+      this._addSlider("reverbLpFreq", "LP", 2000, 20000, 1, options.reverbLpFreq ?? 8000, {
         scale: "log",
-        tooltip: "Low-pass filter on the reverb output. Lower = darker, warmer tail. Higher = bright, airy reverb.",
+        tooltip: "Low-pass filter on the reverb output. Lower = darker, warmer tail.",
       }),
     );
     this.appendChild(revEl);
@@ -420,6 +455,15 @@ export default class WebAudioFxUnit extends HTMLElement {
           break;
         case "reverbLpFreq":
           if (this._reverb) this._reverb.lpFreq = value;
+          break;
+        case "reverbDecay":
+          if (this._reverb) this._reverb.decay = value;
+          break;
+        case "reverbDamping":
+          if (this._reverb) this._reverb.damping = value;
+          break;
+        case "reverbWidth":
+          if (this._reverb) this._reverb.width = value;
           break;
         case "delayFeedback":
           if (this._delay) this._delay.feedback = value;

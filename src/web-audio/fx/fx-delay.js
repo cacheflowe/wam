@@ -70,13 +70,13 @@ export default class WebAudioFxDelay {
 
     // in → delay → wetGain → out
     // delay → filter → feedback → delay (loop)
-    this._in.connect(this._delay);
     this._delay.connect(this._wetGain);
     this._delay.connect(this._filter);
     this._filter.connect(this._feedback);
     this._feedback.connect(this._delay);
     this._wetGain.connect(this._out);
 
+    this._wetConnected = false;
     this.wet = options.wet ?? 0.2;
 
     // LFO modulation on delay time (subtle chorus/wobble on repeats)
@@ -120,21 +120,29 @@ export default class WebAudioFxDelay {
     return this._wetGain.gain.value;
   }
   set wet(v) {
-    this._wetGain.gain.value = Math.max(0, Math.min(1, v));
+    v = Math.max(0, Math.min(1, v));
+    this._wetGain.gain.value = v;
+    if (v > 0 && !this._wetConnected) {
+      this._in.connect(this._delay);
+      this._wetConnected = true;
+    } else if (v === 0 && this._wetConnected) {
+      this._in.disconnect(this._delay);
+      this._wetConnected = false;
+    }
   }
 
   get feedback() {
     return this._feedback.gain.value;
   }
   set feedback(v) {
-    this._feedback.gain.value = Math.min(0.95, Math.max(0, v));
+    this._feedback.gain.setTargetAtTime(Math.min(0.95, Math.max(0, v)), this.ctx.currentTime, 0.02);
   }
 
   get delayTime() {
     return this._delay.delayTime.value;
   }
   set delayTime(secs) {
-    this._delay.delayTime.value = Math.max(0, Math.min(2, secs));
+    this._delay.delayTime.setTargetAtTime(Math.max(0, Math.min(2, secs)), this.ctx.currentTime, 0.02);
   }
 
   // ---- Dub features ----
@@ -152,15 +160,16 @@ export default class WebAudioFxDelay {
   }
   set filterSweep(v) {
     this._filterSweep = Math.max(-1, Math.min(1, v));
+    const t = this.ctx.currentTime;
     if (Math.abs(this._filterSweep) < 0.005) {
       this._filter.type = "lowpass";
-      this._filter.frequency.value = 20000;
+      this._filter.frequency.setTargetAtTime(20000, t, 0.02);
     } else if (this._filterSweep < 0) {
       this._filter.type = "lowpass";
-      this._filter.frequency.value = sweepToLpFreq(this._filterSweep);
+      this._filter.frequency.setTargetAtTime(sweepToLpFreq(this._filterSweep), t, 0.02);
     } else {
       this._filter.type = "highpass";
-      this._filter.frequency.value = sweepToHpFreq(this._filterSweep);
+      this._filter.frequency.setTargetAtTime(sweepToHpFreq(this._filterSweep), t, 0.02);
     }
   }
 
@@ -169,7 +178,7 @@ export default class WebAudioFxDelay {
     return this._lfoGain.gain.value / 0.003;
   }
   set modulation(v) {
-    this._lfoGain.gain.value = v * 0.003;
+    this._lfoGain.gain.setTargetAtTime(v * 0.003, this.ctx.currentTime, 0.02);
   }
 
   // ---- Routing ----

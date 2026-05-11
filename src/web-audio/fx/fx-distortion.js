@@ -22,14 +22,14 @@ export default class WebAudioFxDistortion {
     this._shaper.oversample = "4x";
 
     // in → dry → out
-    // in → shaper → wetGain → out
+    // in → shaper → wetGain → out (connected on demand)
     this._in.connect(this._dry);
-    this._in.connect(this._shaper);
     this._shaper.connect(this._wetGain);
     this._dry.connect(this._out);
     this._wetGain.connect(this._out);
 
     this._dry.gain.value = 1;
+    this._wetConnected = false;
     this.amount = options.amount ?? 0;
     this.wet = options.wet ?? 0;
   }
@@ -51,14 +51,25 @@ export default class WebAudioFxDistortion {
   }
   set amount(v) {
     this._amount = Math.max(0, Math.min(1, v));
-    this._shaper.curve = this._buildCurve(this._amount);
+    clearTimeout(this._curveTimer);
+    this._curveTimer = setTimeout(() => {
+      this._shaper.curve = this._buildCurve(this._amount);
+    }, 60);
   }
 
   get wet() {
     return this._wetGain.gain.value;
   }
   set wet(v) {
-    this._wetGain.gain.value = Math.max(0, Math.min(1, v));
+    v = Math.max(0, Math.min(1, v));
+    this._wetGain.gain.value = v;
+    if (v > 0 && !this._wetConnected) {
+      this._in.connect(this._shaper);
+      this._wetConnected = true;
+    } else if (v === 0 && this._wetConnected) {
+      this._in.disconnect(this._shaper);
+      this._wetConnected = false;
+    }
   }
 
   get input() {

@@ -71,6 +71,7 @@ export default class WebAudioFxChorus {
 
     this._buildVoices();
 
+    this._wetConnected = false;
     this.wet = options.wet ?? 0.5;
     this.feedback = options.feedback ?? 0;
   }
@@ -122,7 +123,6 @@ export default class WebAudioFxChorus {
       const gain = this.ctx.createGain();
       gain.gain.value = 1 / n;
 
-      this._in.connect(delay);
       delay.connect(gain);
 
       // Stereo spread: pan voices across L/R
@@ -165,6 +165,29 @@ export default class WebAudioFxChorus {
     // Re-connect wetBus → feedback + output
     this._wetBus.connect(this._feedbackGain);
     this._wetBus.connect(this._out);
+
+    // Sync connection state with current wet value
+    if (this._wetConnected) {
+      this._connectVoices();
+    }
+  }
+
+  /** Connect _in to all voice delay lines. */
+  _connectVoices() {
+    for (const v of this._voices) this._in.connect(v.delay);
+    this._wetConnected = true;
+  }
+
+  /** Disconnect _in from all voice delay lines to save CPU. */
+  _disconnectVoices() {
+    for (const v of this._voices) {
+      try {
+        this._in.disconnect(v.delay);
+      } catch (_) {
+        /* already disconnected */
+      }
+    }
+    this._wetConnected = false;
   }
 
   // ---- Properties ----
@@ -176,7 +199,7 @@ export default class WebAudioFxChorus {
     const clamped = Math.max(1, Math.min(6, Math.round(v)));
     if (clamped === this._numVoices) return;
     this._numVoices = clamped;
-    this._buildVoices();
+    this._debouncedRebuild();
   }
 
   get rate() {
@@ -197,7 +220,8 @@ export default class WebAudioFxChorus {
   set depth(v) {
     this._depth = Math.max(0, Math.min(1, v));
     const sweep = (this._depthMs / 1000) * this._depth;
-    for (const voice of this._voices) voice.lfoGain.gain.value = sweep;
+    const t = this.ctx.currentTime;
+    for (const voice of this._voices) voice.lfoGain.gain.setTargetAtTime(sweep, t, 0.02);
   }
 
   get depthMs() {
@@ -206,7 +230,8 @@ export default class WebAudioFxChorus {
   set depthMs(v) {
     this._depthMs = Math.max(1, Math.min(30, v));
     const sweep = (this._depthMs / 1000) * this._depth;
-    for (const voice of this._voices) voice.lfoGain.gain.value = sweep;
+    const t = this.ctx.currentTime;
+    for (const voice of this._voices) voice.lfoGain.gain.setTargetAtTime(sweep, t, 0.02);
   }
 
   get delay() {
@@ -215,21 +240,28 @@ export default class WebAudioFxChorus {
   set delay(v) {
     this._delayMs = Math.max(1, Math.min(50, v));
     const sec = this._delayMs / 1000;
-    for (const voice of this._voices) voice.delay.delayTime.value = sec;
+    const t = this.ctx.currentTime;
+    for (const voice of this._voices) voice.delay.delayTime.setTargetAtTime(sec, t, 0.02);
   }
 
   get feedback() {
     return this._feedbackGain.gain.value;
   }
   set feedback(v) {
-    this._feedbackGain.gain.value = Math.max(0, Math.min(0.9, v));
+    this._feedbackGain.gain.setTargetAtTime(Math.max(0, Math.min(0.9, v)), this.ctx.currentTime, 0.02);
   }
 
   get wet() {
     return this._wetBus.gain.value;
   }
   set wet(v) {
-    this._wetBus.gain.value = Math.max(0, Math.min(1, v));
+    v = Math.max(0, Math.min(1, v));
+    this._wetBus.gain.value = v;
+    if (v > 0 && !this._wetConnected) {
+      this._connectVoices();
+    } else if (v === 0 && this._wetConnected) {
+      this._disconnectVoices();
+    }
   }
 
   get shape() {
@@ -246,7 +278,13 @@ export default class WebAudioFxChorus {
   set spread(v) {
     this._spread = Math.max(0, Math.min(1, v));
     // Spread requires voice rebuild for pan recalculation
-    this._buildVoices();
+    this._debouncedRebuild();
+  }
+
+  /** Debounced rebuild to avoid crackling during knob drags. */
+  _debouncedRebuild() {
+    clearTimeout(this._rebuildTimer);
+    this._rebuildTimer = setTimeout(() => this._buildVoices(), 120);
   }
 
   // ---- Routing ----

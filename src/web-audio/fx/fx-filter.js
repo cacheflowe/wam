@@ -27,6 +27,7 @@ export function sweepToHpFreq(v) {
 
 export default class WebAudioFxFilter {
   constructor(ctx, options = {}) {
+    this.ctx = ctx;
     this._sweep = options.sweep ?? 0;
 
     this._hp = ctx.createBiquadFilter();
@@ -49,8 +50,9 @@ export default class WebAudioFxFilter {
   }
   set sweep(v) {
     this._sweep = Math.max(-1, Math.min(1, v));
-    this._lp.frequency.value = sweepToLpFreq(this._sweep);
-    this._hp.frequency.value = sweepToHpFreq(this._sweep);
+    const t = this.ctx.currentTime;
+    this._lp.frequency.setTargetAtTime(sweepToLpFreq(this._sweep), t, 0.02);
+    this._hp.frequency.setTargetAtTime(sweepToHpFreq(this._sweep), t, 0.02);
   }
 
   // Direct setters kept for programmatic use / backwards-compat
@@ -58,22 +60,23 @@ export default class WebAudioFxFilter {
     return this._lp.frequency.value;
   }
   set lpFreq(v) {
-    this._lp.frequency.value = v;
+    this._lp.frequency.setTargetAtTime(v, this.ctx.currentTime, 0.02);
   }
 
   get hpFreq() {
     return this._hp.frequency.value;
   }
   set hpFreq(v) {
-    this._hp.frequency.value = v;
+    this._hp.frequency.setTargetAtTime(v, this.ctx.currentTime, 0.02);
   }
 
   get q() {
     return this._lp.Q.value;
   }
   set q(v) {
-    this._lp.Q.value = v;
-    this._hp.Q.value = v;
+    const t = this.ctx.currentTime;
+    this._lp.Q.setTargetAtTime(v, t, 0.02);
+    this._hp.Q.setTargetAtTime(v, t, 0.02);
   }
 
   get input() {
