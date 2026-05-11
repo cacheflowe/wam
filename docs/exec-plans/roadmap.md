@@ -72,6 +72,7 @@ Build a library of browser-based instruments that are:
 |---|---|---|
 | **Vocoder polish & testing** | High | Gate threshold added, needs more testing; latency optimization; carrier routing verified |
 | **Knob controls / compact UI** | Medium | Replace sliders with compact knob controls for VST-like density; see **UI Direction** section below |
+| **Event-driven control everywhere** | High | Ensure all automation, MIDI, and preset flows go through knob/slider events, not direct instrument writes; see [design-docs/event-driven-control.md](../../docs/design-docs/event-driven-control.md) |
 | **FM synth quality** | High | FM sounds inferior to Mono — investigate why; retune presets; fix silent presets |
 | **MIDI keyboard input** | Medium | Map note-on/off to currently-selected instrument's `trigger()`; see **MIDI** section below |
 | **Double-click/tap reset to default** | Medium | Double-click (or double-tap) any UI control (sliders, knobs, dropdowns, toggles) resets it to its default value |

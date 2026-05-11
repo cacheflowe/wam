@@ -3,6 +3,7 @@ import "../ui/step-seq.js";
 import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/scales.js";
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
+import { createCtrl } from "../ui/slider.js";
 
 /**
  * WebAudioSynthAcid — TB-303-style monophonic acid bass synthesizer.
@@ -116,6 +117,13 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
     },
   };
 
+  /** Beat-fraction intervals for the filter LFO rate. */
+  static LFO_INTERVALS = [
+    { label: "1/4", beats: 1 },
+    { label: "1/2", beats: 2 },
+    { label: "1 bar", beats: 4 },
+  ];
+
   constructor(ctx, preset = "Default") {
     super(ctx, null); // creates ctx + _out but skips preset
     this._distortion = 0;
@@ -125,6 +133,16 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
     this.unisonDetune = 0;
     this.octaveOffset = 0;
     this.octaveJumpProb = 0;
+
+    // Filter LFO — oscillates cutoff between low/high, synced to BPM
+    this.filterLfoActive = false;
+    this.filterLfoLow = 100;
+    this.filterLfoHigh = 4000;
+    this.filterLfoInterval = 4; // beats per full LFO cycle
+    this.filterLfoOffset = 0; // phase offset in steps
+    this._bpm = 120;
+    this._lfoStepPosition = 0; // set by controls on each step tick
+
     this.applyPreset(preset);
   }
 
@@ -167,6 +185,19 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
    * @param {boolean} accent     Accent flag — louder with stronger filter sweep
    * @param {number} atTime      AudioContext scheduled time
    */
+  /** Compute the effective cutoff given a step position, applying LFO if active. */
+  _effectiveCutoff(stepPosition) {
+    if (!this.filterLfoActive) return this.cutoff;
+    // Convert interval from beats to steps (16th notes = 4 steps per beat)
+    const cycleSteps = this.filterLfoInterval * 4;
+    const phase = (((stepPosition + this.filterLfoOffset) % cycleSteps) / cycleSteps) * Math.PI * 2;
+    const t = (Math.sin(phase) + 1) / 2; // 0..1
+    // Logarithmic interpolation between low and high
+    const logLow = Math.log(this.filterLfoLow);
+    const logHigh = Math.log(this.filterLfoHigh);
+    return Math.exp(logLow + t * (logHigh - logLow));
+  }
+
   trigger(midi, stepDurSec, accent, atTime) {
     const ctx = this.ctx;
     const shifted = midi + this.octaveOffset * 12 + (Math.random() < this.octaveJumpProb ? 12 : 0);
@@ -184,7 +215,7 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
     // Filter envelope
     filter.type = "lowpass";
     filter.Q.value = this.resonance;
-    const base = this.cutoff;
+    const base = this._effectiveCutoff(this._lfoStepPosition);
     const peak = Math.min(base + base * this.envMod * 4 * (accent ? 1.5 : 1), 18000);
     filter.frequency.setValueAtTime(base, atTime);
     filter.frequency.linearRampToValueAtTime(peak, atTime + this.attack);
@@ -389,6 +420,7 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     this._rootMidi = 29;
     this._scaleName = "Minor";
     this._pendingNote = null;
+    this._lfoAnimId = null;
 
     // Sequencer position tracking
     this._globalStep = 0;
@@ -433,6 +465,84 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     filterCtrl.appendChild(mkSlider({ param: "resonance", label: "Resonance", min: 0.1, max: 30, step: 0.1 }));
     filterCtrl.appendChild(mkSlider({ param: "envMod", label: "Env Mod", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(filterEl);
+
+    // ---- Filter LFO ----
+    const { el: lfoEl, controls: lfoCtrl } = createSection("Filter LFO");
+    // Active toggle
+    const lfoToggle = document.createElement("button");
+    lfoToggle.className = "wam-toggle-btn";
+    lfoToggle.textContent = "Off";
+    const lfoWrap = createCtrl("Active", { tooltip: "Toggle filter cutoff oscillation synced to BPM." });
+    lfoWrap.appendChild(lfoToggle);
+    lfoToggle.addEventListener("click", () => {
+      this._instrument.filterLfoActive = !this._instrument.filterLfoActive;
+      lfoToggle.textContent = this._instrument.filterLfoActive ? "On" : "Off";
+      if (this._instrument.filterLfoActive) {
+        lfoToggle.setAttribute("data-active", "");
+        this._startLfoAnim();
+      } else {
+        lfoToggle.removeAttribute("data-active");
+        this._stopLfoAnim();
+      }
+      this._emitChange();
+    });
+    this._lfoToggle = lfoToggle;
+    lfoCtrl.appendChild(lfoWrap);
+    lfoCtrl.appendChild(
+      mkSlider({
+        param: "filterLfoLow",
+        label: "Low",
+        min: 50,
+        max: 10000,
+        step: 1,
+        scale: "log",
+        tooltip: "Lower bound of the LFO cutoff sweep.",
+      }),
+    );
+    lfoCtrl.appendChild(
+      mkSlider({
+        param: "filterLfoHigh",
+        label: "High",
+        min: 50,
+        max: 10000,
+        step: 1,
+        scale: "log",
+        tooltip: "Upper bound of the LFO cutoff sweep.",
+      }),
+    );
+    lfoCtrl.appendChild(
+      (() => {
+        const rateWrap = createCtrl("Rate", {
+          tooltip: "LFO cycle length as a rhythmic division. Syncs to the current BPM.",
+        });
+        this._lfoRateSelect = document.createElement("select");
+        this._lfoRateSelect.className = "wam-select";
+        for (const { label, beats } of WebAudioSynthAcid.LFO_INTERVALS) {
+          const opt = document.createElement("option");
+          opt.value = beats;
+          opt.textContent = label;
+          if (beats === this._instrument.filterLfoInterval) opt.selected = true;
+          this._lfoRateSelect.appendChild(opt);
+        }
+        this._lfoRateSelect.addEventListener("change", () => {
+          this._instrument.filterLfoInterval = parseFloat(this._lfoRateSelect.value);
+          this._emitChange();
+        });
+        rateWrap.appendChild(this._lfoRateSelect);
+        return rateWrap;
+      })(),
+    );
+    lfoCtrl.appendChild(
+      mkSlider({
+        param: "filterLfoOffset",
+        label: "Offset",
+        min: 0,
+        max: 15,
+        step: 1,
+        tooltip: "Phase offset in steps. Shifts where the LFO cycle starts within the loop.",
+      }),
+    );
+    controls.appendChild(lfoEl);
 
     // ---- Envelope ----
     const { el: envEl, controls: envCtrl } = createSection("Envelope");
@@ -482,6 +592,11 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
 
   _extraToJSON(params) {
     params.oscType = this._instrument.oscType;
+    params.filterLfoActive = this._instrument.filterLfoActive;
+    params.filterLfoLow = this._instrument.filterLfoLow;
+    params.filterLfoHigh = this._instrument.filterLfoHigh;
+    params.filterLfoInterval = this._instrument.filterLfoInterval;
+    params.filterLfoOffset = this._instrument.filterLfoOffset;
   }
 
   _extendJSON(obj) {
@@ -493,6 +608,18 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     if (key === "oscType") {
       this._instrument.oscType = val;
       this._syncWaveSelect();
+    } else if (key === "filterLfoActive") {
+      this._instrument.filterLfoActive = val;
+      if (this._lfoToggle) {
+        this._lfoToggle.textContent = val ? "On" : "Off";
+        if (val) this._lfoToggle.setAttribute("data-active", "");
+        else this._lfoToggle.removeAttribute("data-active");
+      }
+      if (val) this._startLfoAnim();
+      else this._stopLfoAnim();
+    } else if (key === "filterLfoInterval") {
+      this._instrument.filterLfoInterval = val;
+      if (this._lfoRateSelect) this._lfoRateSelect.value = val;
     } else {
       super._restoreParam(key, val);
     }
@@ -505,6 +632,59 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
 
   _syncExtraControls() {
     this._syncWaveSelect();
+    if (this._lfoToggle && this._instrument) {
+      const active = this._instrument.filterLfoActive;
+      this._lfoToggle.textContent = active ? "On" : "Off";
+      if (active) this._lfoToggle.setAttribute("data-active", "");
+      else this._lfoToggle.removeAttribute("data-active");
+    }
+    if (this._lfoRateSelect && this._instrument) {
+      this._lfoRateSelect.value = this._instrument.filterLfoInterval;
+    }
+  }
+
+  // ---- BPM forwarding ----
+
+  set bpm(v) {
+    super.bpm = v;
+    if (this._instrument) this._instrument._bpm = v;
+  }
+
+  // ---- Filter LFO animation ----
+
+  _startLfoAnim() {
+    if (this._lfoAnimId) return;
+    const tick = () => {
+      if (!this._instrument?.filterLfoActive) {
+        this._lfoAnimId = null;
+        return;
+      }
+      const cutoffVal = this._instrument._effectiveCutoff(this._instrument._lfoStepPosition);
+      const knob = this._sliders["cutoff"];
+      if (knob) {
+        knob.value = cutoffVal;
+        knob.dispatchEvent(
+          new CustomEvent("knob-input", {
+            bubbles: true,
+            detail: { param: "cutoff", label: knob.getAttribute("label"), value: cutoffVal },
+          }),
+        );
+      }
+      this._lfoAnimId = requestAnimationFrame(tick);
+    };
+    this._lfoAnimId = requestAnimationFrame(tick);
+  }
+
+  _stopLfoAnim() {
+    if (this._lfoAnimId) {
+      cancelAnimationFrame(this._lfoAnimId);
+      this._lfoAnimId = null;
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this._stopLfoAnim();
   }
 
   // ---- Sequencer integration ----
@@ -512,6 +692,9 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
   /** Called by the host on each sequencer tick. */
   step(index, time, stepDurationSec) {
     if (!this._instrument || !this._seq) return;
+
+    // Update LFO step position (resets with transport loop at index 0)
+    this._instrument._lfoStepPosition = index;
 
     // Speed multiplier: 0.5x skips odd ticks
     const multiplier = this.speedMultiplier ?? 1;

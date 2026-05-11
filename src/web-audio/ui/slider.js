@@ -595,6 +595,7 @@ export function injectControlsCSS() {
     .wam-ctrl label[data-tooltip]::before {
       white-space: normal;
       overflow: visible;
+      min-width: 130px;
       width: 130px;
       text-align: left;
       line-height: 1;

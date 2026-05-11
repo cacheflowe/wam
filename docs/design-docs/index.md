@@ -8,6 +8,7 @@
 | [audio-routing-protocol.md](audio-routing-protocol.md) | Active | Justin Gitlin | 2026-04-27 |
 | [fire-and-forget-voices.md](fire-and-forget-voices.md) | Active | Justin Gitlin | 2026-04-27 |
 | [bpm-synced-timing.md](bpm-synced-timing.md) | Active | Justin Gitlin | 2026-04-27 |
+| [event-driven-control.md](event-driven-control.md) | Active | Justin Gitlin | 2026-05-11 |
 
 ## Purpose
 

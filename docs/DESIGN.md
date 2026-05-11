@@ -20,10 +20,13 @@ Every instrument and effect exposes `connect(node)` and a `get input()` property
 ### 6. BPM as the master timing reference
 Delay feedback intervals, LFO rates, and sequencer timing are all derived from a single BPM value. Tempo changes propagate from the transport through `controls.bpm = v`. Time is expressed in beats, not seconds, wherever it's musically meaningful.
 
-### 7. Themeable without Shadow DOM
+### 7. Event-driven bidirectional control
+All parameter changes — user interaction, automation (LFOs), MIDI, or presets — flow through the control element's standard event (`knob-input` / `slider-input`). Automation sets `knob.value` and dispatches the event; the existing delegated listener in `controls-base` applies it to the instrument. The instrument never receives direct property writes from automation. This keeps UI and engine in sync, decouples automation from audio classes, and ensures a single code path for all parameter updates. See [design-docs/event-driven-control.md](design-docs/event-driven-control.md).
+
+### 8. Themeable without Shadow DOM
 Accent colors are CSS custom properties (`--slider-accent`, `--fx-accent`) set on the parent wrapper. All child components (sliders, buttons, step sequencer, waveform) inherit via cascade. Shadow DOM would break this; we use light DOM + a once-per-page CSS injection pattern instead.
 
-### 8. Presets are partial and forward-compatible
+### 9. Presets are partial and forward-compatible
 `applyPreset()` uses `!= null` guards for every parameter. Old presets load cleanly when new parameters are added to an instrument. Presets ship as static objects inside the class file — no external preset format to parse.
 
 ## What We Avoid

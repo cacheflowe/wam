@@ -387,6 +387,7 @@ export default class WebAudioKnob extends HTMLElement {
       }
       .wam-knob-label-text[data-tooltip]::before {
         white-space: normal;
+        min-width: 130px;
         max-width: 240px;
         font-size: 0.5rem;
         font-family: monospace;
