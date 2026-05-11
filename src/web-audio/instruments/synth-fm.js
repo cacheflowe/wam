@@ -709,10 +709,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
       if (beats === this._instrument.lfoInterval) opt.selected = true;
       this._lfoIntervalSelect.appendChild(opt);
     }
-    this._lfoIntervalSelect.addEventListener("change", () => {
-      this._instrument.lfoInterval = parseFloat(this._lfoIntervalSelect.value);
-      this._emitChange();
-    });
+    this._registerSelect("lfoInterval", this._lfoIntervalSelect, { parse: parseFloat });
     this._lfoShapeSelect = mkSelect("Shape", lfoCtrl);
     for (const shape of ["sine", "triangle", "sawtooth", "square"]) {
       const opt = document.createElement("option");
@@ -721,10 +718,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
       if (shape === this._instrument.lfoShape) opt.selected = true;
       this._lfoShapeSelect.appendChild(opt);
     }
-    this._lfoShapeSelect.addEventListener("change", () => {
-      this._instrument.lfoShape = this._lfoShapeSelect.value;
-      this._emitChange();
-    });
+    this._registerSelect("lfoShape", this._lfoShapeSelect);
     lfoCtrl.appendChild(mkSlider({ param: "lfoDepth", label: "Depth", min: 0, max: 3000, step: 10 }));
     controls.appendChild(lfoEl);
 
@@ -772,23 +766,11 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
 
   // ---- Slider input override (emit change after set) ----
 
-  _onSliderInput(param, value) {
-    this._instrument[param] = value;
-    this._emitChange();
-  }
-
   // ---- BPM override (also sets instrument BPM for LFO) ----
 
   set bpm(v) {
     if (this._fxUnit) this._fxUnit.bpm = v;
     if (this._instrument) this._instrument.bpm = v;
-  }
-
-  // ---- Sync extra controls after preset ----
-
-  _syncExtraControls() {
-    if (this._lfoShapeSelect) this._lfoShapeSelect.value = this._instrument.lfoShape;
-    if (this._lfoIntervalSelect) this._lfoIntervalSelect.value = this._instrument.lfoInterval;
   }
 
   // ---- Serialization hooks ----
@@ -801,20 +783,6 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
   _extendJSON(obj) {
     obj.steps = this._seq?.steps ?? [];
     obj.chordSize = this._chordSize;
-  }
-
-  _restoreParam(key, val) {
-    if (key === "lfoShape") {
-      this._instrument.lfoShape = val;
-      if (this._lfoShapeSelect) this._lfoShapeSelect.value = val;
-    } else if (key === "lfoInterval") {
-      this._instrument.lfoInterval = val;
-      if (this._lfoIntervalSelect) this._lfoIntervalSelect.value = val;
-    } else if (key === "lfoRate") {
-      // back-compat: old saves used Hz-based lfoRate — ignore, default interval is fine
-    } else {
-      super._restoreParam(key, val);
-    }
   }
 
   _restoreExtra(obj) {
@@ -865,7 +833,8 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
-            const chord = this._chordSize === 1 ? s.note + 24 : buildChordFromScale(s.note + 24, this._scaleName, this._chordSize);
+            const chord =
+              this._chordSize === 1 ? s.note + 24 : buildChordFromScale(s.note + 24, this._scaleName, this._chordSize);
             const ratchet = s.ratchet ?? 1;
             if (ratchet > 1) {
               const ratchetDuration = subStepDur / ratchet;
@@ -918,7 +887,10 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
 
   triggerJamChord() {
     if (!this._instrument || !this._ctx) return;
-    const chord = this._chordSize === 1 ? this._rootMidi + 24 : buildChordFromScale(this._rootMidi + 24, this._scaleName, this._chordSize);
+    const chord =
+      this._chordSize === 1
+        ? this._rootMidi + 24
+        : buildChordFromScale(this._rootMidi + 24, this._scaleName, this._chordSize);
     this._instrument.trigger(chord, 0.25, this._ctx.currentTime);
   }
 

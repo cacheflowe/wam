@@ -67,14 +67,13 @@ Build a library of browser-based instruments that are:
 | **Composition serialization & saving (Phase 3+)** | 2026-05-09 — Full IndexedDB integration via `arrangement-library.js` with CRUD, drag-to-reorder, export/import, clipboard support, and sample songs; wired into Playground UI |
 | **Knob controls / compact UI** | 2026-05-11 — `<wam-knob>` SVG rotary knob component replaces sliders across all instruments, FX, channel strips, and filter sweep; `<wam-param-display>` floating overlay for touch feedback |
 | **Reverb overhaul** | 2026-05-11 — Improved IR synthesis with early reflections, frequency-dependent decay (damping), stereo decorrelation (width), normalization; 3 new controls (Decay, Damping, Width) exposed in FX unit UI |
+| **Event-driven control everywhere** | 2026-05-11 — All parameter changes flow through `knob-input` events via delegated listener; `_registerSelect()`/`_registerToggle()` base-class helpers eliminate per-instrument boilerplate; presets, restore, and automation all use the same event path |
 
 ## Near-Term Goals
 
 | Goal | Priority | Notes |
 |---|---|---|
 | **Vocoder polish & testing** | High | Gate threshold added, needs more testing; latency optimization; carrier routing verified |
-| **Knob controls / compact UI** | ~~Medium~~ Done | `<wam-knob>` SVG rotary component deployed everywhere; see Recently Completed |
-| **Event-driven control everywhere** | High | Ensure all automation, MIDI, and preset flows go through knob/slider events, not direct instrument writes; see [design-docs/event-driven-control.md](../../docs/design-docs/event-driven-control.md) |
 | **FM synth quality** | High | FM sounds inferior to Mono — investigate why; retune presets; fix silent presets |
 | **MIDI keyboard input** | Medium | Map note-on/off to currently-selected instrument's `trigger()`; see **MIDI** section below |
 | **Double-click/tap reset to default** | Medium | Double-click (or double-tap) any UI control (sliders, knobs, dropdowns, toggles) resets it to its default value |

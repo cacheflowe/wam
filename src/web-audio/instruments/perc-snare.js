@@ -24,14 +24,110 @@ import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
  */
 export default class WebAudioPercSnare extends WebAudioInstrumentBase {
   static PRESETS = {
-    Default:    { toneFreq: 200, toneSweep: 80, toneDecay: 0.08, toneWave: "sine", noiseFreq: 1500, noiseDecay: 0.15, noiseSweep: 0, noiseMix: 0.6, buzz: 0.2, clapMode: false, volume: 1 },
-    "808":      { toneFreq: 180, toneSweep: 60, toneDecay: 0.12, toneWave: "sine", noiseFreq: 1200, noiseDecay: 0.2, noiseSweep: 0, noiseMix: 0.5, buzz: 0.15, clapMode: false, volume: 1 },
-    "909":      { toneFreq: 220, toneSweep: 100, toneDecay: 0.06, toneWave: "triangle", noiseFreq: 2000, noiseDecay: 0.12, noiseSweep: 0.4, noiseMix: 0.65, buzz: 0.3, clapMode: false, volume: 1 },
-    Tight:      { toneFreq: 250, toneSweep: 100, toneDecay: 0.04, toneWave: "triangle", noiseFreq: 2500, noiseDecay: 0.08, noiseSweep: 0.2, noiseMix: 0.7, buzz: 0.1, clapMode: false, volume: 1 },
-    Clap:       { toneFreq: 200, toneSweep: 50, toneDecay: 0.02, toneWave: "sine", noiseFreq: 1800, noiseDecay: 0.18, noiseSweep: 0, noiseMix: 0.95, buzz: 0, clapMode: true, volume: 0.9 },
-    Rim:        { toneFreq: 400, toneSweep: 150, toneDecay: 0.03, toneWave: "square", noiseFreq: 4000, noiseDecay: 0.04, noiseSweep: 0, noiseMix: 0.3, buzz: 0, clapMode: false, volume: 1 },
-    Industrial: { toneFreq: 150, toneSweep: 40, toneDecay: 0.15, toneWave: "square", noiseFreq: 800, noiseDecay: 0.25, noiseSweep: 0.6, noiseMix: 0.4, buzz: 0.4, clapMode: false, volume: 0.9 },
-    Brush:      { toneFreq: 180, toneSweep: 30, toneDecay: 0.03, toneWave: "sine", noiseFreq: 3000, noiseDecay: 0.35, noiseSweep: 0.3, noiseMix: 0.85, buzz: 0.5, clapMode: false, volume: 0.6 },
+    Default: {
+      toneFreq: 200,
+      toneSweep: 80,
+      toneDecay: 0.08,
+      toneWave: "sine",
+      noiseFreq: 1500,
+      noiseDecay: 0.15,
+      noiseSweep: 0,
+      noiseMix: 0.6,
+      buzz: 0.2,
+      clapMode: false,
+      volume: 1,
+    },
+    808: {
+      toneFreq: 180,
+      toneSweep: 60,
+      toneDecay: 0.12,
+      toneWave: "sine",
+      noiseFreq: 1200,
+      noiseDecay: 0.2,
+      noiseSweep: 0,
+      noiseMix: 0.5,
+      buzz: 0.15,
+      clapMode: false,
+      volume: 1,
+    },
+    909: {
+      toneFreq: 220,
+      toneSweep: 100,
+      toneDecay: 0.06,
+      toneWave: "triangle",
+      noiseFreq: 2000,
+      noiseDecay: 0.12,
+      noiseSweep: 0.4,
+      noiseMix: 0.65,
+      buzz: 0.3,
+      clapMode: false,
+      volume: 1,
+    },
+    Tight: {
+      toneFreq: 250,
+      toneSweep: 100,
+      toneDecay: 0.04,
+      toneWave: "triangle",
+      noiseFreq: 2500,
+      noiseDecay: 0.08,
+      noiseSweep: 0.2,
+      noiseMix: 0.7,
+      buzz: 0.1,
+      clapMode: false,
+      volume: 1,
+    },
+    Clap: {
+      toneFreq: 200,
+      toneSweep: 50,
+      toneDecay: 0.02,
+      toneWave: "sine",
+      noiseFreq: 1800,
+      noiseDecay: 0.18,
+      noiseSweep: 0,
+      noiseMix: 0.95,
+      buzz: 0,
+      clapMode: true,
+      volume: 0.9,
+    },
+    Rim: {
+      toneFreq: 400,
+      toneSweep: 150,
+      toneDecay: 0.03,
+      toneWave: "square",
+      noiseFreq: 4000,
+      noiseDecay: 0.04,
+      noiseSweep: 0,
+      noiseMix: 0.3,
+      buzz: 0,
+      clapMode: false,
+      volume: 1,
+    },
+    Industrial: {
+      toneFreq: 150,
+      toneSweep: 40,
+      toneDecay: 0.15,
+      toneWave: "square",
+      noiseFreq: 800,
+      noiseDecay: 0.25,
+      noiseSweep: 0.6,
+      noiseMix: 0.4,
+      buzz: 0.4,
+      clapMode: false,
+      volume: 0.9,
+    },
+    Brush: {
+      toneFreq: 180,
+      toneSweep: 30,
+      toneDecay: 0.03,
+      toneWave: "sine",
+      noiseFreq: 3000,
+      noiseDecay: 0.35,
+      noiseSweep: 0.3,
+      noiseMix: 0.85,
+      buzz: 0.5,
+      clapMode: false,
+      volume: 0.6,
+    },
   };
 
   constructor(ctx, preset = "Default") {
@@ -145,15 +241,65 @@ export default class WebAudioPercSnare extends WebAudioInstrumentBase {
 
 export class WebAudioPercSnareControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "toneFreq",   label: "Tone",    min: 80,   max: 500,  step: 1,    tooltip: "Tone body pitch in Hz. Higher = snappier, lower = thumpier." },
-    { param: "toneSweep",  label: "Sweep",   min: 0,    max: 300,  step: 1,    tooltip: "Pitch drop amount. More = punchier attack transient." },
-    { param: "toneDecay",  label: "T.Decay", min: 0.01, max: 0.3,  step: 0.01, tooltip: "Tone body decay time." },
-    { param: "noiseFreq",  label: "N.Freq",  min: 500,  max: 8000, step: 1, scale: "log", tooltip: "Noise highpass filter frequency. Lower = fatter, higher = crackly." },
-    { param: "noiseDecay", label: "N.Decay", min: 0.02, max: 0.5,  step: 0.01, tooltip: "Noise snap/rattle decay time." },
-    { param: "noiseSweep", label: "N.Swp",   min: 0,    max: 1,    step: 0.01, tooltip: "Noise filter sweep. Opens then closes for movement." },
-    { param: "noiseMix",   label: "Mix",     min: 0,    max: 1,    step: 0.01, tooltip: "Balance between tone body (0) and noise snap (1)." },
-    { param: "buzz",       label: "Buzz",    min: 0,    max: 1,    step: 0.01, tooltip: "Snare wire buzz/rattle amount. Longer sustaining tail." },
-    { param: "volume",     label: "Vol",     min: 0,    max: 1,    step: 0.01 },
+    {
+      param: "toneFreq",
+      label: "Tone",
+      min: 80,
+      max: 500,
+      step: 1,
+      tooltip: "Tone body pitch in Hz. Higher = snappier, lower = thumpier.",
+    },
+    {
+      param: "toneSweep",
+      label: "Sweep",
+      min: 0,
+      max: 300,
+      step: 1,
+      tooltip: "Pitch drop amount. More = punchier attack transient.",
+    },
+    { param: "toneDecay", label: "T.Decay", min: 0.01, max: 0.3, step: 0.01, tooltip: "Tone body decay time." },
+    {
+      param: "noiseFreq",
+      label: "N.Freq",
+      min: 500,
+      max: 8000,
+      step: 1,
+      scale: "log",
+      tooltip: "Noise highpass filter frequency. Lower = fatter, higher = crackly.",
+    },
+    {
+      param: "noiseDecay",
+      label: "N.Decay",
+      min: 0.02,
+      max: 0.5,
+      step: 0.01,
+      tooltip: "Noise snap/rattle decay time.",
+    },
+    {
+      param: "noiseSweep",
+      label: "N.Swp",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Noise filter sweep. Opens then closes for movement.",
+    },
+    {
+      param: "noiseMix",
+      label: "Mix",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Balance between tone body (0) and noise snap (1).",
+    },
+    {
+      param: "buzz",
+      label: "Buzz",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Snare wire buzz/rattle amount. Longer sustaining tail.",
+    },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
   ];
 
   static DEFAULT_PATTERN() {
@@ -194,22 +340,18 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
     clapBtn.className = "wam-wave-btn";
     clapBtn.textContent = "CLAP";
     clapBtn.classList.toggle("wam-wave-active", !!this._instrument.clapMode);
-    clapBtn.addEventListener("click", () => {
-      this._instrument.clapMode = !this._instrument.clapMode;
-      clapBtn.classList.toggle("wam-wave-active", this._instrument.clapMode);
-      this._emitChange();
-    });
+    this._registerToggle("clapMode", clapBtn);
     this._clapBtn = clapBtn;
     sec.appendChild(clapBtn);
 
-    sec.appendChild(mkSlider({ param: "toneFreq",   label: "Tone",    min: 80,   max: 500,  step: 1 }));
-    sec.appendChild(mkSlider({ param: "toneSweep",  label: "Sweep",   min: 0,    max: 300,  step: 1 }));
-    sec.appendChild(mkSlider({ param: "toneDecay",  label: "T.Decay", min: 0.01, max: 0.3,  step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "noiseFreq",  label: "N.Freq",  min: 500,  max: 8000, step: 1, scale: "log" }));
-    sec.appendChild(mkSlider({ param: "noiseDecay", label: "N.Decay", min: 0.02, max: 0.5,  step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "noiseSweep", label: "N.Swp",   min: 0,    max: 1,    step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "noiseMix",   label: "Mix",     min: 0,    max: 1,    step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "buzz",       label: "Buzz",    min: 0,    max: 1,    step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "toneFreq", label: "Tone", min: 80, max: 500, step: 1 }));
+    sec.appendChild(mkSlider({ param: "toneSweep", label: "Sweep", min: 0, max: 300, step: 1 }));
+    sec.appendChild(mkSlider({ param: "toneDecay", label: "T.Decay", min: 0.01, max: 0.3, step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "noiseFreq", label: "N.Freq", min: 500, max: 8000, step: 1, scale: "log" }));
+    sec.appendChild(mkSlider({ param: "noiseDecay", label: "N.Decay", min: 0.02, max: 0.5, step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "noiseSweep", label: "N.Swp", min: 0, max: 1, step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "noiseMix", label: "Mix", min: 0, max: 1, step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "buzz", label: "Buzz", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(el);
 
     // ---- Sequencer ----
@@ -227,15 +369,6 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
     expanded.appendChild(this._seq);
     this._seq.addEventListener("step-change", () => this._emitChange());
     this._seq.addEventListener("pattern-change", () => this._emitChange());
-  }
-
-  // ---- Extra controls sync ----
-
-  _syncExtraControls() {
-    if (this._clapBtn && this._instrument) {
-      this._clapBtn.classList.toggle("wam-wave-active", !!this._instrument.clapMode);
-    }
-    this._syncWaveSelect();
   }
 
   // ---- Sequencer integration ----
@@ -342,18 +475,6 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
 
   _extendJSON(obj) {
     obj.steps = this._seq?.steps ?? [];
-  }
-
-  _restoreParam(key, val) {
-    if (key === "clapMode") {
-      this._instrument.clapMode = val;
-      this._syncExtraControls();
-    } else if (key === "toneWave") {
-      this._instrument.toneWave = val;
-      this._syncExtraControls();
-    } else {
-      super._restoreParam(key, val);
-    }
   }
 
   _restoreExtra(obj) {

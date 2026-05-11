@@ -168,131 +168,67 @@ export default class WebAudioFxUnit extends HTMLElement {
 
   fromJSON(obj) {
     if (!obj) return;
-    if (obj.reverbWet != null && this._reverb) {
-      this._reverb.wet = obj.reverbWet;
-      const s = this.querySelector('wam-knob[param="reverbWet"]');
-      if (s) s.value = obj.reverbWet;
-    }
-    if (obj.reverbPreDelay != null && this._reverb) {
-      this._reverb.preDelay = obj.reverbPreDelay;
-      const s = this.querySelector('wam-knob[param="reverbPreDelay"]');
-      if (s) s.value = obj.reverbPreDelay;
-    }
-    if (obj.reverbHpFreq != null && this._reverb) {
-      this._reverb.hpFreq = obj.reverbHpFreq;
-      const s = this.querySelector('wam-knob[param="reverbHpFreq"]');
-      if (s) s.value = obj.reverbHpFreq;
-    }
-    if (obj.reverbLpFreq != null && this._reverb) {
-      this._reverb.lpFreq = obj.reverbLpFreq;
-      const s = this.querySelector('wam-knob[param="reverbLpFreq"]');
-      if (s) s.value = obj.reverbLpFreq;
-    }
-    if (obj.reverbDecay != null && this._reverb) {
-      this._reverb.decay = obj.reverbDecay;
-      const s = this.querySelector('wam-knob[param="reverbDecay"]');
-      if (s) s.value = obj.reverbDecay;
-    }
-    if (obj.reverbDamping != null && this._reverb) {
-      this._reverb.damping = obj.reverbDamping;
-      const s = this.querySelector('wam-knob[param="reverbDamping"]');
-      if (s) s.value = obj.reverbDamping;
-    }
-    if (obj.reverbWidth != null && this._reverb) {
-      this._reverb.width = obj.reverbWidth;
-      const s = this.querySelector('wam-knob[param="reverbWidth"]');
-      if (s) s.value = obj.reverbWidth;
-    }
-    if (obj.delayInterval != null && this._delay) {
-      this._delay.interval = obj.delayInterval;
-      const s = this.querySelector('wam-knob[param="delayInterval"]');
-      if (s) s.value = obj.delayInterval;
-    }
-    if (obj.delayFeedback != null && this._delay) {
-      this._delay.feedback = obj.delayFeedback;
-      const s = this.querySelector('wam-knob[param="delayFeedback"]');
-      if (s) s.value = obj.delayFeedback;
-    }
-    if (obj.delayMix != null && this._delay) {
-      this._delay.wet = obj.delayMix;
-      const s = this.querySelector('wam-knob[param="delayMix"]');
-      if (s) s.value = obj.delayMix;
-    }
-    if (obj.delayFilterSweep != null && this._delay) {
-      this._delay.filterSweep = obj.delayFilterSweep;
-      const s = this.querySelector('wam-filter-sweep[param="delayFilterSweep"]');
-      if (s) s.value = obj.delayFilterSweep;
+
+    /** Set a knob value and dispatch its event so handleFxInput applies the change. */
+    const restore = (param, value, selector) => {
+      if (value == null) return;
+      const s = this.querySelector(selector || `wam-knob[param="${param}"]`);
+      if (s) {
+        s.value = value;
+        s.dispatchEvent(
+          new CustomEvent("knob-input", {
+            bubbles: true,
+            detail: { param, value: typeof value === "number" ? value : parseFloat(value) },
+          }),
+        );
+      }
+    };
+
+    // Reverb
+    restore("reverbWet", obj.reverbWet);
+    restore("reverbPreDelay", obj.reverbPreDelay);
+    restore("reverbHpFreq", obj.reverbHpFreq);
+    restore("reverbLpFreq", obj.reverbLpFreq);
+    restore("reverbDecay", obj.reverbDecay);
+    restore("reverbDamping", obj.reverbDamping);
+    restore("reverbWidth", obj.reverbWidth);
+
+    // Delay
+    restore("delayInterval", obj.delayInterval);
+    restore("delayFeedback", obj.delayFeedback);
+    restore("delayMix", obj.delayMix);
+    restore("delayModulation", obj.delayModulation);
+    if (obj.delayFilterSweep != null) {
+      restore("delayFilterSweep", obj.delayFilterSweep, 'wam-filter-sweep[param="delayFilterSweep"]');
     } else if (obj.delayFilterFreq != null && this._delay) {
-      // backwards-compat: old saves stored raw LP frequency — map to a negative sweep
+      // backwards-compat: old saves stored raw LP frequency
       this._delay.filterFreq = obj.delayFilterFreq;
     }
-    if (obj.delayModulation != null && this._delay) {
-      this._delay.modulation = obj.delayModulation;
-      const s = this.querySelector('wam-knob[param="delayModulation"]');
-      if (s) s.value = obj.delayModulation;
-    }
-    if (obj.chorusVoices != null && this._chorus) {
-      this._chorus.voices = obj.chorusVoices;
-      const s = this.querySelector('wam-knob[param="chorusVoices"]');
-      if (s) s.value = obj.chorusVoices;
-    }
-    if (obj.chorusRate != null && this._chorus) {
-      this._chorus.rate = obj.chorusRate;
-      const s = this.querySelector('wam-knob[param="chorusRate"]');
-      if (s) s.value = obj.chorusRate;
-    }
-    if (obj.chorusDepth != null && this._chorus) {
-      this._chorus.depth = obj.chorusDepth;
-      const s = this.querySelector('wam-knob[param="chorusDepth"]');
-      if (s) s.value = obj.chorusDepth;
-    }
-    if (obj.chorusDelay != null && this._chorus) {
-      this._chorus.delay = obj.chorusDelay;
-      const s = this.querySelector('wam-knob[param="chorusDelay"]');
-      if (s) s.value = obj.chorusDelay;
-    }
-    if (obj.chorusFeedback != null && this._chorus) {
-      this._chorus.feedback = obj.chorusFeedback;
-      const s = this.querySelector('wam-knob[param="chorusFeedback"]');
-      if (s) s.value = obj.chorusFeedback;
-    }
-    if (obj.chorusSpread != null && this._chorus) {
-      this._chorus.spread = obj.chorusSpread;
-      const s = this.querySelector('wam-knob[param="chorusSpread"]');
-      if (s) s.value = obj.chorusSpread;
-    }
-    if (obj.chorusWet != null && this._chorus) {
-      this._chorus.wet = obj.chorusWet;
-      const s = this.querySelector('wam-knob[param="chorusWet"]');
-      if (s) s.value = obj.chorusWet;
-    }
-    if (obj.chorusShape != null && this._chorus) {
-      // backwards-compat: old saves stored string ("sine"/"triangle"), new saves store index
+
+    // Chorus
+    restore("chorusVoices", obj.chorusVoices);
+    restore("chorusRate", obj.chorusRate);
+    restore("chorusDepth", obj.chorusDepth);
+    restore("chorusDelay", obj.chorusDelay);
+    restore("chorusFeedback", obj.chorusFeedback);
+    restore("chorusWet", obj.chorusWet);
+    restore("chorusSpread", obj.chorusSpread);
+    if (obj.chorusShape != null) {
+      // backwards-compat: old saves stored string, new saves store index
       const shapes = ["sine", "triangle"];
-      if (typeof obj.chorusShape === "string") {
-        this._chorus.shape = obj.chorusShape;
-        const s = this.querySelector('wam-knob[param="chorusShape"]');
-        if (s) s.value = Math.max(0, shapes.indexOf(obj.chorusShape));
-      } else {
-        this._chorus.shape = shapes[Math.round(obj.chorusShape)] || "sine";
-        const s = this.querySelector('wam-knob[param="chorusShape"]');
-        if (s) s.value = obj.chorusShape;
-      }
+      const idx = typeof obj.chorusShape === "string" ? Math.max(0, shapes.indexOf(obj.chorusShape)) : obj.chorusShape;
+      restore("chorusShape", idx);
     }
-    if (obj.filterSweep != null && this._filter) {
-      this._filter.sweep = obj.filterSweep;
-      const s = this.querySelector("wam-filter-sweep");
-      if (s) s.value = obj.filterSweep;
+
+    // Filter
+    if (obj.filterSweep != null) {
+      restore("filterSweep", obj.filterSweep, "wam-filter-sweep");
     } else {
       // backwards-compat: old saves had separate lpFreq/hpFreq
       if (obj.lpFreq != null && this._filter) this._filter.lpFreq = obj.lpFreq;
       if (obj.hpFreq != null && this._filter) this._filter.hpFreq = obj.hpFreq;
     }
-    if (obj.filterQ != null && this._filter) {
-      this._filter.q = obj.filterQ;
-      const s = this.querySelector('wam-knob[param="filterQ"]');
-      if (s) s.value = obj.filterQ;
-    }
+    restore("filterQ", obj.filterQ);
   }
 
   // ---- UI ----

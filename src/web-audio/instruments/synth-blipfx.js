@@ -595,27 +595,142 @@ export default class WebAudioSynthBlipFX extends WebAudioInstrumentBase {
 
 export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "volume",       label: "Vol",        min: 0,    max: 1,    step: 0.01 },
-    { param: "frequency",    label: "Freq",       min: 20,   max: 2000, step: 1,   scale: "log", tooltip: "Base oscillator frequency in Hz." },
-    { param: "attack",       label: "Attack",     min: 0,    max: 0.2,  step: 0.001,             tooltip: "Volume envelope attack time." },
-    { param: "decay",        label: "Decay",      min: 0,    max: 0.5,  step: 0.01,              tooltip: "Volume envelope decay time." },
-    { param: "sustain",      label: "Sustain",    min: 0,    max: 0.3,  step: 0.01,              tooltip: "Sustain duration (seconds after decay)." },
-    { param: "sustainVolume",label: "Sus Vol",    min: 0,    max: 1,    step: 0.01,              tooltip: "Volume level during the sustain phase." },
-    { param: "release",      label: "Release",    min: 0.01, max: 1,    step: 0.01,              tooltip: "Volume fade-out after the sustain ends." },
-    { param: "slide",        label: "Slide",      min: -40,  max: 40,   step: 0.5,               tooltip: "Pitch slide rate in semitones/second." },
-    { param: "deltaSlide",   label: "Slide Accel",min: -30,  max: 30,   step: 0.5,               tooltip: "Acceleration of the pitch slide over time." },
-    { param: "pitchJump",    label: "P.Jump",     min: -36,  max: 36,   step: 1,                 tooltip: "Sudden pitch shift in semitones at jump time." },
-    { param: "pitchJumpTime",label: "Jump Time",  min: 0,    max: 0.3,  step: 0.01,              tooltip: "When the pitch jump occurs within the sound." },
-    { param: "repeatTime",   label: "Repeat",     min: 0,    max: 0.5,  step: 0.01,              tooltip: "Time between note restarts for a fluttering effect." },
-    { param: "noise",        label: "Noise",      min: 0,    max: 1,    step: 0.01,              tooltip: "Blend of white noise into the oscillator signal." },
-    { param: "modulation",   label: "FM Mod",     min: 0,    max: 1,    step: 0.01,              tooltip: "FM modulation depth applied to the oscillator." },
-    { param: "shapeCurve",   label: "Shape Pwr",  min: 0.1,  max: 5,    step: 0.1,               tooltip: "Waveshaper curve power. Higher = more distorted waveform." },
-    { param: "tremolo",      label: "Tremolo",    min: 0,    max: 1,    step: 0.01,              tooltip: "Amplitude tremolo depth." },
-    { param: "bitCrush",     label: "BitCrush",   min: 0,    max: 1,    step: 0.01,              tooltip: "Bit reduction. Higher = more lo-fi digital crunch." },
-    { param: "lpfFreq",      label: "LPF",        min: 80,   max: 8000, step: 1,   scale: "log", tooltip: "Lowpass filter cutoff. Removes high frequencies." },
-    { param: "hpfFreq",      label: "HPF",        min: 20,   max: 2000, step: 1,   scale: "log", tooltip: "Highpass filter cutoff. Removes low frequencies." },
-    { param: "lpfResonance", label: "Resonance",  min: 0.5,  max: 15,   step: 0.1,               tooltip: "Resonance (Q) shared by both LP and HP filters." },
-    { param: "chance",       label: "Chance",     min: 0,    max: 1,    step: 0.01,              tooltip: "Probability this sound fires each step. 1 = always plays." },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
+    {
+      param: "frequency",
+      label: "Freq",
+      min: 20,
+      max: 2000,
+      step: 1,
+      scale: "log",
+      tooltip: "Base oscillator frequency in Hz.",
+    },
+    { param: "attack", label: "Attack", min: 0, max: 0.2, step: 0.001, tooltip: "Volume envelope attack time." },
+    { param: "decay", label: "Decay", min: 0, max: 0.5, step: 0.01, tooltip: "Volume envelope decay time." },
+    {
+      param: "sustain",
+      label: "Sustain",
+      min: 0,
+      max: 0.3,
+      step: 0.01,
+      tooltip: "Sustain duration (seconds after decay).",
+    },
+    {
+      param: "sustainVolume",
+      label: "Sus Vol",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Volume level during the sustain phase.",
+    },
+    {
+      param: "release",
+      label: "Release",
+      min: 0.01,
+      max: 1,
+      step: 0.01,
+      tooltip: "Volume fade-out after the sustain ends.",
+    },
+    { param: "slide", label: "Slide", min: -40, max: 40, step: 0.5, tooltip: "Pitch slide rate in semitones/second." },
+    {
+      param: "deltaSlide",
+      label: "Slide Accel",
+      min: -30,
+      max: 30,
+      step: 0.5,
+      tooltip: "Acceleration of the pitch slide over time.",
+    },
+    {
+      param: "pitchJump",
+      label: "P.Jump",
+      min: -36,
+      max: 36,
+      step: 1,
+      tooltip: "Sudden pitch shift in semitones at jump time.",
+    },
+    {
+      param: "pitchJumpTime",
+      label: "Jump Time",
+      min: 0,
+      max: 0.3,
+      step: 0.01,
+      tooltip: "When the pitch jump occurs within the sound.",
+    },
+    {
+      param: "repeatTime",
+      label: "Repeat",
+      min: 0,
+      max: 0.5,
+      step: 0.01,
+      tooltip: "Time between note restarts for a fluttering effect.",
+    },
+    {
+      param: "noise",
+      label: "Noise",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Blend of white noise into the oscillator signal.",
+    },
+    {
+      param: "modulation",
+      label: "FM Mod",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "FM modulation depth applied to the oscillator.",
+    },
+    {
+      param: "shapeCurve",
+      label: "Shape Pwr",
+      min: 0.1,
+      max: 5,
+      step: 0.1,
+      tooltip: "Waveshaper curve power. Higher = more distorted waveform.",
+    },
+    { param: "tremolo", label: "Tremolo", min: 0, max: 1, step: 0.01, tooltip: "Amplitude tremolo depth." },
+    {
+      param: "bitCrush",
+      label: "BitCrush",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Bit reduction. Higher = more lo-fi digital crunch.",
+    },
+    {
+      param: "lpfFreq",
+      label: "LPF",
+      min: 80,
+      max: 8000,
+      step: 1,
+      scale: "log",
+      tooltip: "Lowpass filter cutoff. Removes high frequencies.",
+    },
+    {
+      param: "hpfFreq",
+      label: "HPF",
+      min: 20,
+      max: 2000,
+      step: 1,
+      scale: "log",
+      tooltip: "Highpass filter cutoff. Removes low frequencies.",
+    },
+    {
+      param: "lpfResonance",
+      label: "Resonance",
+      min: 0.5,
+      max: 15,
+      step: 0.1,
+      tooltip: "Resonance (Q) shared by both LP and HP filters.",
+    },
+    {
+      param: "chance",
+      label: "Chance",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Probability this sound fires each step. 1 = always plays.",
+    },
   ];
 
   static DEFAULT_PATTERN() {
@@ -643,9 +758,15 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
 
   // ---- Identity overrides ----
 
-  _defaultColor() { return "#c0f"; }
-  _defaultTitle() { return "BlipFX Sound Effects"; }
-  _fxTitle() { return "SFX FX"; }
+  _defaultColor() {
+    return "#c0f";
+  }
+  _defaultTitle() {
+    return "BlipFX Sound Effects";
+  }
+  _fxTitle() {
+    return "SFX FX";
+  }
 
   _buildStripActions(strip, options = {}) {
     const key = options.jamKey ?? "v";
@@ -682,10 +803,7 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
       if (i === this._instrument.shape) opt.selected = true;
       this._shapeSelect.appendChild(opt);
     });
-    this._shapeSelect.addEventListener("change", () => {
-      this._instrument.shape = parseInt(this._shapeSelect.value);
-      this._emitChange();
-    });
+    this._registerSelect("shape", this._shapeSelect, { parse: parseInt });
     shapeWrap.appendChild(this._shapeSelect);
     toneCtrl.appendChild(shapeWrap);
     toneCtrl.appendChild(mkSlider({ param: "frequency", label: "Freq", min: 20, max: 2000, step: 1, scale: "log" }));
@@ -795,9 +913,8 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     if (param === "chance") {
       this._chance = value;
     } else {
-      this._instrument[param] = value;
+      super._onSliderInput(param, value);
     }
-    this._emitChange();
   }
 
   // ---- Sync overrides ----
@@ -812,12 +929,6 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
       } else {
         slider.value = this._instrument[def.param];
       }
-    }
-  }
-
-  _syncExtraControls() {
-    if (this._shapeSelect && this._instrument) {
-      this._shapeSelect.value = this._instrument.shape;
     }
   }
 
@@ -904,14 +1015,22 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
 
   _meetsCondition(condition, barIndex) {
     switch (condition) {
-      case "off": return true;
-      case "1:2": return barIndex % 2 === 0;
-      case "1:3": return barIndex % 3 === 0;
-      case "1:4": return barIndex % 4 === 0;
-      case "2:4": return barIndex % 4 === 1;
-      case "3:4": return barIndex % 4 === 2;
-      case "fill": return barIndex % 4 === 3;
-      default: return true;
+      case "off":
+        return true;
+      case "1:2":
+        return barIndex % 2 === 0;
+      case "1:3":
+        return barIndex % 3 === 0;
+      case "1:4":
+        return barIndex % 4 === 0;
+      case "2:4":
+        return barIndex % 4 === 1;
+      case "3:4":
+        return barIndex % 4 === 2;
+      case "fill":
+        return barIndex % 4 === 3;
+      default:
+        return true;
     }
   }
 
@@ -953,8 +1072,8 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
   }
 
   _restoreExtra(obj) {
-    if (obj.params?.shape != null && this._shapeSelect) {
-      this._shapeSelect.value = obj.params.shape;
+    if (obj.params?.shape != null) {
+      this._restoreParam("shape", obj.params.shape);
     }
     if (obj.params?.locked != null && this._lockBtn) {
       this._locked = !!obj.params.locked;

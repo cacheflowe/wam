@@ -474,18 +474,7 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     lfoToggle.textContent = "Off";
     const lfoWrap = createCtrl("Active", { tooltip: "Toggle filter cutoff oscillation synced to BPM." });
     lfoWrap.appendChild(lfoToggle);
-    lfoToggle.addEventListener("click", () => {
-      this._instrument.filterLfoActive = !this._instrument.filterLfoActive;
-      lfoToggle.textContent = this._instrument.filterLfoActive ? "On" : "Off";
-      if (this._instrument.filterLfoActive) {
-        lfoToggle.setAttribute("data-active", "");
-        this._startLfoAnim();
-      } else {
-        lfoToggle.removeAttribute("data-active");
-        this._stopLfoAnim();
-      }
-      this._emitChange();
-    });
+    this._registerToggle("filterLfoActive", lfoToggle);
     this._lfoToggle = lfoToggle;
     lfoCtrl.appendChild(lfoWrap);
     lfoCtrl.appendChild(
@@ -524,10 +513,7 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
           if (beats === this._instrument.filterLfoInterval) opt.selected = true;
           this._lfoRateSelect.appendChild(opt);
         }
-        this._lfoRateSelect.addEventListener("change", () => {
-          this._instrument.filterLfoInterval = parseFloat(this._lfoRateSelect.value);
-          this._emitChange();
-        });
+        this._registerSelect("filterLfoInterval", this._lfoRateSelect, { parse: parseFloat });
         rateWrap.appendChild(this._lfoRateSelect);
         return rateWrap;
       })(),
@@ -599,30 +585,23 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     params.filterLfoOffset = this._instrument.filterLfoOffset;
   }
 
+  _onSliderInput(param, value) {
+    super._onSliderInput(param, value);
+    if (param === "filterLfoActive" && this._lfoToggle) {
+      this._lfoToggle.textContent = value ? "On" : "Off";
+      if (value) {
+        this._lfoToggle.setAttribute("data-active", "");
+        this._startLfoAnim();
+      } else {
+        this._lfoToggle.removeAttribute("data-active");
+        this._stopLfoAnim();
+      }
+    }
+  }
+
   _extendJSON(obj) {
     obj.steps = this._seq?.steps ?? [];
     if (this._presetSelect) obj.preset = this._presetSelect.value;
-  }
-
-  _restoreParam(key, val) {
-    if (key === "oscType") {
-      this._instrument.oscType = val;
-      this._syncWaveSelect();
-    } else if (key === "filterLfoActive") {
-      this._instrument.filterLfoActive = val;
-      if (this._lfoToggle) {
-        this._lfoToggle.textContent = val ? "On" : "Off";
-        if (val) this._lfoToggle.setAttribute("data-active", "");
-        else this._lfoToggle.removeAttribute("data-active");
-      }
-      if (val) this._startLfoAnim();
-      else this._stopLfoAnim();
-    } else if (key === "filterLfoInterval") {
-      this._instrument.filterLfoInterval = val;
-      if (this._lfoRateSelect) this._lfoRateSelect.value = val;
-    } else {
-      super._restoreParam(key, val);
-    }
   }
 
   _restoreExtra(obj) {
@@ -631,15 +610,11 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
   }
 
   _syncExtraControls() {
-    this._syncWaveSelect();
     if (this._lfoToggle && this._instrument) {
       const active = this._instrument.filterLfoActive;
       this._lfoToggle.textContent = active ? "On" : "Off";
       if (active) this._lfoToggle.setAttribute("data-active", "");
       else this._lfoToggle.removeAttribute("data-active");
-    }
-    if (this._lfoRateSelect && this._instrument) {
-      this._lfoRateSelect.value = this._instrument.filterLfoInterval;
     }
   }
 

@@ -617,12 +617,6 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
     }
   }
 
-  // ---- Slider handling ----
-
-  _onSliderInput(param, value) {
-    this._instrument[param] = value;
-  }
-
   _refreshAutoSpeedOption(file) {
     if (!this._instrument || !this._speedSelect) return;
     this._instrument._setDetectedLoopLength(file);
@@ -736,11 +730,6 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
     } else if (obj.speedMultiplier != null) {
       this._instrument.speedMultiplier = obj.speedMultiplier;
       if (this._speedSelect) this._speedSelect.value = `${obj.speedMultiplier}`;
-    }
-    // Backwards-compat: old format stored pitchShift in params and stretchRatio at top level
-    if (!obj.ts && (obj.params?.pitchShift != null || obj.stretchRatio != null)) {
-      const compat = { pitchShift: obj.params?.pitchShift ?? 0, stretchRatio: obj.stretchRatio ?? 1 };
-      this._tsControls?.fromJSON(compat);
     }
     if (obj.ts) this._tsControls?.fromJSON(obj.ts);
   }

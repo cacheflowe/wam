@@ -39,6 +39,8 @@ export class WebAudioControlsBase extends HTMLElement {
     this._rotateIntervalInput = null;
     this._waveSelect = null;
     this._waveSelectProp = "oscType";
+    this._selects = {}; // param → { el, parse? } for registered <select> controls
+    this._toggles = {}; // param → { el, activeClass } for registered toggle buttons
     // Section toggle buttons and their target sections
     this._ctrlBtn = null;
     this._seqBtn = null;
@@ -81,6 +83,8 @@ export class WebAudioControlsBase extends HTMLElement {
     const color = options.color || this._defaultColor();
     this.innerHTML = "";
     this._sliders = {};
+    this._selects = {};
+    this._toggles = {};
     this.classList.add("wam-panel");
     injectControlsCSS();
     this.style.setProperty("--slider-accent", color);
@@ -265,10 +269,57 @@ export class WebAudioControlsBase extends HTMLElement {
   /** Handle a non-pan slider value change. Default: set on instrument. */
   _onSliderInput(param, value) {
     this._instrument[param] = value;
+    // Sync registered select value
+    const sel = this._selects[param];
+    if (sel) sel.el.value = value;
+    // Sync registered toggle active class
+    const tog = this._toggles[param];
+    if (tog) tog.el.classList.toggle(tog.activeClass, !!value);
   }
 
   /** Sync non-slider controls after preset change (wave buttons, selects, etc.). */
   _syncExtraControls() {}
+
+  /**
+   * Register a <select> element for a given param.
+   * Wires up change → knob-input dispatch automatically.
+   * @param {string} param  The instrument property name
+   * @param {HTMLSelectElement} el  The <select> element
+   * @param {{ parse?: function }} [opts]  Optional value parser (e.g. parseFloat)
+   */
+  _registerSelect(param, el, { parse } = {}) {
+    this._selects[param] = { el, parse };
+    el.addEventListener("change", () => {
+      const raw = el.value;
+      const value = parse ? parse(raw) : raw;
+      el.dispatchEvent(
+        new CustomEvent("knob-input", {
+          bubbles: true,
+          detail: { param, value },
+        }),
+      );
+    });
+  }
+
+  /**
+   * Register a toggle button for a given param.
+   * Wires up click → knob-input dispatch automatically.
+   * @param {string} param  The instrument property name
+   * @param {HTMLElement} el  The toggle button element
+   * @param {string} [activeClass]  CSS class toggled on active state (default: "wam-wave-active")
+   */
+  _registerToggle(param, el, activeClass = "wam-wave-active") {
+    this._toggles[param] = { el, activeClass };
+    el.addEventListener("click", () => {
+      const newVal = !this._instrument[param];
+      el.dispatchEvent(
+        new CustomEvent("knob-input", {
+          bubbles: true,
+          detail: { param, value: newVal },
+        }),
+      );
+    });
+  }
 
   // ---- FX unit ----
 
@@ -336,7 +387,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
   /**
    * Build an oscillator-type dropdown (SAW/SQR/TRI/SIN etc.) wrapped in createCtrl.
-   * Stores references as this._waveSelect and this._waveSelectProp for _syncWaveSelect().
+   * Stores references as this._waveSelect and this._waveSelectProp.
    * @param {string[]} types  e.g. ["sawtooth","square","triangle","sine"]
    * @param {HTMLElement} appendTo
    * @param {object} [opts]
@@ -356,19 +407,10 @@ export class WebAudioControlsBase extends HTMLElement {
       if (this._instrument[prop] === type) opt.selected = true;
       this._waveSelect.appendChild(opt);
     }
-    this._waveSelect.addEventListener("change", () => {
-      this._instrument[this._waveSelectProp] = this._waveSelect.value;
-      this._emitChange();
-    });
+    this._registerSelect(prop, this._waveSelect);
     wrap.appendChild(this._waveSelect);
     appendTo.appendChild(wrap);
     return wrap;
-  }
-
-  /** Sync wave-select value to instrument property. */
-  _syncWaveSelect() {
-    if (!this._waveSelect || !this._instrument) return;
-    this._waveSelect.value = this._instrument[this._waveSelectProp];
   }
 
   /**
@@ -470,7 +512,29 @@ export class WebAudioControlsBase extends HTMLElement {
   applyPreset(name) {
     if (!this._instrument) return;
     this._instrument.applyPreset(name);
-    this._syncSliders();
+    // Sync all knob-based params through the event path
+    for (const def of this.constructor.SLIDER_DEFS || []) {
+      const knob = this._sliders[def.param];
+      if (knob && this._instrument) {
+        const val = this._instrument[def.param];
+        knob.value = val;
+        knob.dispatchEvent(
+          new CustomEvent("knob-input", {
+            bubbles: true,
+            detail: { param: def.param, value: val },
+          }),
+        );
+      }
+    }
+    // Sync registered selects
+    for (const [param, { el }] of Object.entries(this._selects)) {
+      if (this._instrument) el.value = this._instrument[param];
+    }
+    // Sync registered toggles
+    for (const [param, { el, activeClass }] of Object.entries(this._toggles)) {
+      if (this._instrument) el.classList.toggle(activeClass, !!this._instrument[param]);
+    }
+    if (this._out && this._instrument) this._out.gain.value = this._instrument.volume;
     if (this._presetSelect) this._presetSelect.value = name;
     this._syncExtraControls();
   }
@@ -568,10 +632,45 @@ export class WebAudioControlsBase extends HTMLElement {
     if (key === "volume") {
       if (this._out) this._out.gain.value = val;
       if (this._channelStripVolSlider) this._channelStripVolSlider.value = val;
+      return;
+    }
+    // Registered select — set value + dispatch event
+    const sel = this._selects[key];
+    if (sel) {
+      sel.el.value = val;
+      sel.el.dispatchEvent(
+        new CustomEvent("knob-input", {
+          bubbles: true,
+          detail: { param: key, value: sel.parse ? sel.parse(val) : val },
+        }),
+      );
+      return;
+    }
+    // Registered toggle — dispatch event
+    const tog = this._toggles[key];
+    if (tog) {
+      tog.el.dispatchEvent(
+        new CustomEvent("knob-input", {
+          bubbles: true,
+          detail: { param: key, value: val },
+        }),
+      );
+      return;
+    }
+    // Knob/slider — set value + dispatch event
+    const knob = this._sliders[key];
+    if (knob) {
+      knob.value = val;
+      knob.dispatchEvent(
+        new CustomEvent("knob-input", {
+          bubbles: true,
+          detail: { param: key, value: val },
+        }),
+      );
     } else {
+      // No UI control — direct write as fallback
       this._instrument[key] = val;
     }
-    if (this._sliders[key]) this._sliders[key].value = val;
   }
 
   /** Restore extra top-level fields (e.g. steps, chordSize). */

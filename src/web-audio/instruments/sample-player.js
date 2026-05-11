@@ -189,7 +189,9 @@ export default class WebAudioSamplePlayer extends WebAudioInstrumentBase {
           v.gain.gain.setValueAtTime(v.gain.gain.value, t);
           v.gain.gain.linearRampToValueAtTime(0, t + 0.005);
           v.source.stop(t + 0.01);
-        } catch (_) { /* already stopped */ }
+        } catch (_) {
+          /* already stopped */
+        }
       }
       this._activeVoices = [];
     }
@@ -211,7 +213,7 @@ export default class WebAudioSamplePlayer extends WebAudioInstrumentBase {
     // rootMidi acts as a pitch offset: higher = higher pitch
     let playbackRate = 1.0;
     const jump = Math.random() < this.octaveJumpProb ? 12 : 0;
-    const pitchOffset = (this.rootMidi - 60) + this.octaveOffset * 12 + jump;
+    const pitchOffset = this.rootMidi - 60 + this.octaveOffset * 12 + jump;
     if (midi != null) {
       // Melodic mode: shift to target MIDI note + pitch offset
       playbackRate = WebAudioInstrumentBase._midiToFreq(midi + pitchOffset) / WebAudioInstrumentBase._midiToFreq(60);
@@ -253,7 +255,9 @@ export default class WebAudioSamplePlayer extends WebAudioInstrumentBase {
       const bufferDuration = buffer.duration / playbackRate;
       const envDuration = releaseStart + r + 0.01 - t;
       source.stop(t + Math.min(bufferDuration, envDuration));
-      source.onended = () => { this._activeVoices = this._activeVoices.filter((v) => v !== voice); };
+      source.onended = () => {
+        this._activeVoices = this._activeVoices.filter((v) => v !== voice);
+      };
       this._activeVoices.push(voice);
     } else {
       // No envelope — play sample at velocity, let it finish naturally
@@ -264,7 +268,9 @@ export default class WebAudioSamplePlayer extends WebAudioInstrumentBase {
 
       const voice = { source, gain };
       source.start(t);
-      source.onended = () => { this._activeVoices = this._activeVoices.filter((v) => v !== voice); };
+      source.onended = () => {
+        this._activeVoices = this._activeVoices.filter((v) => v !== voice);
+      };
       this._activeVoices.push(voice);
     }
   }
@@ -437,11 +443,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     this._chokeBtn.className = "wam-wave-btn";
     this._chokeBtn.textContent = "CHOKE";
     if (this._instrument?.choke) this._chokeBtn.classList.add("wam-wave-active");
-    this._chokeBtn.addEventListener("click", () => {
-      this._instrument.choke = !this._instrument.choke;
-      this._chokeBtn.classList.toggle("wam-wave-active", this._instrument.choke);
-      this._emitChange();
-    });
+    this._registerToggle("choke", this._chokeBtn);
     chokeWrap.appendChild(this._chokeBtn);
     sampleCtrl.appendChild(chokeWrap);
 
@@ -474,11 +476,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     this._envToggleBtn.className = "wam-wave-btn";
     this._envToggleBtn.textContent = "ENV";
     if (this._instrument?.useEnvelope) this._envToggleBtn.classList.add("wam-wave-active");
-    this._envToggleBtn.addEventListener("click", () => {
-      this._instrument.useEnvelope = !this._instrument.useEnvelope;
-      this._envToggleBtn.classList.toggle("wam-wave-active", this._instrument.useEnvelope);
-      this._emitChange();
-    });
+    this._registerToggle("useEnvelope", this._envToggleBtn);
     envToggleWrap.appendChild(this._envToggleBtn);
     envCtrl.appendChild(envToggleWrap);
 
@@ -490,7 +488,16 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
 
     // ---- Pitch ----
     const { el: pitchEl, controls: pitchCtrl } = createSection("Pitch");
-    pitchCtrl.appendChild(mkSlider({ param: "rootMidi", label: "Pitch", min: 24, max: 84, step: 1, tooltip: "Pitch offset in semitones (60 = natural)." }));
+    pitchCtrl.appendChild(
+      mkSlider({
+        param: "rootMidi",
+        label: "Pitch",
+        min: 24,
+        max: 84,
+        step: 1,
+        tooltip: "Pitch offset in semitones (60 = natural).",
+      }),
+    );
     pitchCtrl.appendChild(mkSlider({ param: "octaveOffset", label: "Octave", min: -2, max: 2, step: 1 }));
     pitchCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Oct Jump", min: 0, max: 1, step: 0.01 }));
     pitchCtrl.appendChild(mkSlider({ param: "reverseChance", label: "Reverse", min: 0, max: 1, step: 0.01 }));
@@ -602,9 +609,10 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
             let midi;
             if (this._melodicMode) {
               const rootNote = (s.note ?? 60) + 24;
-              midi = this._chordSize === 1
-                ? rootNote
-                : buildChordFromScale(rootNote, this._scaleName ?? "Chromatic", this._chordSize);
+              midi =
+                this._chordSize === 1
+                  ? rootNote
+                  : buildChordFromScale(rootNote, this._scaleName ?? "Chromatic", this._chordSize);
             } else {
               midi = null;
             }
@@ -705,10 +713,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
       if (this._chordSizeSelect) this._chordSizeSelect.value = obj.chordSize;
     }
     if (obj.choke != null) {
-      this._instrument.choke = obj.choke;
-      if (this._chokeBtn) {
-        this._chokeBtn.classList.toggle("wam-wave-active", obj.choke);
-      }
+      this._restoreParam("choke", obj.choke);
     }
   }
 }

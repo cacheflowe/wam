@@ -7,92 +7,252 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
   static PRESETS = {
     Default: {
       oscType: "sawtooth",
-      attack: 0.02, decay: 0.2, sustain: 0.5, release: 0.4,
-      filterType: "lowpass", filterFreq: 600, filterQ: 4, filterEnvAmt: 2,
-      filterAttack: 0.02, filterDecay: 0.2, filterSustain: 0, filterRelease: 0.4,
-      detune: 0, unisonVoices: 1, unisonDetune: 0, subGain: 0,
-      portamento: 0, lfoRate: 2, lfoDepth: 0, lfoShape: "sine", lfoDest: "filter",
+      attack: 0.02,
+      decay: 0.2,
+      sustain: 0.5,
+      release: 0.4,
+      filterType: "lowpass",
+      filterFreq: 600,
+      filterQ: 4,
+      filterEnvAmt: 2,
+      filterAttack: 0.02,
+      filterDecay: 0.2,
+      filterSustain: 0,
+      filterRelease: 0.4,
+      detune: 0,
+      unisonVoices: 1,
+      unisonDetune: 0,
+      subGain: 0,
+      portamento: 0,
+      lfoRate: 2,
+      lfoDepth: 0,
+      lfoShape: "sine",
+      lfoDest: "filter",
       volume: 1,
     },
     Bass: {
       oscType: "sawtooth",
-      attack: 0.01, decay: 0.3, sustain: 0.6, release: 0.3,
-      filterType: "lowpass", filterFreq: 400, filterQ: 6, filterEnvAmt: 3,
-      filterAttack: 0.01, filterDecay: 0.3, filterSustain: 0, filterRelease: 0.3,
-      detune: 0, unisonVoices: 1, unisonDetune: 0, subGain: 0.4,
-      portamento: 0, lfoRate: 2, lfoDepth: 0, lfoShape: "sine", lfoDest: "filter",
+      attack: 0.01,
+      decay: 0.3,
+      sustain: 0.6,
+      release: 0.3,
+      filterType: "lowpass",
+      filterFreq: 400,
+      filterQ: 6,
+      filterEnvAmt: 3,
+      filterAttack: 0.01,
+      filterDecay: 0.3,
+      filterSustain: 0,
+      filterRelease: 0.3,
+      detune: 0,
+      unisonVoices: 1,
+      unisonDetune: 0,
+      subGain: 0.4,
+      portamento: 0,
+      lfoRate: 2,
+      lfoDepth: 0,
+      lfoShape: "sine",
+      lfoDest: "filter",
       volume: 1,
     },
     Soft_Bass: {
       oscType: "sawtooth",
-      attack: 0.02, decay: 0.2, sustain: 0.5, release: 0.4,
-      filterType: "lowpass", filterFreq: 500, filterQ: 5, filterEnvAmt: 2,
-      filterAttack: 0.02, filterDecay: 0.2, filterSustain: 0, filterRelease: 0.4,
-      detune: 0, unisonVoices: 1, unisonDetune: 0, subGain: 0,
-      portamento: 0, lfoRate: 2, lfoDepth: 0, lfoShape: "sine", lfoDest: "filter",
+      attack: 0.02,
+      decay: 0.2,
+      sustain: 0.5,
+      release: 0.4,
+      filterType: "lowpass",
+      filterFreq: 500,
+      filterQ: 5,
+      filterEnvAmt: 2,
+      filterAttack: 0.02,
+      filterDecay: 0.2,
+      filterSustain: 0,
+      filterRelease: 0.4,
+      detune: 0,
+      unisonVoices: 1,
+      unisonDetune: 0,
+      subGain: 0,
+      portamento: 0,
+      lfoRate: 2,
+      lfoDepth: 0,
+      lfoShape: "sine",
+      lfoDest: "filter",
       volume: 0.6,
     },
     Lead: {
       oscType: "sawtooth",
-      attack: 0.01, decay: 0.15, sustain: 0.7, release: 0.5,
-      filterType: "lowpass", filterFreq: 1200, filterQ: 5, filterEnvAmt: 2,
-      filterAttack: 0.01, filterDecay: 0.15, filterSustain: 0, filterRelease: 0.5,
-      detune: 5, unisonVoices: 2, unisonDetune: 8, subGain: 0,
-      portamento: 0, lfoRate: 5, lfoDepth: 0.05, lfoShape: "sine", lfoDest: "pitch",
+      attack: 0.01,
+      decay: 0.15,
+      sustain: 0.7,
+      release: 0.5,
+      filterType: "lowpass",
+      filterFreq: 1200,
+      filterQ: 5,
+      filterEnvAmt: 2,
+      filterAttack: 0.01,
+      filterDecay: 0.15,
+      filterSustain: 0,
+      filterRelease: 0.5,
+      detune: 5,
+      unisonVoices: 2,
+      unisonDetune: 8,
+      subGain: 0,
+      portamento: 0,
+      lfoRate: 5,
+      lfoDepth: 0.05,
+      lfoShape: "sine",
+      lfoDest: "pitch",
       volume: 0.9,
     },
     Pad: {
       oscType: "triangle",
-      attack: 0.4, decay: 0.5, sustain: 0.8, release: 1.5,
-      filterType: "lowpass", filterFreq: 800, filterQ: 2, filterEnvAmt: 1,
-      filterAttack: 0.4, filterDecay: 0.5, filterSustain: 0.3, filterRelease: 1.5,
-      detune: 0, unisonVoices: 3, unisonDetune: 12, subGain: 0,
-      portamento: 0, lfoRate: 0.5, lfoDepth: 0.1, lfoShape: "sine", lfoDest: "filter",
+      attack: 0.4,
+      decay: 0.5,
+      sustain: 0.8,
+      release: 1.5,
+      filterType: "lowpass",
+      filterFreq: 800,
+      filterQ: 2,
+      filterEnvAmt: 1,
+      filterAttack: 0.4,
+      filterDecay: 0.5,
+      filterSustain: 0.3,
+      filterRelease: 1.5,
+      detune: 0,
+      unisonVoices: 3,
+      unisonDetune: 12,
+      subGain: 0,
+      portamento: 0,
+      lfoRate: 0.5,
+      lfoDepth: 0.1,
+      lfoShape: "sine",
+      lfoDest: "filter",
       volume: 0.8,
     },
     Pluck: {
       oscType: "square",
-      attack: 0.001, decay: 0.1, sustain: 0.0, release: 0.2,
-      filterType: "lowpass", filterFreq: 2000, filterQ: 8, filterEnvAmt: 3,
-      filterAttack: 0.001, filterDecay: 0.08, filterSustain: 0, filterRelease: 0.2,
-      detune: 0, unisonVoices: 1, unisonDetune: 0, subGain: 0,
-      portamento: 0, lfoRate: 2, lfoDepth: 0, lfoShape: "sine", lfoDest: "filter",
+      attack: 0.001,
+      decay: 0.1,
+      sustain: 0.0,
+      release: 0.2,
+      filterType: "lowpass",
+      filterFreq: 2000,
+      filterQ: 8,
+      filterEnvAmt: 3,
+      filterAttack: 0.001,
+      filterDecay: 0.08,
+      filterSustain: 0,
+      filterRelease: 0.2,
+      detune: 0,
+      unisonVoices: 1,
+      unisonDetune: 0,
+      subGain: 0,
+      portamento: 0,
+      lfoRate: 2,
+      lfoDepth: 0,
+      lfoShape: "sine",
+      lfoDest: "filter",
       volume: 0.9,
     },
     Airy_Lead: {
       oscType: "sawtooth",
-      attack: 0.02, decay: 0.15, sustain: 0.3, release: 0.8,
-      filterType: "highpass", filterFreq: 4000, filterQ: 1, filterEnvAmt: 0,
-      filterAttack: 0.02, filterDecay: 0.15, filterSustain: 0, filterRelease: 0.8,
-      detune: 0, unisonVoices: 1, unisonDetune: 0, subGain: 0,
-      portamento: 0, lfoRate: 2, lfoDepth: 0, lfoShape: "sine", lfoDest: "filter",
+      attack: 0.02,
+      decay: 0.15,
+      sustain: 0.3,
+      release: 0.8,
+      filterType: "highpass",
+      filterFreq: 4000,
+      filterQ: 1,
+      filterEnvAmt: 0,
+      filterAttack: 0.02,
+      filterDecay: 0.15,
+      filterSustain: 0,
+      filterRelease: 0.8,
+      detune: 0,
+      unisonVoices: 1,
+      unisonDetune: 0,
+      subGain: 0,
+      portamento: 0,
+      lfoRate: 2,
+      lfoDepth: 0,
+      lfoShape: "sine",
+      lfoDest: "filter",
       volume: 0.35,
     },
     Cello: {
       oscType: "sawtooth",
-      attack: 0.12, decay: 0.3, sustain: 0.7, release: 0.8,
-      filterType: "lowpass", filterFreq: 700, filterQ: 3, filterEnvAmt: 1.5,
-      filterAttack: 0.12, filterDecay: 0.3, filterSustain: 0.1, filterRelease: 0.8,
-      detune: 0, unisonVoices: 2, unisonDetune: 8, subGain: 0.15,
-      portamento: 0.06, lfoRate: 5, lfoDepth: 0.04, lfoShape: "sine", lfoDest: "pitch",
+      attack: 0.12,
+      decay: 0.3,
+      sustain: 0.7,
+      release: 0.8,
+      filterType: "lowpass",
+      filterFreq: 700,
+      filterQ: 3,
+      filterEnvAmt: 1.5,
+      filterAttack: 0.12,
+      filterDecay: 0.3,
+      filterSustain: 0.1,
+      filterRelease: 0.8,
+      detune: 0,
+      unisonVoices: 2,
+      unisonDetune: 8,
+      subGain: 0.15,
+      portamento: 0.06,
+      lfoRate: 5,
+      lfoDepth: 0.04,
+      lfoShape: "sine",
+      lfoDest: "pitch",
       volume: 0.5,
     },
     Whisper: {
       oscType: "sine",
-      attack: 0.3, decay: 0.6, sustain: 0.4, release: 1.5,
-      filterType: "lowpass", filterFreq: 2500, filterQ: 1, filterEnvAmt: 0,
-      filterAttack: 0.3, filterDecay: 0.6, filterSustain: 0, filterRelease: 1.5,
-      detune: 0, unisonVoices: 2, unisonDetune: 5, subGain: 0,
-      portamento: 0.1, lfoRate: 3, lfoDepth: 0.03, lfoShape: "sine", lfoDest: "pitch",
+      attack: 0.3,
+      decay: 0.6,
+      sustain: 0.4,
+      release: 1.5,
+      filterType: "lowpass",
+      filterFreq: 2500,
+      filterQ: 1,
+      filterEnvAmt: 0,
+      filterAttack: 0.3,
+      filterDecay: 0.6,
+      filterSustain: 0,
+      filterRelease: 1.5,
+      detune: 0,
+      unisonVoices: 2,
+      unisonDetune: 5,
+      subGain: 0,
+      portamento: 0.1,
+      lfoRate: 3,
+      lfoDepth: 0.03,
+      lfoShape: "sine",
+      lfoDest: "pitch",
       volume: 0.25,
     },
     Drone_Pad: {
       oscType: "triangle",
-      attack: 0.8, decay: 0.5, sustain: 0.9, release: 2.0,
-      filterType: "lowpass", filterFreq: 500, filterQ: 1.5, filterEnvAmt: 0.5,
-      filterAttack: 0.8, filterDecay: 0.5, filterSustain: 0.5, filterRelease: 2.0,
-      detune: 0, unisonVoices: 2, unisonDetune: 3, subGain: 0.2,
-      portamento: 0.2, lfoRate: 0.3, lfoDepth: 0.15, lfoShape: "sine", lfoDest: "filter",
+      attack: 0.8,
+      decay: 0.5,
+      sustain: 0.9,
+      release: 2.0,
+      filterType: "lowpass",
+      filterFreq: 500,
+      filterQ: 1.5,
+      filterEnvAmt: 0.5,
+      filterAttack: 0.8,
+      filterDecay: 0.5,
+      filterSustain: 0.5,
+      filterRelease: 2.0,
+      detune: 0,
+      unisonVoices: 2,
+      unisonDetune: 3,
+      subGain: 0.2,
+      portamento: 0.2,
+      lfoRate: 0.3,
+      lfoDepth: 0.15,
+      lfoShape: "sine",
+      lfoDest: "filter",
       volume: 0.55,
     },
   };
@@ -102,13 +262,27 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
     this._lastFreq = 0;
     // Defaults — overridden by applyPreset
     this.oscType = "sawtooth";
-    this.attack = 0.02; this.decay = 0.2; this.sustain = 0.5; this.release = 0.4;
+    this.attack = 0.02;
+    this.decay = 0.2;
+    this.sustain = 0.5;
+    this.release = 0.4;
     this.filterType = "lowpass";
-    this.filterFreq = 600; this.filterQ = 4; this.filterEnvAmt = 2;
-    this.filterAttack = 0.02; this.filterDecay = 0.2; this.filterSustain = 0; this.filterRelease = 0.4;
-    this.detune = 0; this.unisonVoices = 1; this.unisonDetune = 0; this.subGain = 0;
+    this.filterFreq = 600;
+    this.filterQ = 4;
+    this.filterEnvAmt = 2;
+    this.filterAttack = 0.02;
+    this.filterDecay = 0.2;
+    this.filterSustain = 0;
+    this.filterRelease = 0.4;
+    this.detune = 0;
+    this.unisonVoices = 1;
+    this.unisonDetune = 0;
+    this.subGain = 0;
     this.portamento = 0;
-    this.lfoRate = 2; this.lfoDepth = 0; this.lfoShape = "sine"; this.lfoDest = "filter";
+    this.lfoRate = 2;
+    this.lfoDepth = 0;
+    this.lfoShape = "sine";
+    this.lfoDest = "filter";
     this.octaveOffset = 0;
     this.octaveJumpProb = 0;
     this.applyPreset(preset);
@@ -206,7 +380,8 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
       } else if (this.lfoDest === "pitch") {
         lfoGainNode.gain.value = this.lfoDepth * 1200; // cents
         for (const osc of allOscs) lfoGainNode.connect(osc.detune);
-      } else { // amp / tremolo
+      } else {
+        // amp / tremolo
         lfoGainNode.gain.value = this.lfoDepth * 0.5;
         lfoGainNode.connect(amp.gain);
       }
@@ -222,27 +397,77 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
 
 export class WebAudioSynthMonoControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "attack",        label: "Attack",    min: 0.001, max: 4,     step: 0.001, tooltip: "Amplitude envelope attack time." },
-    { param: "decay",         label: "Decay",     min: 0.01,  max: 4,     step: 0.01,  tooltip: "Amplitude envelope decay time." },
-    { param: "sustain",       label: "Sustain",   min: 0,     max: 1,     step: 0.01,  tooltip: "Amplitude sustain level during held notes." },
-    { param: "release",       label: "Release",   min: 0.01,  max: 5,     step: 0.01,  tooltip: "Amplitude release time." },
-    { param: "filterFreq",    label: "Cutoff",    min: 20,    max: 12000, step: 1, scale: "log", tooltip: "Filter base cutoff frequency." },
-    { param: "filterQ",       label: "Res",       min: 0.5,   max: 20,    step: 0.1,   tooltip: "Filter resonance." },
-    { param: "filterEnvAmt",  label: "Env Amt",   min: -6,    max: 6,     step: 0.1,   tooltip: "Filter envelope depth in octaves. Negative = downward sweep." },
-    { param: "filterAttack",  label: "F.Atk",     min: 0.001, max: 4,     step: 0.001, tooltip: "Filter envelope attack time." },
-    { param: "filterDecay",   label: "F.Dec",     min: 0.01,  max: 4,     step: 0.01,  tooltip: "Filter envelope decay time." },
-    { param: "filterSustain", label: "F.Sus",     min: 0,     max: 1,     step: 0.01,  tooltip: "Filter sustain level (0 = full decay, 1 = stay at peak)." },
-    { param: "filterRelease", label: "F.Rel",     min: 0.01,  max: 5,     step: 0.01,  tooltip: "Filter envelope release time." },
-    { param: "detune",        label: "Detune",    min: -50,   max: 50,    step: 1,     tooltip: "Global pitch offset in cents." },
-    { param: "unisonVoices",  label: "Voices",    min: 1,     max: 8,     step: 1,     tooltip: "Unison voice count (1 = off)." },
-    { param: "unisonDetune",  label: "Spread",    min: 0,     max: 100,   step: 1,     tooltip: "Unison detune spread in cents across all voices." },
-    { param: "subGain",       label: "Sub",       min: 0,     max: 1,     step: 0.01,  tooltip: "Sub-octave oscillator level." },
-    { param: "portamento",    label: "Glide",     min: 0,     max: 2,     step: 0.01,  tooltip: "Portamento glide time in seconds." },
-    { param: "lfoRate",       label: "LFO Rate",  min: 0.01,  max: 20,    step: 0.01,  tooltip: "LFO speed in Hz." },
-    { param: "lfoDepth",      label: "LFO Depth", min: 0,     max: 1,     step: 0.01,  tooltip: "LFO modulation depth (0 = off)." },
-    { param: "octaveOffset",  label: "Octave",    min: -2,    max: 2,     step: 1,     tooltip: "Shift all notes up or down by octaves." },
-    { param: "octaveJumpProb",label: "Oct Jump",  min: 0,     max: 1,     step: 0.01,  tooltip: "Probability of randomly jumping an octave on each note." },
-    { param: "volume",        label: "Vol",       min: 0,     max: 1,     step: 0.01 },
+    { param: "attack", label: "Attack", min: 0.001, max: 4, step: 0.001, tooltip: "Amplitude envelope attack time." },
+    { param: "decay", label: "Decay", min: 0.01, max: 4, step: 0.01, tooltip: "Amplitude envelope decay time." },
+    {
+      param: "sustain",
+      label: "Sustain",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Amplitude sustain level during held notes.",
+    },
+    { param: "release", label: "Release", min: 0.01, max: 5, step: 0.01, tooltip: "Amplitude release time." },
+    {
+      param: "filterFreq",
+      label: "Cutoff",
+      min: 20,
+      max: 12000,
+      step: 1,
+      scale: "log",
+      tooltip: "Filter base cutoff frequency.",
+    },
+    { param: "filterQ", label: "Res", min: 0.5, max: 20, step: 0.1, tooltip: "Filter resonance." },
+    {
+      param: "filterEnvAmt",
+      label: "Env Amt",
+      min: -6,
+      max: 6,
+      step: 0.1,
+      tooltip: "Filter envelope depth in octaves. Negative = downward sweep.",
+    },
+    { param: "filterAttack", label: "F.Atk", min: 0.001, max: 4, step: 0.001, tooltip: "Filter envelope attack time." },
+    { param: "filterDecay", label: "F.Dec", min: 0.01, max: 4, step: 0.01, tooltip: "Filter envelope decay time." },
+    {
+      param: "filterSustain",
+      label: "F.Sus",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Filter sustain level (0 = full decay, 1 = stay at peak).",
+    },
+    { param: "filterRelease", label: "F.Rel", min: 0.01, max: 5, step: 0.01, tooltip: "Filter envelope release time." },
+    { param: "detune", label: "Detune", min: -50, max: 50, step: 1, tooltip: "Global pitch offset in cents." },
+    { param: "unisonVoices", label: "Voices", min: 1, max: 8, step: 1, tooltip: "Unison voice count (1 = off)." },
+    {
+      param: "unisonDetune",
+      label: "Spread",
+      min: 0,
+      max: 100,
+      step: 1,
+      tooltip: "Unison detune spread in cents across all voices.",
+    },
+    { param: "subGain", label: "Sub", min: 0, max: 1, step: 0.01, tooltip: "Sub-octave oscillator level." },
+    { param: "portamento", label: "Glide", min: 0, max: 2, step: 0.01, tooltip: "Portamento glide time in seconds." },
+    { param: "lfoRate", label: "LFO Rate", min: 0.01, max: 20, step: 0.01, tooltip: "LFO speed in Hz." },
+    { param: "lfoDepth", label: "LFO Depth", min: 0, max: 1, step: 0.01, tooltip: "LFO modulation depth (0 = off)." },
+    {
+      param: "octaveOffset",
+      label: "Octave",
+      min: -2,
+      max: 2,
+      step: 1,
+      tooltip: "Shift all notes up or down by octaves.",
+    },
+    {
+      param: "octaveJumpProb",
+      label: "Oct Jump",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Probability of randomly jumping an octave on each note.",
+    },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
   ];
 
   static DEFAULT_PATTERN() {
@@ -266,9 +491,15 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     this._seqPosition = 0;
   }
 
-  _defaultColor() { return "#0f0"; }
-  _defaultTitle() { return "Mono Synth"; }
-  _fxTitle() { return "Mono FX"; }
+  _defaultColor() {
+    return "#0f0";
+  }
+  _defaultTitle() {
+    return "Mono Synth";
+  }
+  _fxTitle() {
+    return "Mono FX";
+  }
 
   _buildControls(controls, expanded, mkSlider, ctx, options) {
     const color = options.color || this._defaultColor();
@@ -276,49 +507,51 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
     this._makePresetDropdown(WebAudioSynthMono.PRESETS, toneCtrl);
     this._makeWaveSelect(["sawtooth", "square", "triangle", "sine"], toneCtrl);
-    toneCtrl.appendChild(mkSlider({ param: "detune",       label: "Detune",  min: -50, max: 50,  step: 1 }));
-    toneCtrl.appendChild(mkSlider({ param: "unisonVoices", label: "Voices",  min: 1,   max: 8,   step: 1 }));
-    toneCtrl.appendChild(mkSlider({ param: "unisonDetune", label: "Spread",  min: 0,   max: 100, step: 1 }));
-    toneCtrl.appendChild(mkSlider({ param: "subGain",      label: "Sub",     min: 0,   max: 1,   step: 0.01 }));
-    toneCtrl.appendChild(mkSlider({ param: "portamento",   label: "Glide",   min: 0,   max: 2,   step: 0.01 }));
+    toneCtrl.appendChild(mkSlider({ param: "detune", label: "Detune", min: -50, max: 50, step: 1 }));
+    toneCtrl.appendChild(mkSlider({ param: "unisonVoices", label: "Voices", min: 1, max: 8, step: 1 }));
+    toneCtrl.appendChild(mkSlider({ param: "unisonDetune", label: "Spread", min: 0, max: 100, step: 1 }));
+    toneCtrl.appendChild(mkSlider({ param: "subGain", label: "Sub", min: 0, max: 1, step: 0.01 }));
+    toneCtrl.appendChild(mkSlider({ param: "portamento", label: "Glide", min: 0, max: 2, step: 0.01 }));
     controls.appendChild(toneEl);
 
     // ---- Envelope ----
     const { el: envEl, controls: envCtrl } = createSection("Envelope");
-    envCtrl.appendChild(mkSlider({ param: "attack",  label: "Attack",  min: 0.001, max: 4, step: 0.001 }));
-    envCtrl.appendChild(mkSlider({ param: "decay",   label: "Decay",   min: 0.01,  max: 4, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "sustain", label: "Sustain", min: 0,     max: 1, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "release", label: "Release", min: 0.01,  max: 5, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "attack", label: "Attack", min: 0.001, max: 4, step: 0.001 }));
+    envCtrl.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.01, max: 4, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "release", label: "Release", min: 0.01, max: 5, step: 0.01 }));
     controls.appendChild(envEl);
 
     // ---- Filter ----
     const { el: filterEl, controls: filterCtrl } = createSection("Filter");
     filterCtrl.appendChild(this._makeFilterTypeSelect());
-    filterCtrl.appendChild(mkSlider({ param: "filterFreq",   label: "Cutoff",  min: 20,  max: 12000, step: 1, scale: "log" }));
-    filterCtrl.appendChild(mkSlider({ param: "filterQ",      label: "Res",     min: 0.5, max: 20,    step: 0.1 }));
-    filterCtrl.appendChild(mkSlider({ param: "filterEnvAmt", label: "Env Amt", min: -6,  max: 6,     step: 0.1 }));
+    filterCtrl.appendChild(
+      mkSlider({ param: "filterFreq", label: "Cutoff", min: 20, max: 12000, step: 1, scale: "log" }),
+    );
+    filterCtrl.appendChild(mkSlider({ param: "filterQ", label: "Res", min: 0.5, max: 20, step: 0.1 }));
+    filterCtrl.appendChild(mkSlider({ param: "filterEnvAmt", label: "Env Amt", min: -6, max: 6, step: 0.1 }));
     controls.appendChild(filterEl);
 
     // ---- Filter Envelope ----
     const { el: fenvEl, controls: fenvCtrl } = createSection("Filter Env");
-    fenvCtrl.appendChild(mkSlider({ param: "filterAttack",  label: "F.Atk", min: 0.001, max: 4, step: 0.001 }));
-    fenvCtrl.appendChild(mkSlider({ param: "filterDecay",   label: "F.Dec", min: 0.01,  max: 4, step: 0.01 }));
-    fenvCtrl.appendChild(mkSlider({ param: "filterSustain", label: "F.Sus", min: 0,     max: 1, step: 0.01 }));
-    fenvCtrl.appendChild(mkSlider({ param: "filterRelease", label: "F.Rel", min: 0.01,  max: 5, step: 0.01 }));
+    fenvCtrl.appendChild(mkSlider({ param: "filterAttack", label: "F.Atk", min: 0.001, max: 4, step: 0.001 }));
+    fenvCtrl.appendChild(mkSlider({ param: "filterDecay", label: "F.Dec", min: 0.01, max: 4, step: 0.01 }));
+    fenvCtrl.appendChild(mkSlider({ param: "filterSustain", label: "F.Sus", min: 0, max: 1, step: 0.01 }));
+    fenvCtrl.appendChild(mkSlider({ param: "filterRelease", label: "F.Rel", min: 0.01, max: 5, step: 0.01 }));
     controls.appendChild(fenvEl);
 
     // ---- LFO ----
     const { el: lfoEl, controls: lfoCtrl } = createSection("LFO");
-    lfoCtrl.appendChild(mkSlider({ param: "lfoRate",  label: "Rate",  min: 0.01, max: 20, step: 0.01 }));
-    lfoCtrl.appendChild(mkSlider({ param: "lfoDepth", label: "Depth", min: 0,    max: 1,  step: 0.01 }));
+    lfoCtrl.appendChild(mkSlider({ param: "lfoRate", label: "Rate", min: 0.01, max: 20, step: 0.01 }));
+    lfoCtrl.appendChild(mkSlider({ param: "lfoDepth", label: "Depth", min: 0, max: 1, step: 0.01 }));
     lfoCtrl.appendChild(this._makeLfoShapeSelect());
     lfoCtrl.appendChild(this._makeLfoDestSelect());
     controls.appendChild(lfoEl);
 
     // ---- Octave ----
     const { el: octEl, controls: octCtrl } = createSection("Octave");
-    octCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Offset",    min: -2, max: 2, step: 1 }));
-    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0,  max: 1, step: 0.01 }));
+    octCtrl.appendChild(mkSlider({ param: "octaveOffset", label: "Offset", min: -2, max: 2, step: 1 }));
+    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(octEl);
 
     // ---- Sequencer ----
@@ -401,14 +634,22 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
 
   _meetsCondition(condition, barIndex) {
     switch (condition) {
-      case "off": return true;
-      case "1:2": return barIndex % 2 === 0;
-      case "1:3": return barIndex % 3 === 0;
-      case "1:4": return barIndex % 4 === 0;
-      case "2:4": return barIndex % 4 === 1;
-      case "3:4": return barIndex % 4 === 2;
-      case "fill": return barIndex % 4 === 3;
-      default: return true;
+      case "off":
+        return true;
+      case "1:2":
+        return barIndex % 2 === 0;
+      case "1:3":
+        return barIndex % 3 === 0;
+      case "1:4":
+        return barIndex % 4 === 0;
+      case "2:4":
+        return barIndex % 4 === 1;
+      case "3:4":
+        return barIndex % 4 === 2;
+      case "fill":
+        return barIndex % 4 === 3;
+      default:
+        return true;
     }
   }
 
@@ -440,16 +681,19 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     const wrap = createCtrl("Type");
     this._filterTypeSelect = document.createElement("select");
     this._filterTypeSelect.className = "wam-select";
-    for (const [val, label] of [["lowpass","LP"],["highpass","HP"],["bandpass","BP"],["notch","Notch"]]) {
+    for (const [val, label] of [
+      ["lowpass", "LP"],
+      ["highpass", "HP"],
+      ["bandpass", "BP"],
+      ["notch", "Notch"],
+    ]) {
       const opt = document.createElement("option");
-      opt.value = val; opt.textContent = label;
+      opt.value = val;
+      opt.textContent = label;
       this._filterTypeSelect.appendChild(opt);
     }
     this._filterTypeSelect.value = this._instrument.filterType;
-    this._filterTypeSelect.addEventListener("change", () => {
-      this._instrument.filterType = this._filterTypeSelect.value;
-      this._emitChange();
-    });
+    this._registerSelect("filterType", this._filterTypeSelect);
     wrap.appendChild(this._filterTypeSelect);
     return wrap;
   }
@@ -458,16 +702,19 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     const wrap = createCtrl("Shape");
     this._lfoShapeSelect = document.createElement("select");
     this._lfoShapeSelect.className = "wam-select";
-    for (const [val, label] of [["sine","Sin"],["triangle","Tri"],["square","Sqr"],["sawtooth","Saw"]]) {
+    for (const [val, label] of [
+      ["sine", "Sin"],
+      ["triangle", "Tri"],
+      ["square", "Sqr"],
+      ["sawtooth", "Saw"],
+    ]) {
       const opt = document.createElement("option");
-      opt.value = val; opt.textContent = label;
+      opt.value = val;
+      opt.textContent = label;
       this._lfoShapeSelect.appendChild(opt);
     }
     this._lfoShapeSelect.value = this._instrument.lfoShape;
-    this._lfoShapeSelect.addEventListener("change", () => {
-      this._instrument.lfoShape = this._lfoShapeSelect.value;
-      this._emitChange();
-    });
+    this._registerSelect("lfoShape", this._lfoShapeSelect);
     wrap.appendChild(this._lfoShapeSelect);
     return wrap;
   }
@@ -476,16 +723,18 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     const wrap = createCtrl("Dest");
     this._lfoDestSelect = document.createElement("select");
     this._lfoDestSelect.className = "wam-select";
-    for (const [val, label] of [["filter","Filter"],["pitch","Pitch"],["amp","Amp"]]) {
+    for (const [val, label] of [
+      ["filter", "Filter"],
+      ["pitch", "Pitch"],
+      ["amp", "Amp"],
+    ]) {
       const opt = document.createElement("option");
-      opt.value = val; opt.textContent = label;
+      opt.value = val;
+      opt.textContent = label;
       this._lfoDestSelect.appendChild(opt);
     }
     this._lfoDestSelect.value = this._instrument.lfoDest;
-    this._lfoDestSelect.addEventListener("change", () => {
-      this._instrument.lfoDest = this._lfoDestSelect.value;
-      this._emitChange();
-    });
+    this._registerSelect("lfoDest", this._lfoDestSelect);
     wrap.appendChild(this._lfoDestSelect);
     return wrap;
   }
@@ -503,36 +752,6 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
 
   _restoreExtra(obj) {
     if (obj.steps && this._seq) this._seq.steps = obj.steps;
-  }
-
-  _restoreParam(key, val) {
-    switch (key) {
-      case "oscType":
-        this._instrument.oscType = val;
-        this._syncWaveSelect();
-        break;
-      case "filterType":
-        this._instrument.filterType = val;
-        if (this._filterTypeSelect) this._filterTypeSelect.value = val;
-        break;
-      case "lfoShape":
-        this._instrument.lfoShape = val;
-        if (this._lfoShapeSelect) this._lfoShapeSelect.value = val;
-        break;
-      case "lfoDest":
-        this._instrument.lfoDest = val;
-        if (this._lfoDestSelect) this._lfoDestSelect.value = val;
-        break;
-      default:
-        super._restoreParam(key, val);
-    }
-  }
-
-  _syncExtraControls() {
-    this._syncWaveSelect();
-    if (this._filterTypeSelect && this._instrument) this._filterTypeSelect.value = this._instrument.filterType;
-    if (this._lfoShapeSelect && this._instrument) this._lfoShapeSelect.value = this._instrument.lfoShape;
-    if (this._lfoDestSelect && this._instrument) this._lfoDestSelect.value = this._instrument.lfoDest;
   }
 }
 
