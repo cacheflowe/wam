@@ -5,6 +5,10 @@
  * events at the document level and shows the control label + formatted value
  * in a high-z-index overlay. Hides after ~800ms of inactivity.
  *
+ * Only displays when the user has an active pointer on a control (knob or
+ * slider). Automated/LFO-driven value changes are ignored so the overlay
+ * doesn't flicker during programmatic updates.
+ *
  * Great for touchscreen use where the user's thumb obscures the small
  * knob display, and useful on desktop too for quick visual feedback.
  *
@@ -22,6 +26,7 @@ class WebAudioParamDisplay extends HTMLElement {
     this._valueEl = null;
     this._hideTimer = null;
     this._built = false;
+    this._pointerActive = false;
   }
 
   connectedCallback() {
@@ -108,9 +113,50 @@ class WebAudioParamDisplay extends HTMLElement {
     document.body.appendChild(el);
     WebAudioParamDisplay.#instance = el;
 
-    // Listen at document level (capture phase) for all knob/slider events
-    // Capture phase ensures we see events even if stopPropagation is called
+    // Track whether the user has an active pointer on a control.
+    // This prevents automated value changes (LFOs, etc.) from showing the overlay.
+    const isOnControl = (e) => !!e.target.closest?.("wam-knob, wam-slider");
+
+    document.addEventListener(
+      "pointerdown",
+      (e) => {
+        if (isOnControl(e)) el._pointerActive = true;
+      },
+      true,
+    );
+    document.addEventListener(
+      "pointerup",
+      () => {
+        el._pointerActive = false;
+      },
+      true,
+    );
+    document.addEventListener(
+      "pointercancel",
+      () => {
+        el._pointerActive = false;
+      },
+      true,
+    );
+
+    // Wheel and dblclick on controls are also user gestures.
+    // Set the flag briefly — the knob-input fires synchronously in the same
+    // handler, then we clear the flag on the next microtask so LFO-driven
+    // events on the following animation frame are still filtered out.
+    const briefActivate = (e) => {
+      if (!isOnControl(e)) return;
+      el._pointerActive = true;
+      queueMicrotask(() => {
+        el._pointerActive = false;
+      });
+    };
+    document.addEventListener("wheel", briefActivate, true);
+    document.addEventListener("dblclick", briefActivate, true);
+
+    // Listen at document level (capture phase) for all knob/slider events.
+    // Only show when a user pointer is actively interacting with a control.
     const handler = (e) => {
+      if (!el._pointerActive) return;
       const { label, value } = e.detail;
       if (label != null) el.show(label, value);
     };
