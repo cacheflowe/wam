@@ -487,8 +487,8 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
 
     if (files?.length) this._instrument.setFileCatalog(files, this._basePath);
 
-    const mkSelect = (labelText, appendTo) => {
-      const wrap = createCtrl(labelText);
+    const mkSelect = (labelText, appendTo, { tooltip = null } = {}) => {
+      const wrap = createCtrl(labelText, tooltip ? { tooltip } : {});
       const sel = document.createElement("select");
       sel.className = "wam-select";
       wrap.appendChild(sel);
@@ -523,7 +523,7 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
       loopCtrl.appendChild(fileWrap);
     }
 
-    this._speedSelect = mkSelect("Speed", loopCtrl);
+    this._speedSelect = mkSelect("Speed", loopCtrl, { tooltip: "Playback speed multiplier. Auto matches the loop to the current BPM." });
     const autoOpt = document.createElement("option");
     autoOpt.value = AUTO_SPEED_VALUE;
     this._speedSelect.appendChild(autoOpt);
@@ -545,7 +545,7 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
       this._emitChange();
     });
 
-    this._subdivSelect = mkSelect("Jump Grid", loopCtrl);
+    this._subdivSelect = mkSelect("Jump Grid", loopCtrl, { tooltip: "How finely the loop is sliced for random jumps." });
     for (const v of [4, 8, 16]) {
       const opt = document.createElement("option");
       opt.value = v;
@@ -558,7 +558,12 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
       this._emitChange();
     });
 
-    this._returnSelect = mkSelect("Return", loopCtrl);
+    controls.appendChild(loopEl);
+
+    // ---- Chop section ----
+    const { el: chopEl, controls: chopCtrl } = createSection("Chop");
+
+    this._returnSelect = mkSelect("Return", chopCtrl, { tooltip: "Steps before a random jump snaps back to normal playback." });
     for (const [v, lbl] of [
       [1, "1 step"],
       [2, "2 steps"],
@@ -576,14 +581,13 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
       this._instrument.returnSteps = parseInt(this._returnSelect.value);
       this._emitChange();
     });
-
-    controls.appendChild(loopEl);
+    chopCtrl.appendChild(mkSlider({ param: "randomChance", label: "Random", min: 0, max: 1, step: 0.01 }));
+    chopCtrl.appendChild(mkSlider({ param: "reverseChance", label: "Reverse", min: 0, max: 0.25, step: 0.01 }));
+    controls.appendChild(chopEl);
 
     // ---- Mix section ----
     const { el: mixEl, controls: mixCtrl } = createSection("Mix");
     mixCtrl.appendChild(mkSlider({ param: "gainBoost", label: "Boost", min: 0.25, max: 2, step: 0.01 }));
-    mixCtrl.appendChild(mkSlider({ param: "randomChance", label: "Random", min: 0, max: 1, step: 0.01 }));
-    mixCtrl.appendChild(mkSlider({ param: "reverseChance", label: "Reverse", min: 0, max: 0.25, step: 0.01 }));
     controls.appendChild(mixEl);
 
     // ---- Time-stretch controls (only when enabled) ----
