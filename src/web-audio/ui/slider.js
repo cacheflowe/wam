@@ -355,6 +355,7 @@ export function injectControlsCSS() {
     .wam-wave-btn,
     .wam-toggle-btn,
     .wam-mute-btn,
+    .wam-solo-btn,
     .wam-action-btn,
     .wam-jam-btn,
     .wam-play-btn {
@@ -392,9 +393,10 @@ export function injectControlsCSS() {
       color: var(--slider-accent, #0f0);
       border-color: var(--slider-accent, #0f0);
     }
-    /* ---- Neutral toggle buttons (Ctrl / Seq / FX / Mute) ---- */
+    /* ---- Neutral toggle buttons (Ctrl / Seq / FX / Mute / Solo) ---- */
     .wam-toggle-btn,
-    .wam-mute-btn {
+    .wam-mute-btn,
+    .wam-solo-btn {
       padding: 0 10px;
       background: transparent;
       color: #555;
@@ -412,6 +414,7 @@ export function injectControlsCSS() {
       background: color-mix(in srgb, var(--slider-accent, #0f0) 25%, transparent);
     }
     .wam-mute-btn.wam-muted { background: #a00; color: #fff; border-color: #a00; }
+    .wam-solo-btn.wam-soloed { background: #c90; color: #fff; border-color: #c90; }
     /* ---- Accent buttons (action, jam, play) ---- */
     .wam-action-btn,
     .wam-jam-btn,
@@ -736,6 +739,13 @@ export function createChannelStrip(
   muteWrap.appendChild(muteBtn);
   mixGroup.appendChild(muteWrap);
 
+  const soloBtn = document.createElement("button");
+  soloBtn.className = "wam-solo-btn";
+  soloBtn.textContent = "Solo";
+  const soloWrap = createCtrl("Solo", { tooltip: "Solo this channel — mute all others." });
+  soloWrap.appendChild(soloBtn);
+  mixGroup.appendChild(soloWrap);
+
   strip.appendChild(mixGroup);
 
   // Group 5: Section nav toggles (Ctrl/Seq/FX) — filled by bind()
@@ -746,21 +756,30 @@ export function createChannelStrip(
   parentEl.appendChild(strip);
 
   let muted = false;
+  let soloed = false;
+  let soloSuppressed = false;
   let preMuteVolume = 1;
+  let preSoloVolume = 1;
 
   const syncMuteButton = () => {
     muteBtn.classList.toggle("wam-muted", muted);
-    // muteBtn.textContent = muted ? "Muted" : "Mute";
     muteBtn.textContent = "Mute";
+  };
+
+  const syncSoloButton = () => {
+    soloBtn.classList.toggle("wam-soloed", soloed);
+    soloBtn.textContent = "Solo";
   };
 
   const applyMuteState = (nextMuted, { restoreOnUnmute = true } = {}) => {
     muted = !!nextMuted;
     const out = getOutGain();
     if (muted) {
-      preMuteVolume = out?.gain.value ?? 1;
+      // Capture the real volume — use preSoloVolume if currently suppressed
+      if (!soloSuppressed) preMuteVolume = out?.gain.value ?? 1;
+      else preMuteVolume = preSoloVolume;
       if (out) out.gain.value = 0;
-    } else if (restoreOnUnmute) {
+    } else if (restoreOnUnmute && !soloSuppressed) {
       if (out) out.gain.value = preMuteVolume;
     }
     syncMuteButton();
@@ -768,6 +787,13 @@ export function createChannelStrip(
 
   muteBtn.addEventListener("click", () => {
     applyMuteState(!muted, { restoreOnUnmute: true });
+    parentEl.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
+  });
+
+  soloBtn.addEventListener("click", () => {
+    soloed = !soloed;
+    syncSoloButton();
+    parentEl.dispatchEvent(new CustomEvent("solo-change", { bubbles: true, detail: { soloed } }));
     parentEl.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
   });
 
@@ -781,13 +807,35 @@ export function createChannelStrip(
     panSlider,
     meter,
     isMuted: () => muted,
-    getVolume: () => (muted ? preMuteVolume : (getOutGain()?.gain.value ?? 1)),
+    isSoloed: () => soloed,
+    getVolume: () => {
+      if (muted) return preMuteVolume;
+      if (soloSuppressed) return preSoloVolume;
+      return getOutGain()?.gain.value ?? 1;
+    },
     setPreMuteVolume: (v) => {
       preMuteVolume = v;
     },
     setMuted: (v) => {
       // Keep existing behavior for state restore: unmuting does not overwrite restored volume.
       applyMuteState(v, { restoreOnUnmute: false });
+    },
+    setSoloed: (v) => {
+      soloed = !!v;
+      syncSoloButton();
+    },
+    /** Suppress/restore gain for solo coordination (does not affect mute state). */
+    applySoloSuppress: (suppressed) => {
+      const out = getOutGain();
+      if (suppressed && !soloSuppressed && !muted) {
+        // Entering suppression — capture the real current gain
+        preSoloVolume = out?.gain.value ?? 1;
+        if (out) out.gain.value = 0;
+      } else if (!suppressed && soloSuppressed && !muted) {
+        // Leaving suppression — restore the captured gain
+        if (out) out.gain.value = preSoloVolume;
+      }
+      soloSuppressed = suppressed;
     },
   };
 }

@@ -4,7 +4,7 @@ import { injectControlsCSS, createChannelStrip, createSection, createCtrl } from
 /**
  * WebAudioControlsBase — shared foundation for all instrument control panels.
  *
- * Handles the universal boilerplate: CSS injection, channel strip (title/vol/pan/mute/meter),
+ * Handles the universal boilerplate: CSS injection, channel strip (title/vol/pan/mute/solo/meter),
  * waveform visualizer, expanded panel, FX unit, audio routing, slider event delegation,
  * preset management, and serialization.
  *
@@ -20,6 +20,8 @@ import { injectControlsCSS, createChannelStrip, createSection, createCtrl } from
  *     → _setupRouting()
  */
 export class WebAudioControlsBase extends HTMLElement {
+  /** Shared registry of all live controls instances for solo coordination. */
+  static _soloInstances = new Set();
   constructor() {
     super();
     this._instrument = null;
@@ -31,6 +33,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._pan = null;
     this._panSlider = null;
     this._muteHandle = null;
+    this._soloHandle = null;
     this._channelStripVolSlider = null;
     this._speedMultiplier = 1;
     this._speedSelect = null;
@@ -56,6 +59,8 @@ export class WebAudioControlsBase extends HTMLElement {
   disconnectedCallback() {
     for (const h of this._jamKeyHandlers) document.removeEventListener("keydown", h);
     this._jamKeyHandlers = [];
+    WebAudioControlsBase._soloInstances.delete(this);
+    WebAudioControlsBase._applySolo();
   }
 
   // ---- Override points for subclass identity ----
@@ -73,6 +78,20 @@ export class WebAudioControlsBase extends HTMLElement {
   /** Title for the FX unit panel. */
   _fxTitle() {
     return "FX";
+  }
+
+  /**
+   * Re-evaluate solo state across all live controls instances.
+   * If any instance is soloed, suppress all non-soloed (and non-muted) channels.
+   * When no instance is soloed, restore everyone.
+   */
+  static _applySolo() {
+    const instances = [...WebAudioControlsBase._soloInstances];
+    const anySoloed = instances.some((c) => c._soloHandle?.isSoloed());
+    for (const c of instances) {
+      const soloed = c._soloHandle?.isSoloed();
+      c._soloHandle?.applySoloSuppress(anySoloed && !soloed);
+    }
   }
 
   // ---- Core bind ----
@@ -105,6 +124,13 @@ export class WebAudioControlsBase extends HTMLElement {
       setPreMuteVolume: strip.setPreMuteVolume,
       getVolume: strip.getVolume,
     };
+    this._soloHandle = {
+      isSoloed: strip.isSoloed,
+      setSoloed: strip.setSoloed,
+      applySoloSuppress: strip.applySoloSuppress,
+    };
+    WebAudioControlsBase._soloInstances.add(this);
+    this.addEventListener("solo-change", () => WebAudioControlsBase._applySolo());
     this._channelStripVolSlider = strip.volSlider;
     this._sliders["volume"] = strip.volSlider;
     this._panSlider = strip.panSlider;
@@ -569,6 +595,7 @@ export class WebAudioControlsBase extends HTMLElement {
       params,
       fx: this._fxUnit?.toJSON(),
       muted: this._muteHandle?.isMuted() ?? false,
+      soloed: this._soloHandle?.isSoloed() ?? false,
       pan: this._pan?.pan.value ?? 0,
       speedMultiplier: this._speedMultiplier,
       patternParams: this._seq?.getPatternParams(),
@@ -598,6 +625,10 @@ export class WebAudioControlsBase extends HTMLElement {
     this._restoreExtra(obj);
     if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
     if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
+    if (obj.soloed != null) {
+      this._soloHandle?.setSoloed(obj.soloed);
+      WebAudioControlsBase._applySolo();
+    }
     if (obj.pan != null && this._pan) {
       this._pan.pan.value = obj.pan;
       if (this._panSlider) this._panSlider.value = obj.pan;
