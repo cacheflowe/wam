@@ -53,6 +53,9 @@ export class WebAudioControlsBase extends HTMLElement {
     this._seqSection = null;
     this._seqControls = null;
     this._fxSection = null;
+    // Jam button and bound key
+    this._jamBtn = null;
+    this._jamKey = null;
     // Keyboard jam handlers — cleared and re-registered on each bind()
     this._jamKeyHandlers = [];
   }
@@ -274,16 +277,84 @@ export class WebAudioControlsBase extends HTMLElement {
   /**
    * Inject buttons into the always-visible channel strip.
    * Default: single quantized jam trigger. Override in subclass (e.g. loop player).
+   *
+   * Key-learn: hold the jam button and press any key to bind it as the jam shortcut.
    */
   _buildStripActions(strip, options = {}) {
     const key = options.jamKey ?? this._defaultJamKey();
     const btn = document.createElement("button");
-    btn.textContent = "♩";
     btn.className = "wam-jam-btn";
-    btn.title = key ? `Trigger on next beat [${key.toUpperCase()}]` : "Trigger on next beat";
     btn.addEventListener("click", () => this._queueJam());
     strip.appendChild(btn);
+    this._jamBtn = btn;
+    this._jamKey = key || null;
+    this._updateJamLabel();
     if (key) this._bindJamKey(key, () => this._queueJam());
+
+    // Key-learn: pointerdown starts listening, keydown while held assigns the key
+    let learning = false;
+    let learnHandler = null;
+    btn.addEventListener("pointerdown", () => {
+      learning = true;
+      btn.classList.add("wam-jam-learning");
+      learnHandler = (e) => {
+        if (!learning) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.key === "Escape") {
+          this._clearJamKey();
+        } else {
+          this._setJamKey(e.key);
+        }
+        learning = false;
+        btn.classList.remove("wam-jam-learning");
+      };
+      document.addEventListener("keydown", learnHandler, { once: true });
+    });
+    const stopLearn = () => {
+      if (!learning) return;
+      learning = false;
+      btn.classList.remove("wam-jam-learning");
+      if (learnHandler) document.removeEventListener("keydown", learnHandler);
+      learnHandler = null;
+    };
+    btn.addEventListener("pointerup", stopLearn);
+    btn.addEventListener("pointercancel", stopLearn);
+    btn.addEventListener("pointerleave", stopLearn);
+  }
+
+  /** Rebind the jam keyboard shortcut to a new key. */
+  _setJamKey(key) {
+    // Remove old jam key handlers
+    for (const h of this._jamKeyHandlers) document.removeEventListener("keydown", h);
+    this._jamKeyHandlers = [];
+    // Bind the new key
+    this._jamKey = key;
+    this._bindJamKey(key, () => this._queueJam());
+    this._updateJamLabel();
+    this._emitChange();
+  }
+
+  /** Clear the jam keyboard shortcut (Escape while learning). */
+  _clearJamKey() {
+    for (const h of this._jamKeyHandlers) document.removeEventListener("keydown", h);
+    this._jamKeyHandlers = [];
+    this._jamKey = null;
+    this._updateJamLabel();
+    this._emitChange();
+  }
+
+  /** Update jam button text and tooltip to reflect current bound key. */
+  _updateJamLabel() {
+    if (!this._jamBtn) return;
+    const key = this._jamKey;
+    if (key) {
+      this._jamBtn.textContent = `♩ ${key.toUpperCase()}`;
+      this._jamBtn.title = `Trigger on next beat [${key.toUpperCase()}] · Hold + press key to rebind`;
+    } else {
+      this._jamBtn.textContent = "♩";
+      this._jamBtn.title = "Trigger on next beat · Hold + press key to bind";
+    }
   }
 
   /** Default keyboard shortcut for the jam button. Override per instrument. */
@@ -627,6 +698,7 @@ export class WebAudioControlsBase extends HTMLElement {
       muted: this._muteHandle?.isMuted() ?? false,
       soloed: this._soloHandle?.isSoloed() ?? false,
       pan: this._pan?.pan.value ?? 0,
+      jamKey: this._jamKey ?? null,
       speedMultiplier: this._speedMultiplier,
       patternParams: this._seq?.getPatternParams(),
       sections: {
@@ -663,6 +735,7 @@ export class WebAudioControlsBase extends HTMLElement {
       this._pan.pan.value = obj.pan;
       if (this._panSlider) this._panSlider.value = obj.pan;
     }
+    if (obj.jamKey) this._setJamKey(obj.jamKey);
     if (obj.speedMultiplier != null) {
       this._speedMultiplier = obj.speedMultiplier;
       if (this._speedSelect) this._speedSelect.value = obj.speedMultiplier;

@@ -909,6 +909,15 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     this._seq.addEventListener("pattern-change", () => this._emitChange());
   }
 
+  // ---- Preset override (chance lives on controls, not instrument) ----
+
+  applyPreset(name) {
+    super.applyPreset(name);
+    // Base class reads instrument.chance (undefined → NaN); restore from controls state
+    const knob = this._sliders["chance"];
+    if (knob) knob.value = this._chance;
+  }
+
   // ---- Slider input override (chance is stored on controls, not instrument) ----
 
   _onSliderInput(param, value) {
