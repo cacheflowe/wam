@@ -19,9 +19,15 @@
  * near the current write position, maintaining low latency.
  *
  * Grain size is configurable via AudioParam (128–4096 samples). Small grains
- * (~512, "clean") produce transparent pitch shifting. Large grains (~2048,
+ * (~512, "clean") produce transparent pitch shifting. Larger grains (~1024,
  * "vintage") produce audible repetition/stutter artifacts characteristic of
  * classic hardware timestretchers (Akai S-series, early Ableton).
+ *
+ * Timing note: OLA pitch shifting introduces a latency that oscillates between
+ * grainSize and grainSize*(2-pitchRatio) samples per grain cycle. This makes
+ * the grain size the primary knob for balancing vintage texture vs. timing
+ * accuracy — 2048-sample grains produce a ~23 Hz oscillation that sounds
+ * off-beat; 1024 samples gives acceptable flutter at ~47 Hz.
  *
  * Bypass: when pitchShift === 0, input is copied directly to output with zero
  * latency. The circular buffer is still filled so switching to non-zero pitch
@@ -135,7 +141,11 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
       let sR = 0;
 
       // Tap 0
-      const readPos0 = (tap0.grainStart + ((tap0.localPos + 0.5) | 0)) & BUFFER_MASK;
+      let readPos0 = (tap0.grainStart + ((tap0.localPos + 0.5) | 0)) & BUFFER_MASK;
+      // Clamp: prevent reading ahead of write pointer (pitchRatio > 2 edge case)
+      if (((readPos0 - this._writePos + BUFFER_SIZE) & BUFFER_MASK) < (BUFFER_SIZE >>> 1)) {
+        readPos0 = (this._writePos - 1 + BUFFER_SIZE) & BUFFER_MASK;
+      }
       const w0 = win[(tap0.phase * winScale + 0.5) | 0];
       sL += bufL[readPos0] * w0;
       sR += bufR[readPos0] * w0;
@@ -150,7 +160,11 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
       }
 
       // Tap 1
-      const readPos1 = (tap1.grainStart + ((tap1.localPos + 0.5) | 0)) & BUFFER_MASK;
+      let readPos1 = (tap1.grainStart + ((tap1.localPos + 0.5) | 0)) & BUFFER_MASK;
+      // Clamp: prevent reading ahead of write pointer (pitchRatio > 2 edge case)
+      if (((readPos1 - this._writePos + BUFFER_SIZE) & BUFFER_MASK) < (BUFFER_SIZE >>> 1)) {
+        readPos1 = (this._writePos - 1 + BUFFER_SIZE) & BUFFER_MASK;
+      }
       const w1 = win[(tap1.phase * winScale + 0.5) | 0];
       sL += bufL[readPos1] * w1;
       sR += bufR[readPos1] * w1;

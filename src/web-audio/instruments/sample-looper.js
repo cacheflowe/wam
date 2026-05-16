@@ -244,7 +244,7 @@ export default class WebAudioLoopPlayer extends WebAudioInstrumentBase {
   set grainStyle(v) {
     this._grainStyle = v;
     if (this._pitchShiftNode) {
-      this._pitchShiftNode.grainSize = v === "vintage" ? 2048 : 512;
+      this._pitchShiftNode.grainSize = v === "vintage" ? 1024 : 512;
     }
   }
 
