@@ -403,6 +403,7 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
     // Advance sequencer position (2x = 2 steps per tick, offset in time)
     const stepsToAdvance = multiplier === 2 ? 2 : 1;
     const subStepDur = stepDurationSec / stepsToAdvance;
+    let stepFired = false;
     for (let si = 0; si < stepsToAdvance; si++) {
       const subTime = time + si * subStepDur;
       const stepIndex = this._seqPosition % 16;
@@ -411,6 +412,7 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            stepFired = true;
             const ratchet = s.ratchet ?? 1;
             if (ratchet > 1) {
               const ratchetDuration = subStepDur / ratchet;
@@ -427,6 +429,8 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
       this._seqPosition++;
     }
 
+    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
+    this._jamPending = false;
     this._globalStep++;
   }
 
@@ -449,6 +453,10 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
       default:
         return true;
     }
+  }
+
+  _triggerJam(time, stepDurationSec) {
+    this._instrument.trigger(0.8, time);
   }
 
   setActiveStep() {

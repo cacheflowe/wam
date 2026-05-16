@@ -523,7 +523,9 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
       loopCtrl.appendChild(fileWrap);
     }
 
-    this._speedSelect = mkSelect("Speed", loopCtrl, { tooltip: "Playback speed multiplier. Auto matches the loop to the current BPM." });
+    this._speedSelect = mkSelect("Speed", loopCtrl, {
+      tooltip: "Playback speed multiplier. Auto matches the loop to the current BPM.",
+    });
     const autoOpt = document.createElement("option");
     autoOpt.value = AUTO_SPEED_VALUE;
     this._speedSelect.appendChild(autoOpt);
@@ -545,7 +547,9 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
       this._emitChange();
     });
 
-    this._subdivSelect = mkSelect("Jump Grid", loopCtrl, { tooltip: "How finely the loop is sliced for random jumps." });
+    this._subdivSelect = mkSelect("Jump Grid", loopCtrl, {
+      tooltip: "How finely the loop is sliced for random jumps.",
+    });
     for (const v of [4, 8, 16]) {
       const opt = document.createElement("option");
       opt.value = v;
@@ -563,7 +567,9 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
     // ---- Chop section ----
     const { el: chopEl, controls: chopCtrl } = createSection("Chop");
 
-    this._returnSelect = mkSelect("Return", chopCtrl, { tooltip: "Steps before a random jump snaps back to normal playback." });
+    this._returnSelect = mkSelect("Return", chopCtrl, {
+      tooltip: "Steps before a random jump snaps back to normal playback.",
+    });
     for (const [v, lbl] of [
       [1, "1 step"],
       [2, "2 steps"],

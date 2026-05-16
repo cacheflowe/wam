@@ -534,20 +534,9 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     }
   }
 
-  _buildStripActions(strip, options = {}) {
-    const key = options.jamKey ?? null;
-    const btn = document.createElement("button");
-    btn.className = "wam-jam-btn";
-    btn.textContent = "\u25B6";
-    btn.title = key ? `Trigger sample [${key.toUpperCase()}]` : "Trigger sample";
-    const trigger = () => {
-      if (!this._instrument?.loaded) return;
-      if (this._ctx?.state === "suspended") this._ctx.resume();
-      this._instrument.triggerDrum(0.9, 0.5, this._ctx.currentTime);
-    };
-    btn.addEventListener("mousedown", trigger);
-    strip.appendChild(btn);
-    if (key) this._bindJamKey(key, trigger);
+  _triggerJam(time, stepDurationSec) {
+    if (!this._instrument?.loaded) return;
+    this._instrument.triggerDrum(0.9, 0.5, time);
   }
 
   // ---- Scale broadcast ----
@@ -597,6 +586,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     // Advance
     const stepsToAdvance = multiplier === 2 ? 2 : 1;
     const subStepDur = stepDurationSec / stepsToAdvance;
+    let stepFired = false;
     for (let si = 0; si < stepsToAdvance; si++) {
       const subTime = time + si * subStepDur;
       const stepIndex = this._seqPosition % 16;
@@ -605,6 +595,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            stepFired = true;
             const ratchet = s.ratchet ?? 1;
             let midi;
             if (this._melodicMode) {
@@ -631,6 +622,8 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
       this._seqPosition++;
     }
 
+    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
+    this._jamPending = false;
     this._globalStep++;
   }
 

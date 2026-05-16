@@ -35,6 +35,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._muteHandle = null;
     this._soloHandle = null;
     this._channelStripVolSlider = null;
+    this._jamPending = false;
     this._speedMultiplier = 1;
     this._speedSelect = null;
     this._densityInput = null;
@@ -270,8 +271,37 @@ export class WebAudioControlsBase extends HTMLElement {
     // Override in subclass
   }
 
-  /** Inject buttons into the always-visible channel strip (e.g. jam trigger). Override in subclass. */
-  _buildStripActions(strip, options = {}) {}
+  /**
+   * Inject buttons into the always-visible channel strip.
+   * Default: single quantized jam trigger. Override in subclass (e.g. loop player).
+   */
+  _buildStripActions(strip, options = {}) {
+    const key = options.jamKey ?? this._defaultJamKey();
+    const btn = document.createElement("button");
+    btn.textContent = "♩";
+    btn.className = "wam-jam-btn";
+    btn.title = key ? `Trigger on next beat [${key.toUpperCase()}]` : "Trigger on next beat";
+    btn.addEventListener("click", () => this._queueJam());
+    strip.appendChild(btn);
+    if (key) this._bindJamKey(key, () => this._queueJam());
+  }
+
+  /** Default keyboard shortcut for the jam button. Override per instrument. */
+  _defaultJamKey() {
+    return null;
+  }
+
+  /** Queue a jam trigger for the next sequencer step. */
+  _queueJam() {
+    if (this._ctx?.state === "suspended") this._ctx.resume();
+    this._jamPending = true;
+  }
+
+  /**
+   * Fire the instrument's jam sound. Called from step() when _jamPending is true
+   * and no sequencer step was active. Override in subclass.
+   */
+  _triggerJam(time, stepDurationSec) {}
 
   /**
    * Register a global keyboard shortcut that fires `fn` when `key` is pressed.

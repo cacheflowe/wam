@@ -768,15 +768,17 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     return "SFX FX";
   }
 
-  _buildStripActions(strip, options = {}) {
-    const key = options.jamKey ?? "v";
-    const btn = document.createElement("button");
-    btn.textContent = "▶";
-    btn.className = "wam-jam-btn";
-    btn.title = `Trigger sound [${key.toUpperCase()}]`;
-    btn.addEventListener("click", () => this.triggerNow());
-    strip.appendChild(btn);
-    this._bindJamKey(key, () => this.triggerNow());
+  _defaultJamKey() {
+    return "v";
+  }
+
+  _triggerJam(time, stepDurationSec) {
+    if (!this._locked) {
+      this._instrument.randomize();
+      this._syncSliders();
+      this._syncExtraControls();
+    }
+    this._instrument.trigger(time);
   }
 
   // ---- Bind override to capture chance from options ----
@@ -980,6 +982,7 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     // Advance sequencer position (2x = 2 steps per tick, offset in time)
     const stepsToAdvance = multiplier === 2 ? 2 : 1;
     const subStepDur = stepDurationSec / stepsToAdvance;
+    let stepFired = false;
     for (let si = 0; si < stepsToAdvance; si++) {
       const subTime = time + si * subStepDur;
       const stepIndex = this._seqPosition % 16;
@@ -988,6 +991,7 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            stepFired = true;
             if (!this._locked) {
               this._instrument.randomize();
               this._syncSliders();
@@ -1010,6 +1014,8 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
       this._seqPosition++;
     }
 
+    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
+    this._jamPending = false;
     this._globalStep++;
   }
 

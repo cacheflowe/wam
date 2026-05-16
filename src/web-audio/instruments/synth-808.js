@@ -1,6 +1,6 @@
 import "../ui/slider.js";
 import "../ui/step-seq.js";
-import { scaleNoteOptions, STEP_WEIGHTS } from "../global/scales.js";
+import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/scales.js";
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 
@@ -286,8 +286,22 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
       scale: "log",
       tooltip: "Tone filter cutoff. Lower = rounder, darker bass.",
     },
-    { param: "octaveOffset",   label: "Octave",   min: -2, max: 2, step: 1,    tooltip: "Shift all notes up or down by octaves." },
-    { param: "octaveJumpProb", label: "Oct Jump", min: 0,  max: 1, step: 0.01, tooltip: "Probability of randomly jumping an octave on each note." },
+    {
+      param: "octaveOffset",
+      label: "Octave",
+      min: -2,
+      max: 2,
+      step: 1,
+      tooltip: "Shift all notes up or down by octaves.",
+    },
+    {
+      param: "octaveJumpProb",
+      label: "Oct Jump",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Probability of randomly jumping an octave on each note.",
+    },
   ];
 
   static DEFAULT_PATTERN() {
@@ -326,6 +340,13 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
     return null;
   }
 
+  _triggerJam(time, stepDurationSec) {
+    const notes = scaleNotesInRange(this._rootMidi, this._scaleName, 24, 48);
+    if (notes.length) {
+      this._instrument.trigger(notes[Math.floor(Math.random() * notes.length)], stepDurationSec, time);
+    }
+  }
+
   // ---- Build controls ----
 
   _buildControls(controls, expanded, mkSlider, ctx, options) {
@@ -353,8 +374,8 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
 
     // ---- Octave ----
     const { el: octEl, controls: octCtrl } = createSection("Octave");
-    octCtrl.appendChild(mkSlider({ param: "octaveOffset",   label: "Offset",    min: -2, max: 2, step: 1 }));
-    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0,  max: 1, step: 0.01 }));
+    octCtrl.appendChild(mkSlider({ param: "octaveOffset", label: "Offset", min: -2, max: 2, step: 1 }));
+    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(octEl);
 
     // ---- Sequencer ----
@@ -408,6 +429,7 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
     // Advance sequencer position (2x = 2 steps per tick, offset in time)
     const stepsToAdvance = multiplier === 2 ? 2 : 1;
     const subStepDur = stepDurationSec / stepsToAdvance;
+    let stepFired = false;
     for (let si = 0; si < stepsToAdvance; si++) {
       const subTime = time + si * subStepDur;
       const stepIndex = this._seqPosition % 16;
@@ -416,6 +438,7 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            stepFired = true;
             const ratchet = s.ratchet ?? 1;
             if (ratchet > 1) {
               const ratchetDuration = subStepDur / ratchet;
@@ -432,6 +455,8 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
       this._seqPosition++;
     }
 
+    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
+    this._jamPending = false;
     this._globalStep++;
   }
 

@@ -1,6 +1,6 @@
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import "../ui/step-seq.js";
-import { scaleNoteOptions, STEP_WEIGHTS } from "../global/scales.js";
+import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/scales.js";
 import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
 
 export default class WebAudioSynthMono extends WebAudioInstrumentBase {
@@ -345,18 +345,12 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
     filter.type = this.filterType;
     filter.Q.value = this.filterQ;
 
-    // Filter ADSR envelope
     const baseFreq = this.filterFreq;
     const peakFreq = Math.max(20, Math.min(20000, baseFreq * Math.pow(2, this.filterEnvAmt)));
     const susFreq = baseFreq + (peakFreq - baseFreq) * this.filterSustain;
     const fAtk = Math.max(0.001, this.filterAttack);
-    filter.frequency.setValueAtTime(baseFreq, t);
-    filter.frequency.linearRampToValueAtTime(peakFreq, t + fAtk);
-    filter.frequency.linearRampToValueAtTime(susFreq, t + fAtk + this.filterDecay);
-    filter.frequency.setValueAtTime(susFreq, t + durationSec);
-    filter.frequency.linearRampToValueAtTime(baseFreq, t + durationSec + this.filterRelease);
 
-    // Amplitude ADSR
+    // Amplitude ADSR (linearRamp — preserves original envelope character)
     amp.gain.setValueAtTime(0, t);
     amp.gain.linearRampToValueAtTime(velocity, t + this.attack);
     amp.gain.linearRampToValueAtTime(velocity * this.sustain, t + this.attack + this.decay);
@@ -367,23 +361,66 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
     filter.connect(amp);
     amp.connect(this._out);
 
-    // LFO — per-note oscillator added on top of scheduled automations
-    if (this.lfoDepth > 0) {
+    // LFO — per-note modulation.
+    // Key insight: scheduled automation (linearRamp/exponentialRamp) on an AudioParam
+    // conflicts with audio-rate node connections to the same param, causing clicks.
+    // Solution: when LFO targets filter, drive the filter envelope via a
+    // ConstantSource (audio-rate) so both envelope and LFO sum cleanly.
+    // Amp tremolo uses a separate gain node in the signal path.
+    const lfoTargetsFilter = this.lfoDepth > 0 && this.lfoDest === "filter";
+
+    // Filter envelope — always uses scheduled automation on filter.frequency
+    filter.frequency.setValueAtTime(baseFreq, t);
+    filter.frequency.linearRampToValueAtTime(peakFreq, t + fAtk);
+    filter.frequency.linearRampToValueAtTime(susFreq, t + fAtk + this.filterDecay);
+    filter.frequency.setValueAtTime(susFreq, t + durationSec);
+    filter.frequency.linearRampToValueAtTime(baseFreq, t + durationSec + this.filterRelease);
+
+    if (lfoTargetsFilter) {
+      // Modulate filter.detune (cents) via a smoothed LFO signal.
+      // BiquadFilterNode updates coefficients once per render quantum (128 samples).
+      // Rapid changes — especially from square/sawtooth waves — cause coefficient
+      // discontinuities that produce audible clicks. A one-pole smoothing filter
+      // on the LFO signal limits the rate of change per quantum.
+      const lfoOsc = ctx.createOscillator();
+      const lfoGainNode = ctx.createGain();
+      lfoOsc.type = this.lfoShape;
+      lfoOsc.frequency.value = this.lfoRate;
+      lfoGainNode.gain.value = this.lfoDepth * 2400;
+      lfoOsc.connect(lfoGainNode);
+      // Smoothing: lowpass at the render quantum rate (~344 Hz) to round off
+      // only the sharpest transients that cause per-quantum coefficient clicks.
+      const smoother = ctx.createBiquadFilter();
+      smoother.type = "lowpass";
+      smoother.frequency.value = 300;
+      smoother.Q.value = 0.5;
+      lfoGainNode.connect(smoother);
+      smoother.connect(filter.detune);
+      lfoOsc.start(t);
+      lfoOsc.stop(stopTime);
+    }
+
+    if (this.lfoDepth > 0 && !lfoTargetsFilter) {
       const lfoOsc = ctx.createOscillator();
       const lfoGainNode = ctx.createGain();
       lfoOsc.type = this.lfoShape;
       lfoOsc.frequency.value = this.lfoRate;
       lfoOsc.connect(lfoGainNode);
-      if (this.lfoDest === "filter") {
-        lfoGainNode.gain.value = this.lfoDepth * 3000;
-        lfoGainNode.connect(filter.frequency);
-      } else if (this.lfoDest === "pitch") {
+
+      if (this.lfoDest === "pitch") {
         lfoGainNode.gain.value = this.lfoDepth * 1200; // cents
         for (const osc of allOscs) lfoGainNode.connect(osc.detune);
       } else {
-        // amp / tremolo
-        lfoGainNode.gain.value = this.lfoDepth * 0.5;
-        lfoGainNode.connect(amp.gain);
+        // Amp/tremolo: insert a gain node in the signal path whose gain is
+        // modulated by the LFO. Range: [1 - depth, 1]. This multiplies the
+        // signal rather than fighting the amp's ADSR automation.
+        const tremoloNode = ctx.createGain();
+        tremoloNode.gain.value = 1.0 - this.lfoDepth * 0.5;
+        filter.disconnect(amp);
+        filter.connect(tremoloNode);
+        tremoloNode.connect(amp);
+        lfoGainNode.gain.value = Math.min(this.lfoDepth * 0.5, 1.0 - this.lfoDepth * 0.5);
+        lfoGainNode.connect(tremoloNode.gain);
       }
       lfoOsc.start(t);
       lfoOsc.stop(stopTime);
@@ -501,6 +538,13 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     return "Mono FX";
   }
 
+  _triggerJam(time, stepDurationSec) {
+    const notes = scaleNotesInRange(this._rootMidi, this._scaleName, 24, 72);
+    if (notes.length) {
+      this._instrument.trigger(notes[Math.floor(Math.random() * notes.length)], stepDurationSec, 0.8, time);
+    }
+  }
+
   _buildControls(controls, expanded, mkSlider, ctx, options) {
     const color = options.color || this._defaultColor();
     // ---- Tone ----
@@ -605,6 +649,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     // Advance sequencer position (2x = 2 steps per tick, offset in time)
     const stepsToAdvance = multiplier === 2 ? 2 : 1;
     const subStepDur = stepDurationSec / stepsToAdvance;
+    let stepFired = false;
     for (let si = 0; si < stepsToAdvance; si++) {
       const subTime = time + si * subStepDur;
       const stepIndex = this._seqPosition % 16;
@@ -613,6 +658,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            stepFired = true;
             const ratchet = s.ratchet ?? 1;
             if (ratchet > 1) {
               const ratchetDuration = subStepDur / ratchet;
@@ -629,6 +675,8 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
       this._seqPosition++;
     }
 
+    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
+    this._jamPending = false;
     this._globalStep++;
   }
 

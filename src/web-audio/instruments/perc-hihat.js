@@ -19,15 +19,15 @@ import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
  */
 export default class WebAudioPercHihat extends WebAudioInstrumentBase {
   // Metallic oscillator frequency ratios (909-inspired, relative to base tone)
-  static METAL_RATIOS = [1, 1.4471, 1.6170, 1.9265, 2.5028, 2.6637];
+  static METAL_RATIOS = [1, 1.4471, 1.617, 1.9265, 2.5028, 2.6637];
 
   static PRESETS = {
-    Default:  { tone: 320, metalMix: 0.5, filterFreq: 8000, filterQ: 0.8, decay: 0.06, openDecay: 0.3, volume: 1 },
-    "909":    { tone: 330, metalMix: 0.7, filterFreq: 9000, filterQ: 1.0, decay: 0.05, openDecay: 0.35, volume: 1 },
-    "808":    { tone: 280, metalMix: 0.2, filterFreq: 7000, filterQ: 0.6, decay: 0.06, openDecay: 0.28, volume: 0.9 },
-    Bright:   { tone: 400, metalMix: 0.6, filterFreq: 12000, filterQ: 0.5, decay: 0.04, openDecay: 0.25, volume: 1 },
-    Dark:     { tone: 250, metalMix: 0.4, filterFreq: 5000, filterQ: 1.2, decay: 0.08, openDecay: 0.35, volume: 0.8 },
-    Shaker:   { tone: 280, metalMix: 0.1, filterFreq: 6000, filterQ: 0.5, decay: 0.12, openDecay: 0.2, volume: 0.7 },
+    Default: { tone: 320, metalMix: 0.5, filterFreq: 8000, filterQ: 0.8, decay: 0.06, openDecay: 0.3, volume: 1 },
+    909: { tone: 330, metalMix: 0.7, filterFreq: 9000, filterQ: 1.0, decay: 0.05, openDecay: 0.35, volume: 1 },
+    808: { tone: 280, metalMix: 0.2, filterFreq: 7000, filterQ: 0.6, decay: 0.06, openDecay: 0.28, volume: 0.9 },
+    Bright: { tone: 400, metalMix: 0.6, filterFreq: 12000, filterQ: 0.5, decay: 0.04, openDecay: 0.25, volume: 1 },
+    Dark: { tone: 250, metalMix: 0.4, filterFreq: 5000, filterQ: 1.2, decay: 0.08, openDecay: 0.35, volume: 0.8 },
+    Shaker: { tone: 280, metalMix: 0.1, filterFreq: 6000, filterQ: 0.5, decay: 0.12, openDecay: 0.2, volume: 0.7 },
     Metallic: { tone: 360, metalMix: 0.9, filterFreq: 10000, filterQ: 1.5, decay: 0.05, openDecay: 0.4, volume: 0.9 },
   };
 
@@ -124,13 +124,49 @@ export default class WebAudioPercHihat extends WebAudioInstrumentBase {
 
 export class WebAudioPercHihatControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "tone",       label: "Tone",    min: 150, max: 600,   step: 1,    tooltip: "Base frequency for metallic oscillators. Tunes the hat's pitch." },
-    { param: "metalMix",   label: "Metal",   min: 0,   max: 1,     step: 0.01, tooltip: "Balance between metallic oscillators (1) and noise (0)." },
-    { param: "filterFreq", label: "Freq",    min: 2000, max: 16000, step: 1, scale: "log", tooltip: "Highpass filter frequency. Higher = brighter, thinner." },
-    { param: "filterQ",    label: "Q",       min: 0.1,  max: 5,     step: 0.1, tooltip: "Filter resonance. Higher = more ringing, focused." },
-    { param: "decay",      label: "Closed",  min: 0.01, max: 0.2,   step: 0.01, tooltip: "Closed hat decay time." },
-    { param: "openDecay",  label: "Open",    min: 0.05, max: 0.8,   step: 0.01, tooltip: "Open hat decay time. Open hats are choked by closed hits." },
-    { param: "volume",     label: "Vol",     min: 0,    max: 1,     step: 0.01 },
+    {
+      param: "tone",
+      label: "Tone",
+      min: 150,
+      max: 600,
+      step: 1,
+      tooltip: "Base frequency for metallic oscillators. Tunes the hat's pitch.",
+    },
+    {
+      param: "metalMix",
+      label: "Metal",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Balance between metallic oscillators (1) and noise (0).",
+    },
+    {
+      param: "filterFreq",
+      label: "Freq",
+      min: 2000,
+      max: 16000,
+      step: 1,
+      scale: "log",
+      tooltip: "Highpass filter frequency. Higher = brighter, thinner.",
+    },
+    {
+      param: "filterQ",
+      label: "Q",
+      min: 0.1,
+      max: 5,
+      step: 0.1,
+      tooltip: "Filter resonance. Higher = more ringing, focused.",
+    },
+    { param: "decay", label: "Closed", min: 0.01, max: 0.2, step: 0.01, tooltip: "Closed hat decay time." },
+    {
+      param: "openDecay",
+      label: "Open",
+      min: 0.05,
+      max: 0.8,
+      step: 0.01,
+      tooltip: "Open hat decay time. Open hats are choked by closed hits.",
+    },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
   ];
 
   static DEFAULT_PATTERN() {
@@ -150,21 +186,27 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
     this._seqPosition = 0;
   }
 
-  _defaultColor() { return "#ff0"; }
-  _defaultTitle() { return "Hi-Hat"; }
-  _fxTitle() { return "HiHat FX"; }
+  _defaultColor() {
+    return "#ff0";
+  }
+  _defaultTitle() {
+    return "Hi-Hat";
+  }
+  _fxTitle() {
+    return "HiHat FX";
+  }
 
   _buildControls(controls, expanded, mkSlider, ctx, options) {
     const color = options.color || this._defaultColor();
 
     const { el, controls: sec } = createSection("Hi-Hat");
     this._makePresetDropdown(WebAudioPercHihat.PRESETS, sec);
-    sec.appendChild(mkSlider({ param: "tone",       label: "Tone",   min: 150, max: 600,   step: 1 }));
-    sec.appendChild(mkSlider({ param: "metalMix",   label: "Metal",  min: 0,   max: 1,     step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "filterFreq", label: "Freq",   min: 2000, max: 16000, step: 1, scale: "log" }));
-    sec.appendChild(mkSlider({ param: "filterQ",    label: "Q",      min: 0.1,  max: 5,     step: 0.1 }));
-    sec.appendChild(mkSlider({ param: "decay",      label: "Closed", min: 0.01, max: 0.2,   step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "openDecay",  label: "Open",   min: 0.05, max: 0.8,   step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "tone", label: "Tone", min: 150, max: 600, step: 1 }));
+    sec.appendChild(mkSlider({ param: "metalMix", label: "Metal", min: 0, max: 1, step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "filterFreq", label: "Freq", min: 2000, max: 16000, step: 1, scale: "log" }));
+    sec.appendChild(mkSlider({ param: "filterQ", label: "Q", min: 0.1, max: 5, step: 0.1 }));
+    sec.appendChild(mkSlider({ param: "decay", label: "Closed", min: 0.01, max: 0.2, step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "openDecay", label: "Open", min: 0.05, max: 0.8, step: 0.01 }));
     controls.appendChild(el);
 
     // ---- Sequencer ----
@@ -217,6 +259,7 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
     // Advance sequencer position (2x = 2 steps per tick, offset in time)
     const stepsToAdvance = multiplier === 2 ? 2 : 1;
     const subStepDur = stepDurationSec / stepsToAdvance;
+    let stepFired = false;
     for (let si = 0; si < stepsToAdvance; si++) {
       const subTime = time + si * subStepDur;
       const stepIndex = this._seqPosition % 16;
@@ -225,6 +268,7 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            stepFired = true;
             const ratchet = s.ratchet ?? 1;
             const isOpen = s.open ?? false;
             if (ratchet > 1) {
@@ -242,20 +286,34 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
       this._seqPosition++;
     }
 
+    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
+    this._jamPending = false;
     this._globalStep++;
   }
 
   _meetsCondition(condition, barIndex) {
     switch (condition) {
-      case "off": return true;
-      case "1:2": return barIndex % 2 === 0;
-      case "1:3": return barIndex % 3 === 0;
-      case "1:4": return barIndex % 4 === 0;
-      case "2:4": return barIndex % 4 === 1;
-      case "3:4": return barIndex % 4 === 2;
-      case "fill": return barIndex % 4 === 3;
-      default: return true;
+      case "off":
+        return true;
+      case "1:2":
+        return barIndex % 2 === 0;
+      case "1:3":
+        return barIndex % 3 === 0;
+      case "1:4":
+        return barIndex % 4 === 0;
+      case "2:4":
+        return barIndex % 4 === 1;
+      case "3:4":
+        return barIndex % 4 === 2;
+      case "fill":
+        return barIndex % 4 === 3;
+      default:
+        return true;
     }
+  }
+
+  _triggerJam(time, stepDurationSec) {
+    this._instrument.trigger(0.7, time, false);
   }
 
   setActiveStep() {

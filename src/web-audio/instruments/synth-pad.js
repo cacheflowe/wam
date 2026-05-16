@@ -1,6 +1,6 @@
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import "../ui/step-seq.js";
-import { scaleNoteOptions, buildChordFromScale } from "../global/scales.js";
+import { scaleNoteOptions, scaleNotesInRange, buildChordFromScale } from "../global/scales.js";
 import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
 
 export default class WebAudioSynthPad extends WebAudioInstrumentBase {
@@ -466,6 +466,15 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     return "Pad FX";
   }
 
+  _triggerJam(time, stepDurationSec) {
+    const notes = scaleNotesInRange(this._rootMidi, this._scaleName, 36, 72);
+    if (notes.length) {
+      const note = notes[Math.floor(Math.random() * notes.length)];
+      const chord = this._chordSize === 1 ? note : buildChordFromScale(note, this._scaleName, this._chordSize);
+      this._instrument.trigger(chord, stepDurationSec, 0.8, time);
+    }
+  }
+
   _buildControls(controls, expanded, mkSlider, ctx, options) {
     const color = options.color || this._defaultColor();
     // ---- Tone ----
@@ -588,6 +597,7 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     // Advance sequencer position (2x = 2 steps per tick, offset in time)
     const stepsToAdvance = multiplier === 2 ? 2 : 1;
     const subStepDur = stepDurationSec / stepsToAdvance;
+    let stepFired = false;
     for (let si = 0; si < stepsToAdvance; si++) {
       const subTime = time + si * subStepDur;
       const stepIndex = this._seqPosition % 16;
@@ -596,6 +606,7 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            stepFired = true;
             const chord =
               this._chordSize === 1 ? s.note : buildChordFromScale(s.note, this._scaleName, this._chordSize);
             const ratchet = s.ratchet ?? 1;
@@ -614,6 +625,8 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
       this._seqPosition++;
     }
 
+    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
+    this._jamPending = false;
     this._globalStep++;
   }
 

@@ -419,7 +419,6 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     this._seq = null;
     this._rootMidi = 29;
     this._scaleName = "Minor";
-    this._pendingNote = null;
     this._lfoAnimId = null;
 
     // Sequencer position tracking
@@ -439,15 +438,15 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     return "Acid FX";
   }
 
-  _buildStripActions(strip, options = {}) {
-    const key = options.jamKey ?? "b";
-    const btn = document.createElement("button");
-    btn.textContent = "♩";
-    btn.className = "wam-jam-btn";
-    btn.title = `Trigger note [${key.toUpperCase()}]`;
-    btn.addEventListener("click", () => this.queueRandomNote());
-    strip.appendChild(btn);
-    this._bindJamKey(key, () => this.queueRandomNote());
+  _defaultJamKey() {
+    return "b";
+  }
+
+  _triggerJam(time, stepDurationSec) {
+    const notes = scaleNotesInRange(this._rootMidi, this._scaleName, 24, 60);
+    if (notes.length) {
+      this._instrument.trigger(notes[Math.floor(Math.random() * notes.length)], stepDurationSec, false, time);
+    }
   }
 
   _buildControls(controls, expanded, mkSlider, ctx, options) {
@@ -699,6 +698,7 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     // Advance sequencer position (2x = 2 steps per tick, offset in time)
     const stepsToAdvance = multiplier === 2 ? 2 : 1;
     const subStepDur = stepDurationSec / stepsToAdvance;
+    let stepFired = false;
     for (let si = 0; si < stepsToAdvance; si++) {
       const subTime = time + si * subStepDur;
       const stepIndex = this._seqPosition % 16;
@@ -708,6 +708,7 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
         const probability = s.probability ?? 1;
         if (Math.random() < probability) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            stepFired = true;
             const ratchet = s.ratchet ?? 1;
             if (ratchet > 1) {
               const ratchetDuration = subStepDur / ratchet;
@@ -729,12 +730,8 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
       this._seqPosition++;
     }
 
-    // Pending note (keyboard jam)
-    if (this._pendingNote !== null) {
-      this._instrument.trigger(this._pendingNote, stepDurationSec, false, time);
-      this._pendingNote = null;
-    }
-
+    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
+    this._jamPending = false;
     this._globalStep++;
   }
 
@@ -770,12 +767,6 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     this._rootMidi = rootMidi;
     this._scaleName = scaleName;
     this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 24, 60));
-  }
-
-  /** Queue a random note to be played on the next step. */
-  queueRandomNote() {
-    const notes = scaleNotesInRange(this._rootMidi, this._scaleName, 24, 60);
-    if (notes.length) this._pendingNote = notes[Math.floor(Math.random() * notes.length)];
   }
 
   /** Randomize the step pattern using weighted probability. */

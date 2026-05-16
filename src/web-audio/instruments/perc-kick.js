@@ -18,14 +18,14 @@ import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
  */
 export default class WebAudioPercKick extends WebAudioInstrumentBase {
   static PRESETS = {
-    Default:  { startFreq: 150, endFreq: 40, sweepTime: 0.08, decay: 0.35, click: 0.3, drive: 0, volume: 1 },
-    "808":    { startFreq: 140, endFreq: 35, sweepTime: 0.1,  decay: 0.45, click: 0.1, drive: 0, volume: 1 },
-    "909":    { startFreq: 200, endFreq: 50, sweepTime: 0.05, decay: 0.28, click: 0.7, drive: 0.2, volume: 1 },
-    Punchy:   { startFreq: 200, endFreq: 50, sweepTime: 0.05, decay: 0.25, click: 0.5, drive: 0.1, volume: 1 },
-    Boomy:    { startFreq: 100, endFreq: 30, sweepTime: 0.15, decay: 0.6,  click: 0.1, drive: 0, volume: 0.9 },
-    Hard:     { startFreq: 250, endFreq: 45, sweepTime: 0.04, decay: 0.3,  click: 0.8, drive: 0.5, volume: 1 },
-    Distorted:{ startFreq: 180, endFreq: 40, sweepTime: 0.06, decay: 0.35, click: 0.4, drive: 0.8, volume: 0.9 },
-    Sub:      { startFreq: 80,  endFreq: 30, sweepTime: 0.2,  decay: 0.7,  click: 0,   drive: 0, volume: 1 },
+    Default: { startFreq: 150, endFreq: 40, sweepTime: 0.08, decay: 0.35, click: 0.3, drive: 0, volume: 1 },
+    808: { startFreq: 140, endFreq: 35, sweepTime: 0.1, decay: 0.45, click: 0.1, drive: 0, volume: 1 },
+    909: { startFreq: 200, endFreq: 50, sweepTime: 0.05, decay: 0.28, click: 0.7, drive: 0.2, volume: 1 },
+    Punchy: { startFreq: 200, endFreq: 50, sweepTime: 0.05, decay: 0.25, click: 0.5, drive: 0.1, volume: 1 },
+    Boomy: { startFreq: 100, endFreq: 30, sweepTime: 0.15, decay: 0.6, click: 0.1, drive: 0, volume: 0.9 },
+    Hard: { startFreq: 250, endFreq: 45, sweepTime: 0.04, decay: 0.3, click: 0.8, drive: 0.5, volume: 1 },
+    Distorted: { startFreq: 180, endFreq: 40, sweepTime: 0.06, decay: 0.35, click: 0.4, drive: 0.8, volume: 0.9 },
+    Sub: { startFreq: 80, endFreq: 30, sweepTime: 0.2, decay: 0.7, click: 0, drive: 0, volume: 1 },
   };
 
   constructor(ctx, preset = "Default") {
@@ -54,7 +54,9 @@ export default class WebAudioPercKick extends WebAudioInstrumentBase {
     this._drive = v;
     this._updateDriveCurve(v);
   }
-  get drive() { return this._drive ?? 0; }
+  get drive() {
+    return this._drive ?? 0;
+  }
 
   /**
    * @param {number} [velocity]  0–1
@@ -129,13 +131,41 @@ export default class WebAudioPercKick extends WebAudioInstrumentBase {
 
 export class WebAudioPercKickControls extends WebAudioControlsBase {
   static SLIDER_DEFS = [
-    { param: "startFreq", label: "Start",  min: 50,  max: 500, step: 1,    tooltip: "Starting pitch of the pitch sweep." },
-    { param: "endFreq",   label: "End",    min: 20,  max: 200, step: 1,    tooltip: "Final pitch at end of sweep. Lower = deeper sub." },
-    { param: "sweepTime", label: "Sweep",  min: 0.01, max: 0.5, step: 0.01, tooltip: "Duration of the pitch drop." },
-    { param: "decay",     label: "Decay",  min: 0.05, max: 1.5, step: 0.01, tooltip: "Body decay time. Longer = sustaining thump." },
-    { param: "click",     label: "Click",  min: 0,    max: 1,   step: 0.01, tooltip: "Transient click amount. Adds 909-style attack definition." },
-    { param: "drive",     label: "Drive",  min: 0,    max: 1,   step: 0.01, tooltip: "Saturation/distortion amount. Adds grit and presence." },
-    { param: "volume",    label: "Vol",    min: 0,    max: 1,   step: 0.01 },
+    { param: "startFreq", label: "Start", min: 50, max: 500, step: 1, tooltip: "Starting pitch of the pitch sweep." },
+    {
+      param: "endFreq",
+      label: "End",
+      min: 20,
+      max: 200,
+      step: 1,
+      tooltip: "Final pitch at end of sweep. Lower = deeper sub.",
+    },
+    { param: "sweepTime", label: "Sweep", min: 0.01, max: 0.5, step: 0.01, tooltip: "Duration of the pitch drop." },
+    {
+      param: "decay",
+      label: "Decay",
+      min: 0.05,
+      max: 1.5,
+      step: 0.01,
+      tooltip: "Body decay time. Longer = sustaining thump.",
+    },
+    {
+      param: "click",
+      label: "Click",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Transient click amount. Adds 909-style attack definition.",
+    },
+    {
+      param: "drive",
+      label: "Drive",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tooltip: "Saturation/distortion amount. Adds grit and presence.",
+    },
+    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
   ];
 
   static DEFAULT_PATTERN() {
@@ -154,21 +184,27 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
     this._seqPosition = 0;
   }
 
-  _defaultColor() { return "#f44"; }
-  _defaultTitle() { return "Kick"; }
-  _fxTitle() { return "Kick FX"; }
+  _defaultColor() {
+    return "#f44";
+  }
+  _defaultTitle() {
+    return "Kick";
+  }
+  _fxTitle() {
+    return "Kick FX";
+  }
 
   _buildControls(controls, expanded, mkSlider, ctx, options) {
     const color = options.color || this._defaultColor();
 
     const { el, controls: sec } = createSection("Kick");
     this._makePresetDropdown(WebAudioPercKick.PRESETS, sec);
-    sec.appendChild(mkSlider({ param: "startFreq", label: "Start",  min: 50,  max: 500, step: 1 }));
-    sec.appendChild(mkSlider({ param: "endFreq",   label: "End",    min: 20,  max: 200, step: 1 }));
-    sec.appendChild(mkSlider({ param: "sweepTime", label: "Sweep",  min: 0.01, max: 0.5, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "decay",     label: "Decay",  min: 0.05, max: 1.5, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "click",     label: "Click",  min: 0,    max: 1,   step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "drive",     label: "Drive",  min: 0,    max: 1,   step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "startFreq", label: "Start", min: 50, max: 500, step: 1 }));
+    sec.appendChild(mkSlider({ param: "endFreq", label: "End", min: 20, max: 200, step: 1 }));
+    sec.appendChild(mkSlider({ param: "sweepTime", label: "Sweep", min: 0.01, max: 0.5, step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.05, max: 1.5, step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "click", label: "Click", min: 0, max: 1, step: 0.01 }));
+    sec.appendChild(mkSlider({ param: "drive", label: "Drive", min: 0, max: 1, step: 0.01 }));
     controls.appendChild(el);
 
     // ---- Sequencer ----
@@ -216,6 +252,7 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
 
     const stepsToAdvance = multiplier === 2 ? 2 : 1;
     const subStepDur = stepDurationSec / stepsToAdvance;
+    let stepFired = false;
     for (let si = 0; si < stepsToAdvance; si++) {
       const subTime = time + si * subStepDur;
       const stepIndex = this._seqPosition % 16;
@@ -224,6 +261,7 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            stepFired = true;
             const ratchet = s.ratchet ?? 1;
             if (ratchet > 1) {
               const ratchetDuration = subStepDur / ratchet;
@@ -240,20 +278,34 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
       this._seqPosition++;
     }
 
+    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
+    this._jamPending = false;
     this._globalStep++;
   }
 
   _meetsCondition(condition, barIndex) {
     switch (condition) {
-      case "off": return true;
-      case "1:2": return barIndex % 2 === 0;
-      case "1:3": return barIndex % 3 === 0;
-      case "1:4": return barIndex % 4 === 0;
-      case "2:4": return barIndex % 4 === 1;
-      case "3:4": return barIndex % 4 === 2;
-      case "fill": return barIndex % 4 === 3;
-      default: return true;
+      case "off":
+        return true;
+      case "1:2":
+        return barIndex % 2 === 0;
+      case "1:3":
+        return barIndex % 3 === 0;
+      case "1:4":
+        return barIndex % 4 === 0;
+      case "2:4":
+        return barIndex % 4 === 1;
+      case "3:4":
+        return barIndex % 4 === 2;
+      case "fill":
+        return barIndex % 4 === 3;
+      default:
+        return true;
     }
+  }
+
+  _triggerJam(time, stepDurationSec) {
+    this._instrument.trigger(0.9, time);
   }
 
   setActiveStep() {

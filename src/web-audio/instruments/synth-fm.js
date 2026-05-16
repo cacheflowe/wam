@@ -624,15 +624,18 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     return "FM FX";
   }
 
-  _buildStripActions(strip, options = {}) {
-    const key = options.jamKey ?? "n";
-    const btn = document.createElement("button");
-    btn.textContent = "♫";
-    btn.className = "wam-jam-btn";
-    btn.title = `Trigger chord [${key.toUpperCase()}]`;
-    btn.addEventListener("click", () => this.triggerJamChord());
-    strip.appendChild(btn);
-    this._bindJamKey(key, () => this.triggerJamChord());
+  _defaultJamKey() {
+    return "n";
+  }
+
+  _triggerJam(time, stepDurationSec) {
+    const notes = scaleNotesInRange(this._rootMidi, this._scaleName, 24, 48);
+    if (notes.length) {
+      const note = notes[Math.floor(Math.random() * notes.length)];
+      const chord =
+        this._chordSize === 1 ? note + 24 : buildChordFromScale(note + 24, this._scaleName, this._chordSize);
+      this._instrument.trigger(chord, stepDurationSec, time);
+    }
   }
 
   // ---- Bind override to set BPM on instrument ----
@@ -825,6 +828,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     // Advance sequencer position (2x = 2 steps per tick, offset in time)
     const stepsToAdvance = multiplier === 2 ? 2 : 1;
     const subStepDur = stepDurationSec / stepsToAdvance;
+    let stepFired = false;
     for (let si = 0; si < stepsToAdvance; si++) {
       const subTime = time + si * subStepDur;
       const stepIndex = this._seqPosition % 16;
@@ -833,6 +837,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            stepFired = true;
             const chord =
               this._chordSize === 1 ? s.note + 24 : buildChordFromScale(s.note + 24, this._scaleName, this._chordSize);
             const ratchet = s.ratchet ?? 1;
@@ -851,6 +856,8 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
       this._seqPosition++;
     }
 
+    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
+    this._jamPending = false;
     this._globalStep++;
   }
 
@@ -883,15 +890,6 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     this._rootMidi = rootMidi;
     this._scaleName = scaleName;
     this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 24, 48));
-  }
-
-  triggerJamChord() {
-    if (!this._instrument || !this._ctx) return;
-    const chord =
-      this._chordSize === 1
-        ? this._rootMidi + 24
-        : buildChordFromScale(this._rootMidi + 24, this._scaleName, this._chordSize);
-    this._instrument.trigger(chord, 0.25, this._ctx.currentTime);
   }
 
   randomize() {
