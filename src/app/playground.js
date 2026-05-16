@@ -84,6 +84,12 @@ const samplesConfig = {
       "ZAP_4.wav",
     ],
   },
+  vocals: {
+    glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/11-vocals/*.wav")),
+    servedAt: "_assets/samples/11-vocals/",
+    fallbackDir: "public/audio/samples/vocals/",
+    fallbackFiles: ["eek-a-mouse-loop-8.wav"],
+  },
 };
 
 const LOOP_FILES_BREAKS = resolveSamples(samplesConfig.breaks);
@@ -91,7 +97,7 @@ const LOOP_FILES_PERCL = resolveSamples(samplesConfig.percloops);
 const SAMPLE_FILES_KICKS = resolveSamples(samplesConfig.kicks);
 const SAMPLE_FILES_SNARES = resolveSamples(samplesConfig.snares);
 const SAMPLE_FILES_HITS = resolveSamples(samplesConfig.hits);
-
+const LOOP_FILES_VOCALS = resolveSamples(samplesConfig.vocals);
 /**
  * Registry of available instrument types.
  * Each entry describes how to instantiate a headless instrument, create its
@@ -249,6 +255,25 @@ const INSTRUMENT_TYPES = [
     tag: "wam-sample-player-controls",
     bindOpts: (bpm) => ({ color: "#8af", files: SAMPLE_FILES_HITS, basePath: "", fx: { bpm } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
+  },
+  {
+    id: "loop-vocals",
+    label: "Loop Player (Vocals)",
+    color: "rgb(46, 149, 93)",
+    make: (ctx) =>
+      new WebAudioLoopPlayer(ctx, {
+        speedMultiplier: 1,
+        subdivision: 4,
+        returnSteps: 1,
+        randomChance: 0.1,
+        reverseChance: 0.04,
+        volume: 0.8,
+        useTimeStretch: true,
+      }),
+    tag: "wam-sample-looper-controls",
+    bindOpts: (bpm) => ({ color: "rgb(46, 149, 93)", files: LOOP_FILES_VOCALS, basePath: "", fx: { bpm } }),
+    // Loop player uses (globalStep, bpm, time) — owner tracks globalStep externally
+    step: null,
   },
 ];
 
