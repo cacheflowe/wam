@@ -1,6 +1,6 @@
 {
   "v": 1,
-  "songName": "danzhal",
+  "songName": "Danzhal",
   "transport": {
     "bpm": 148,
     "masterVolume": 1,
@@ -36,10 +36,10 @@
   "instruments": [
     {
       "id": "bass808",
-      "instanceId": 16,
+      "instanceId": 6,
       "state": {
         "params": {
-          "volume": 0.33000001311302185,
+          "volume": 0.4099999964237213,
           "decay": 2.7800000000000002,
           "pitchSweepSemitones": 12,
           "pitchDecay": 0.27,
@@ -182,7 +182,7 @@
     },
     {
       "id": "snare",
-      "instanceId": 17,
+      "instanceId": 7,
       "state": {
         "params": {
           "toneFreq": 164,
@@ -337,7 +337,7 @@
     },
     {
       "id": "hihat",
-      "instanceId": 18,
+      "instanceId": 8,
       "state": {
         "params": {
           "tone": 220,
@@ -488,7 +488,7 @@
     },
     {
       "id": "mono",
-      "instanceId": 19,
+      "instanceId": 9,
       "state": {
         "params": {
           "attack": 1.093,
@@ -673,7 +673,7 @@
     },
     {
       "id": "snare",
-      "instanceId": 20,
+      "instanceId": 10,
       "state": {
         "params": {
           "toneFreq": 200,
@@ -828,7 +828,7 @@
     },
     {
       "id": "kick",
-      "instanceId": 21,
+      "instanceId": 11,
       "state": {
         "params": {
           "startFreq": 180,
@@ -979,7 +979,7 @@
     },
     {
       "id": "mono",
-      "instanceId": 22,
+      "instanceId": 12,
       "state": {
         "params": {
           "attack": 0.08700000000000001,
@@ -1164,10 +1164,10 @@
     },
     {
       "id": "fm",
-      "instanceId": 23,
+      "instanceId": 13,
       "state": {
         "params": {
-          "volume": 0.9100000262260437,
+          "volume": 0.8600000143051147,
           "octaveOffset": 0,
           "octaveJumpProb": 0.25,
           "carrierRatio": 1,
