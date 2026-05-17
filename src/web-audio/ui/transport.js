@@ -263,6 +263,11 @@ export class WebAudioTransportControls extends HTMLElement {
     return this._masterGain;
   }
 
+  /** Master analyser node (post-FX, pre-destination). */
+  get masterAnalyser() {
+    return this._out;
+  }
+
   /** Slot element where apps can append a share/export button. */
   get shareSlot() {
     return this._shareSlot;

@@ -103,6 +103,10 @@ export class WebAudioControlsBase extends HTMLElement {
   bind(instrument, ctx, options = {}) {
     this._instrument = instrument;
     this._ctx = ctx;
+
+    // Wrap trigger methods to emit a visual notification event
+    this._wrapTrigger(instrument);
+
     const color = options.color || this._defaultColor();
     this.innerHTML = "";
     this._sliders = {};
@@ -375,6 +379,31 @@ export class WebAudioControlsBase extends HTMLElement {
   _triggerJam(time, stepDurationSec) {}
 
   /**
+   * Notify the UI that this instrument fired a note.
+   * Dispatches a bubbling "wam-trigger" CustomEvent for visualization.
+   */
+  _notifyTrigger(velocity = 1) {
+    this.dispatchEvent(new CustomEvent("wam-trigger", { bubbles: true, detail: { velocity: Math.min(1, velocity) } }));
+  }
+
+  /**
+   * Wrap the instrument's trigger/triggerDrum methods so _notifyTrigger fires
+   * automatically on every note, keeping instrument code DRY.
+   */
+  _wrapTrigger(instrument) {
+    const self = this;
+    for (const method of ["trigger", "triggerDrum"]) {
+      const orig = instrument[method];
+      if (typeof orig === "function") {
+        instrument[method] = function (...args) {
+          if (!self._muteHandle?.isMuted()) self._notifyTrigger();
+          return orig.apply(this, args);
+        };
+      }
+    }
+  }
+
+  /**
    * Register a global keyboard shortcut that fires `fn` when `key` is pressed.
    * Automatically resumes a suspended AudioContext. Handlers are removed on disconnect
    * and re-registered on each bind() call.
@@ -478,9 +507,11 @@ export class WebAudioControlsBase extends HTMLElement {
     this._out.connect(this._pan);
     const analyser = ctx.createAnalyser();
     this._out.connect(analyser);
+    this._analyser = analyser;
     const meterAnalyser = ctx.createAnalyser();
     meterAnalyser.fftSize = 256;
     this._out.connect(meterAnalyser);
+    this._meterAnalyser = meterAnalyser;
     strip.meter.setAnalyser(meterAnalyser);
     waveform.init(analyser, color, { fixed: true });
   }

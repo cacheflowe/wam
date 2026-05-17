@@ -1,4 +1,6 @@
 import WebAudioSequencer from "../web-audio/global/sequencer.js";
+import WamAnalysisBus from "../web-audio/ui/analysis-bus.js";
+import "../web-audio/ui/visualizer.js";
 
 // Import all instrument modules (registers custom elements as a side-effect)
 import "../web-audio/instruments/perc-kick.js";
@@ -268,6 +270,7 @@ export default class PlaygroundApp extends HTMLElement {
 
     this._instanceCounter = 0;
     this._isLoadingState = false;
+    this._analysisBus = new WamAnalysisBus();
 
     this._buildUI();
     this._loadInitialState();
@@ -335,6 +338,50 @@ export default class PlaygroundApp extends HTMLElement {
     const palette = document.createElement("section");
     palette.style.cssText = "margin-bottom:1.5rem;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;";
 
+    // Visualizer panel
+    const vizRow = document.createElement("section");
+    vizRow.style.cssText = "margin-bottom:1.5rem;";
+    const vizDetails = document.createElement("details");
+    vizDetails.open = true;
+    const vizSummary = document.createElement("summary");
+    vizSummary.textContent = "Visualizer";
+    vizDetails.appendChild(vizSummary);
+
+    // Sketch selector
+    const vizToolbar = document.createElement("div");
+    vizToolbar.style.cssText = "display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;";
+    const sketchLabel = document.createElement("label");
+    sketchLabel.textContent = "Sketch:";
+    sketchLabel.style.cssText = "font-size:0.8rem;opacity:0.7;";
+    this._sketchSelect = document.createElement("select");
+    this._sketchSelect.style.cssText =
+      "font-size:0.8rem;padding:0.2rem 0.4rem;border-radius:4px;background:#1a1a2e;color:#eee;border:1px solid #444;";
+    const sketches = [
+      { label: "Pulse Shapes", path: "../web-audio/ui/sketches/pulse-shapes.js" },
+      { label: "Reactive Geometry", path: "../web-audio/ui/sketches/reactive-geometry.js" },
+      { label: "Sequence Grid", path: "../web-audio/ui/sketches/sequence-grid.js" },
+    ];
+    for (const sk of sketches) {
+      const opt = document.createElement("option");
+      opt.value = sk.path;
+      opt.textContent = sk.label;
+      this._sketchSelect.appendChild(opt);
+    }
+    this._sketchSelect.addEventListener("change", () => {
+      const url = new URL(this._sketchSelect.value, import.meta.url).href;
+      this._vizEl.loadSketch(url);
+    });
+    vizToolbar.appendChild(sketchLabel);
+    vizToolbar.appendChild(this._sketchSelect);
+    vizDetails.appendChild(vizToolbar);
+
+    this._vizEl = document.createElement("wam-visualizer");
+    this._vizEl.style.cssText =
+      "display:block;width:100%;height:300px;border:1px solid #333;border-radius:6px;overflow:hidden;margin-top:0.5rem;";
+    vizDetails.appendChild(this._vizEl);
+    vizRow.appendChild(vizDetails);
+    main.appendChild(vizRow);
+
     for (const def of INSTRUMENT_TYPES) {
       const btn = document.createElement("button");
       btn.textContent = `+ ${def.label}`;
@@ -354,6 +401,14 @@ export default class PlaygroundApp extends HTMLElement {
     this._instrumentList = document.createElement("div");
     this._instrumentList.style.cssText = "display:flex;flex-direction:column;gap:1rem;";
     main.appendChild(this._instrumentList);
+
+    // Route instrument trigger events to the analysis bus
+    this._instrumentList.addEventListener("wam-trigger", (e) => {
+      const ctrl = e.target;
+      const entry =
+        this._instruments.find((ent) => ent.ctrl === ctrl) || this._pendingInstruments.find((ent) => ent.ctrl === ctrl);
+      if (entry) this._analysisBus.trigger(entry.analysisKey, e.detail.velocity);
+    });
 
     // Empty state
     this._emptyMsg = document.createElement("p");
@@ -388,6 +443,12 @@ export default class PlaygroundApp extends HTMLElement {
       showScales: true,
     });
     this._transportEl.connect(this._ctx.destination);
+
+    // Wire visualizer analysis bus
+    this._analysisBus.setContext(this._ctx);
+    this._analysisBus.setMaster(this._transportEl.masterAnalyser);
+    this._vizEl.init(this._analysisBus, this._ctx);
+    this._vizEl.loadSketch(new URL(this._sketchSelect.value, import.meta.url).href);
 
     this._transportEl.addEventListener("transport-share-click", () => {
       this._shareURL();
@@ -443,6 +504,8 @@ export default class PlaygroundApp extends HTMLElement {
       }
 
       const dur = this._seq.stepDurationSec();
+      const bar = Math.floor(this._globalStep / 16);
+      this._analysisBus.setBeat(step, bar, this._transportEl.bpm, dur, time);
       for (const entry of this._instruments) {
         if (entry.def.step) {
           entry.def.step(entry.ctrl, step, time, dur);
@@ -486,7 +549,10 @@ export default class PlaygroundApp extends HTMLElement {
     this._transportEl.broadcastScale();
 
     const instanceId = this._instanceCounter++;
-    const entry = { def, ctrl, instrument, instanceId };
+    const analysisKey = `${def.label} ${instanceId}`;
+    this._analysisBus.addInstrument(analysisKey, ctrl);
+
+    const entry = { def, ctrl, instrument, instanceId, analysisKey };
 
     // If the transport is running, hold until the next bar so the pattern starts in phase
     if (this._transportEl.playing) {
@@ -517,6 +583,7 @@ export default class PlaygroundApp extends HTMLElement {
   }
 
   _removeInstrument(entry, row) {
+    this._analysisBus.removeInstrument(entry.analysisKey);
     this._transportEl.unregisterInstrument(entry.ctrl);
     entry.ctrl.disconnect();
     if (row && row.parentNode === this._instrumentList) {
@@ -556,6 +623,7 @@ export default class PlaygroundApp extends HTMLElement {
 
     // 1. Clear existing
     for (const entry of [...this._instruments, ...this._pendingInstruments]) {
+      this._analysisBus.removeInstrument(entry.analysisKey);
       this._transportEl.unregisterInstrument(entry.ctrl);
       entry.ctrl.disconnect();
       if (entry.row && entry.row.parentNode === this._instrumentList) {
