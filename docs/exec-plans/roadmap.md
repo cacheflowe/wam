@@ -79,6 +79,7 @@ Build a library of browser-based instruments that are:
 | **MIDI keyboard input** | Medium | Map note-on/off to currently-selected instrument's `trigger()`; see **MIDI** section below |
 | **Double-click/tap reset to default** | Medium | Double-click (or double-tap) any UI control (sliders, knobs, dropdowns, toggles) resets it to its default value |
 | **True preset save/recall** | Medium | Two modes: (1) Vite dev — externalize presets to JSON files, auto-write on save/delete via dev middleware; (2) Static site — download preset collection as .json, drag-and-drop .json onto instrument to restore. Currently localStorage + clipboard export; see **Preset Persistence** section below |
+| **Per-section randomize** | Medium | Randomize individual control-panel sections (e.g. just Oscillator, just Filter, just Envelope) instead of all params at once; add a randomize button per section header |
 | **Ad hoc audio loading** | Medium | Drop an audio file (or use file input selector) onto `sample-looper.js` and `sample-player.js` controls to load custom user audio |
 | **Parametric EQ** | Medium | 3-4 band EQ as first effect in FX unit chain; new `eq.js` with engine + UI; see **New Effects** section below |
 | **Sidechain compressor** | Medium | Duck instrument gain based on another instrument's amplitude; instrument selector UI (like vocoder carrier routing); see **New Effects** section below |

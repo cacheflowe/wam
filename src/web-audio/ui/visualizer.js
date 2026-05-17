@@ -61,6 +61,16 @@ export default class WamVisualizer extends HTMLElement {
     }
   }
 
+  /** Load a sketch from an already-imported module default export. */
+  loadSketchModule(sketchFn) {
+    if (this._p5) {
+      this._p5.remove();
+      this._p5 = null;
+    }
+    this._sketchModule = sketchFn;
+    this._startSketch();
+  }
+
   /** Set display mode: "panel", "background", or "corner". */
   setMode(mode) {
     this._mode = mode;

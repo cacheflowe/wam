@@ -356,6 +356,7 @@ export default class PlaygroundApp extends HTMLElement {
     this._sketchSelect = document.createElement("select");
     this._sketchSelect.style.cssText =
       "font-size:0.8rem;padding:0.2rem 0.4rem;border-radius:4px;background:#1a1a2e;color:#eee;border:1px solid #444;";
+    const sketchModules = import.meta.glob("../web-audio/ui/sketches/*.js");
     const sketches = [
       { label: "Pulse Shapes", path: "../web-audio/ui/sketches/pulse-shapes.js" },
       { label: "Reactive Geometry", path: "../web-audio/ui/sketches/reactive-geometry.js" },
@@ -368,9 +369,9 @@ export default class PlaygroundApp extends HTMLElement {
       this._sketchSelect.appendChild(opt);
     }
     this._sketchSelect.addEventListener("change", () => {
-      const url = new URL(this._sketchSelect.value, import.meta.url).href;
-      this._vizEl.loadSketch(url);
+      this._loadSketchByPath(this._sketchSelect.value, sketchModules);
     });
+    this._sketchModules = sketchModules;
     vizToolbar.appendChild(sketchLabel);
     vizToolbar.appendChild(this._sketchSelect);
     vizDetails.appendChild(vizToolbar);
@@ -448,7 +449,7 @@ export default class PlaygroundApp extends HTMLElement {
     this._analysisBus.setContext(this._ctx);
     this._analysisBus.setMaster(this._transportEl.masterAnalyser);
     this._vizEl.init(this._analysisBus, this._ctx);
-    this._vizEl.loadSketch(new URL(this._sketchSelect.value, import.meta.url).href);
+    this._loadSketchByPath(this._sketchSelect.value, this._sketchModules);
 
     this._transportEl.addEventListener("transport-share-click", () => {
       this._shareURL();
@@ -708,6 +709,16 @@ export default class PlaygroundApp extends HTMLElement {
     } catch (e) {
       return null;
     }
+  }
+
+  async _loadSketchByPath(relativePath, sketchModules) {
+    const loader = sketchModules[relativePath];
+    if (!loader) {
+      console.error("[playground] No sketch module for path:", relativePath);
+      return;
+    }
+    const mod = await loader();
+    this._vizEl.loadSketchModule(mod.default);
   }
 
   _shareURL() {
