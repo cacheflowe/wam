@@ -795,6 +795,31 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
     this._makePresetDropdown(WebAudioSynthBlipFX.PRESETS, toneCtrl);
 
+    // Randomize + Rand/Trig toggle in same row
+    const actionWrap = createCtrl("Actions");
+    const newBtn = document.createElement("button");
+    newBtn.textContent = "\u2684 Randomize";
+    newBtn.className = "wam-action-btn";
+    newBtn.addEventListener("click", () => {
+      this._instrument.randomize();
+      this._syncSliders();
+      this._syncExtraControls();
+      this._emitChange();
+    });
+    actionWrap.appendChild(newBtn);
+
+    this._lockBtn = document.createElement("button");
+    this._lockBtn.textContent = "\uD83C\uDFB2 Rand/Trig: ON";
+    this._lockBtn.className = "wam-action-btn";
+    this._lockBtn.addEventListener("click", () => {
+      this._locked = !this._locked;
+      this._lockBtn.textContent = this._locked ? "\uD83C\uDFB2 Rand/Trig: OFF" : "\uD83C\uDFB2 Rand/Trig: ON";
+      this._lockBtn.style.opacity = this._locked ? "0.6" : "1";
+      this._emitChange();
+    });
+    actionWrap.appendChild(this._lockBtn);
+    toneCtrl.appendChild(actionWrap);
+
     const shapeWrap = createCtrl("Shape", { tooltip: "Oscillator waveform shape." });
     this._shapeSelect = document.createElement("select");
     this._shapeSelect.className = "wam-select";
@@ -812,19 +837,6 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     const chanceSlider = mkSlider({ param: "chance", label: "Chance", min: 0, max: 1, step: 0.01 });
     chanceSlider.value = this._chance;
     toneCtrl.appendChild(chanceSlider);
-
-    const randPresetWrap = createCtrl("Rand Preset", { tooltip: "Load a random preset." });
-    const randPresetBtn = document.createElement("button");
-    randPresetBtn.textContent = "⚄";
-    randPresetBtn.className = "wam-action-btn";
-    randPresetBtn.addEventListener("click", () => {
-      const names = Object.keys(WebAudioSynthBlipFX.PRESETS);
-      const name = names[Math.floor(Math.random() * names.length)];
-      this.applyPreset(name);
-      this._emitChange();
-    });
-    randPresetWrap.appendChild(randPresetBtn);
-    toneCtrl.appendChild(randPresetWrap);
     controls.appendChild(toneEl);
 
     // ---- Envelope ----
@@ -860,36 +872,6 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     filtCtrl.appendChild(mkSlider({ param: "hpfFreq", label: "HPF", min: 20, max: 2000, step: 1, scale: "log" }));
     filtCtrl.appendChild(mkSlider({ param: "lpfResonance", label: "Resonance", min: 0.5, max: 15, step: 0.1 }));
     controls.appendChild(filtEl);
-
-    // ---- Action row ----
-    const actionRow = document.createElement("div");
-    actionRow.className = "wam-action-row";
-
-    const newBtn = document.createElement("button");
-    newBtn.textContent = "\u2684 Randomize";
-    newBtn.className = "wam-action-btn";
-    newBtn.addEventListener("click", () => {
-      if (this._locked) return;
-      this._instrument.randomize();
-      this._syncSliders();
-      this._syncExtraControls();
-      this._emitChange();
-    });
-    actionRow.appendChild(newBtn);
-
-    this._lockBtn = document.createElement("button");
-    this._lockBtn.textContent = "\uD83D\uDD13 Lock";
-    this._lockBtn.className = "wam-action-btn";
-    this._lockBtn.addEventListener("click", () => {
-      this._locked = !this._locked;
-      this._lockBtn.textContent = this._locked ? "\uD83D\uDD12 Locked" : "\uD83D\uDD13 Lock";
-      this._lockBtn.style.opacity = this._locked ? "1" : "0.6";
-      this._emitChange();
-    });
-    this._lockBtn.style.opacity = "0.6";
-    actionRow.appendChild(this._lockBtn);
-
-    expanded.appendChild(actionRow);
 
     // ---- Sequencer ----
     const color = options.color || this._defaultColor();
@@ -937,6 +919,9 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
       if (!slider) continue;
       if (def.param === "chance") {
         slider.value = this._chance;
+      } else if (def.param === "volume") {
+        // Volume lives on controls' _out, not on the instrument
+        continue;
       } else {
         slider.value = this._instrument[def.param];
       }
@@ -1092,8 +1077,8 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     }
     if (obj.params?.locked != null && this._lockBtn) {
       this._locked = !!obj.params.locked;
-      this._lockBtn.textContent = this._locked ? "🔒 Locked" : "🔓 Lock";
-      this._lockBtn.style.opacity = this._locked ? "1" : "0.6";
+      this._lockBtn.textContent = this._locked ? "🎲 Rand/Trig: OFF" : "🎲 Rand/Trig: ON";
+      this._lockBtn.style.opacity = this._locked ? "0.6" : "1";
     }
     if (obj.steps && this._seq) this._seq.steps = obj.steps;
   }
