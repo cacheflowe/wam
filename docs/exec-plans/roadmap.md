@@ -78,6 +78,7 @@ Build a library of browser-based instruments that are:
 | **FM synth quality** | High | FM sounds inferior to Mono — investigate why; retune presets; fix silent presets |
 | **MIDI keyboard input** | Medium | Map note-on/off to currently-selected instrument's `trigger()`; see **MIDI** section below |
 | **Double-click/tap reset to default** | Medium | Double-click (or double-tap) any UI control (sliders, knobs, dropdowns, toggles) resets it to its default value |
+| **True preset save/recall** | Medium | Two modes: (1) Vite dev — externalize presets to JSON files, auto-write on save/delete via dev middleware; (2) Static site — download preset collection as .json, drag-and-drop .json onto instrument to restore. Currently localStorage + clipboard export; see **Preset Persistence** section below |
 | **Ad hoc audio loading** | Medium | Drop an audio file (or use file input selector) onto `sample-looper.js` and `sample-player.js` controls to load custom user audio |
 | **Parametric EQ** | Medium | 3-4 band EQ as first effect in FX unit chain; new `eq.js` with engine + UI; see **New Effects** section below |
 | **Sidechain compressor** | Medium | Duck instrument gain based on another instrument's amplitude; instrument selector UI (like vocoder carrier routing); see **New Effects** section below |
@@ -135,6 +136,32 @@ Goal: replace the single expand/collapse drawer with three independent toggle bu
 2. Wire each button to show/hide its corresponding DOM section
 3. Unify toggle button CSS into a single reusable `.wam-toggle-btn` class (Mute + new buttons + Lock + Jam)
 4. Persist section visibility in `toJSON()` / `fromJSON()`
+
+## Preset Persistence
+
+Goal: allow true save/recall of user presets with two operational modes depending on the hosting environment.
+
+**Current state** (2026-05-16): User presets are stored in `localStorage` keyed per instrument class. Save copies JSON to clipboard. Export All copies the full collection. Delete with confirmation.
+
+**Mode 1 — Vite dev server (local development)**:
+- Externalize presets into per-instrument JSON files (e.g. `src/data/presets/synth-mono.json`)
+- Instrument loads built-in presets from `static PRESETS` merged with the JSON file at dev time
+- Save/delete operations POST to a small Vite middleware that rewrites the JSON file
+- Zero manual copy-paste workflow — presets are immediately persisted in version-controlled files
+- On production build, JSON files are inlined/bundled as normal
+
+**Mode 2 — Static site (deployed / no write access)**:
+- localStorage remains the runtime store (current behavior)
+- "Download" button exports the user preset collection as a `.json` file
+- Drag-and-drop a `.json` file onto the instrument panel (or use a file input) to import/restore presets
+- Merge strategy: imported presets are added alongside existing ones; duplicates prompt overwrite confirmation
+
+**Implementation plan**:
+1. Define JSON schema for preset files: `{ "instrumentClass": "...", "presets": { "Name": { ...params }, ... } }`
+2. Add Vite plugin/middleware (dev only) that handles `POST /api/presets/:instrument` and `DELETE /api/presets/:instrument/:name`
+3. Add download button to preset section (straightforward — `Blob` + `URL.createObjectURL`)
+4. Add drag-and-drop / file input handler on the controls panel for `.json` import
+5. Detect environment: if `POST /api/presets/...` returns 404, fall back to localStorage-only mode
 
 ## Test Playground
 

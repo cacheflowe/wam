@@ -232,6 +232,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
     // Subclass hook — controls goes into ctrl section, seqControls is passed as `expanded`
     // so subclasses' expanded.appendChild(this._seq) targets the padded seq content area
+    this._buildPresetSection(controls, instrument);
     this._buildControls(controls, this._seqControls, mkSlider, ctx, options);
 
     // Delegated slider-input / knob-input listener
@@ -518,11 +519,251 @@ export class WebAudioControlsBase extends HTMLElement {
 
   // ---- Shared UI builders ----
 
+  /** localStorage key for user presets scoped to this instrument class. */
+  _userPresetsKey() {
+    return `wam-user-presets-${this._instrument?.constructor.name ?? "unknown"}`;
+  }
+
+  /** Load user-saved presets from localStorage. */
+  _loadUserPresets() {
+    try {
+      return JSON.parse(localStorage.getItem(this._userPresetsKey()) || "{}");
+    } catch {
+      return {};
+    }
+  }
+
+  /** Save user presets object to localStorage. */
+  _saveUserPresets(presets) {
+    localStorage.setItem(this._userPresetsKey(), JSON.stringify(presets));
+  }
+
+  /** Capture current instrument params as a preset object (sound-shaping only). */
+  _capturePresetParams() {
+    const params = {};
+    for (const def of this.constructor.SLIDER_DEFS || []) {
+      if (def.param === "volume" || def.param === "chance") continue;
+      const val = this._instrument[def.param];
+      if (val !== undefined) params[def.param] = val;
+    }
+    // Capture registered selects (e.g. oscType, shape)
+    for (const [param] of Object.entries(this._selects)) {
+      const val = this._instrument[param];
+      if (val !== undefined) params[param] = val;
+    }
+    // Capture registered toggles
+    for (const [param] of Object.entries(this._toggles)) {
+      const val = this._instrument[param];
+      if (val !== undefined) params[param] = val;
+    }
+    return params;
+  }
+
+  /**
+   * Build the Presets section (dropdown + randomize + save + delete).
+   * Automatically skipped if instrument has no PRESETS.
+   */
+  _buildPresetSection(controls, instrument) {
+    const PresetsObj = instrument.constructor.PRESETS;
+    if (!PresetsObj || Object.keys(PresetsObj).length === 0) return;
+
+    const { el: presetEl, controls: presetCtrl } = createSection("Presets");
+
+    // Dropdown
+    const wrap = createCtrl("Preset", { tooltip: "Load a sound preset." });
+    this._presetSelect = document.createElement("select");
+    this._presetSelect.className = "wam-select";
+
+    // Built-in presets
+    for (const name of Object.keys(PresetsObj)) {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name.replace(/_/g, " ");
+      this._presetSelect.appendChild(opt);
+    }
+    // User presets (from localStorage)
+    this._refreshUserPresetOptions();
+
+    this._presetSelect.addEventListener("change", () => {
+      const name = this._presetSelect.value;
+      const userPresets = this._loadUserPresets();
+      if (userPresets[name]) {
+        // User preset — apply directly
+        for (const [key, val] of Object.entries(userPresets[name])) {
+          if (key === "volume") continue;
+          const prop = `_${key}`;
+          if (prop in this._instrument) this._instrument[prop] = val;
+          else if (key in this._instrument) this._instrument[key] = val;
+        }
+        if (this._instrument._rebake) this._instrument._rebake();
+        this._syncSliders();
+        this._syncExtraControls();
+      } else {
+        this.applyPreset(name);
+      }
+      this._emitChange();
+    });
+    wrap.appendChild(this._presetSelect);
+    presetCtrl.appendChild(wrap);
+
+    // Action buttons row
+    const actionWrap = createCtrl("Actions");
+
+    // Randomize All
+    const randBtn = document.createElement("button");
+    randBtn.textContent = "\u2684 Rand";
+    randBtn.className = "wam-action-btn";
+    randBtn.title = "Randomize all synthesis parameters";
+    randBtn.addEventListener("click", () => {
+      this._randomizeAllParams();
+      this._emitChange();
+    });
+    actionWrap.appendChild(randBtn);
+
+    // Save
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "\uD83D\uDCBE Save";
+    saveBtn.className = "wam-action-btn";
+    saveBtn.title = "Save current sound as a user preset";
+    saveBtn.addEventListener("click", () => this._saveCurrentAsPreset());
+    actionWrap.appendChild(saveBtn);
+
+    // Delete
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "\uD83D\uDDD1 Del";
+    delBtn.className = "wam-action-btn";
+    delBtn.title = "Delete the selected user preset";
+    delBtn.addEventListener("click", () => this._deleteSelectedPreset());
+    actionWrap.appendChild(delBtn);
+
+    // Export All
+    const exportBtn = document.createElement("button");
+    exportBtn.textContent = "\uD83D\uDCCB Export";
+    exportBtn.className = "wam-action-btn";
+    exportBtn.title = "Copy all user presets to clipboard as JSON";
+    exportBtn.addEventListener("click", () => this._exportAllUserPresets());
+    actionWrap.appendChild(exportBtn);
+
+    presetCtrl.appendChild(actionWrap);
+    controls.appendChild(presetEl);
+  }
+
+  /** Refresh the user-preset options in the dropdown (appended after built-ins). */
+  _refreshUserPresetOptions() {
+    if (!this._presetSelect) return;
+    // Remove existing user options
+    this._presetSelect.querySelectorAll("option[data-user]").forEach((o) => o.remove());
+    const userPresets = this._loadUserPresets();
+    const names = Object.keys(userPresets);
+    if (names.length === 0) return;
+    // Separator
+    const sep = document.createElement("option");
+    sep.disabled = true;
+    sep.textContent = "── User ──";
+    sep.setAttribute("data-user", "");
+    this._presetSelect.appendChild(sep);
+    for (const name of names) {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      opt.setAttribute("data-user", "");
+      this._presetSelect.appendChild(opt);
+    }
+  }
+
+  /** Randomize all synthesis parameters within their slider min/max ranges. */
+  _randomizeAllParams() {
+    for (const def of this.constructor.SLIDER_DEFS || []) {
+      if (def.param === "volume" || def.param === "chance") continue;
+      const min = parseFloat(def.min);
+      const max = parseFloat(def.max);
+      const step = parseFloat(def.step) || 0.01;
+      let val;
+      if (def.scale === "log") {
+        // Log-scale: randomize in log space
+        val = Math.exp(Math.random() * (Math.log(max) - Math.log(min)) + Math.log(min));
+      } else {
+        val = min + Math.random() * (max - min);
+      }
+      // Quantize to step
+      val = Math.round(val / step) * step;
+      val = Math.min(max, Math.max(min, val));
+      this._instrument[def.param] = val;
+    }
+    // Randomize registered selects (e.g. oscType)
+    for (const [param, { el }] of Object.entries(this._selects)) {
+      const opts = [...el.options].filter((o) => !o.disabled);
+      if (opts.length > 0) {
+        const pick = opts[Math.floor(Math.random() * opts.length)];
+        el.value = pick.value;
+        const parsed = this._selects[param].parse ? this._selects[param].parse(pick.value) : pick.value;
+        this._instrument[param] = parsed;
+      }
+    }
+    if (this._instrument._rebake) this._instrument._rebake();
+    if (this._instrument._markDirty) this._instrument._markDirty();
+    this._syncSliders();
+    this._syncExtraControls();
+  }
+
+  /** Prompt for a name and save the current sound as a user preset. */
+  _saveCurrentAsPreset() {
+    const name = prompt("Preset name:");
+    if (!name || !name.trim()) return;
+    const key = name.trim();
+    const params = this._capturePresetParams();
+    const userPresets = this._loadUserPresets();
+    userPresets[key] = params;
+    this._saveUserPresets(userPresets);
+    this._refreshUserPresetOptions();
+    this._presetSelect.value = key;
+    // Copy to clipboard for pasting into source
+    const json = JSON.stringify(params, null, 2);
+    navigator.clipboard.writeText(`"${key}": ${json},`).then(() => {
+      console.log(`[WAM] Preset "${key}" saved & copied to clipboard`);
+    });
+  }
+
+  /** Delete the currently selected user preset (with confirmation). */
+  _deleteSelectedPreset() {
+    const name = this._presetSelect?.value;
+    if (!name) return;
+    const userPresets = this._loadUserPresets();
+    if (!userPresets[name]) {
+      alert(`"${name}" is a built-in preset. Remove it from the source code if needed.`);
+      return;
+    }
+    if (!confirm(`Delete user preset "${name}"?`)) return;
+    delete userPresets[name];
+    this._saveUserPresets(userPresets);
+    this._refreshUserPresetOptions();
+    // Select first built-in preset
+    if (this._presetSelect.options.length > 0) {
+      this._presetSelect.value = this._presetSelect.options[0].value;
+    }
+  }
+
+  /** Copy all user presets for this instrument to clipboard as a JSON object. */
+  _exportAllUserPresets() {
+    const userPresets = this._loadUserPresets();
+    const names = Object.keys(userPresets);
+    if (names.length === 0) {
+      alert("No user presets saved for this instrument.");
+      return;
+    }
+    const json = JSON.stringify(userPresets, null, 2);
+    navigator.clipboard.writeText(json).then(() => {
+      alert(`${names.length} preset(s) copied to clipboard.`);
+      console.log(`[WAM] Exported ${names.length} user presets for ${this._instrument?.constructor.name}:\n${json}`);
+    });
+  }
+
   /**
    * Build a preset <select> from a PRESETS object and append to container.
    * Stores the element as this._presetSelect.
    * @param {object} PresetsObj  e.g. WebAudioSynthMono.PRESETS
    * @param {HTMLElement} appendTo
+   * @deprecated Use _buildPresetSection() instead — kept for backward compat.
    */
   _makePresetDropdown(PresetsObj, appendTo) {
     const wrap = createCtrl("Preset", { tooltip: "Load a sound preset." });
@@ -670,8 +911,9 @@ export class WebAudioControlsBase extends HTMLElement {
   applyPreset(name) {
     if (!this._instrument) return;
     this._instrument.applyPreset(name);
-    // Sync all knob-based params through the event path
+    // Sync all knob-based params through the event path (skip volume — channel strip is independent)
     for (const def of this.constructor.SLIDER_DEFS || []) {
+      if (def.param === "volume") continue;
       const knob = this._sliders[def.param];
       if (knob && this._instrument) {
         const val = this._instrument[def.param];
@@ -692,7 +934,6 @@ export class WebAudioControlsBase extends HTMLElement {
     for (const [param, { el, activeClass }] of Object.entries(this._toggles)) {
       if (this._instrument) el.classList.toggle(activeClass, !!this._instrument[param]);
     }
-    if (this._out && this._instrument) this._out.gain.value = this._instrument.volume;
     if (this._presetSelect) this._presetSelect.value = name;
     this._syncExtraControls();
   }
@@ -700,11 +941,10 @@ export class WebAudioControlsBase extends HTMLElement {
   /** Update all registered sliders from instrument state. */
   _syncSliders() {
     for (const def of this.constructor.SLIDER_DEFS || []) {
+      if (def.param === "volume") continue; // channel strip volume is independent
       const slider = this._sliders[def.param];
       if (slider && this._instrument) slider.value = this._instrument[def.param];
     }
-    // Keep controls output gain in sync with instrument volume
-    if (this._out && this._instrument) this._out.gain.value = this._instrument.volume;
   }
 
   // ---- Serialization ----

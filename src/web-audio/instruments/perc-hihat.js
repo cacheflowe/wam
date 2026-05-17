@@ -200,7 +200,7 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
     const color = options.color || this._defaultColor();
 
     const { el, controls: sec } = createSection("Hi-Hat");
-    this._makePresetDropdown(WebAudioPercHihat.PRESETS, sec);
+
     sec.appendChild(mkSlider({ param: "tone", label: "Tone", min: 150, max: 600, step: 1 }));
     sec.appendChild(mkSlider({ param: "metalMix", label: "Metal", min: 0, max: 1, step: 0.01 }));
     sec.appendChild(mkSlider({ param: "filterFreq", label: "Freq", min: 2000, max: 16000, step: 1, scale: "log" }));

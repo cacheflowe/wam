@@ -255,6 +255,32 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
       lfoDest: "filter",
       volume: 0.55,
     },
+    Raygun: {
+      attack: 0.40700000000000003,
+      decay: 0.81,
+      sustain: 0.4,
+      release: 0.47000000000000003,
+      filterFreq: 83,
+      filterQ: 12,
+      filterEnvAmt: -0.30000000000000004,
+      filterAttack: 1.305,
+      filterDecay: 0.62,
+      filterSustain: 0.12,
+      filterRelease: 0.32,
+      detune: 11,
+      unisonVoices: 7,
+      unisonDetune: 89,
+      subGain: 0.4,
+      portamento: 0.08,
+      lfoRate: 8.36,
+      lfoDepth: 0.3,
+      octaveOffset: 0,
+      octaveJumpProb: 0.17,
+      oscType: "square",
+      filterType: "highpass",
+      lfoShape: "triangle",
+      lfoDest: "filter",
+    },
   };
 
   constructor(ctx, preset = "Default") {
@@ -549,7 +575,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     const color = options.color || this._defaultColor();
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
-    this._makePresetDropdown(WebAudioSynthMono.PRESETS, toneCtrl);
+
     this._makeWaveSelect(["sawtooth", "square", "triangle", "sine"], toneCtrl);
     toneCtrl.appendChild(mkSlider({ param: "detune", label: "Detune", min: -50, max: 50, step: 1 }));
     toneCtrl.appendChild(mkSlider({ param: "unisonVoices", label: "Voices", min: 1, max: 8, step: 1 }));

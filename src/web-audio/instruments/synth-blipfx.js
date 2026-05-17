@@ -734,9 +734,9 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
   ];
 
   static DEFAULT_PATTERN() {
-    return Array.from({ length: 16 }, (_, i) => ({
-      active: i % 4 === 0,
-      probability: 0.5,
+    return Array.from({ length: 16 }, () => ({
+      active: false,
+      probability: 1,
       ratchet: 1,
       conditions: "off",
     }));
@@ -793,7 +793,6 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
   _buildControls(controls, expanded, mkSlider, ctx, options) {
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
-    this._makePresetDropdown(WebAudioSynthBlipFX.PRESETS, toneCtrl);
 
     // Randomize + Rand/Trig toggle in same row
     const actionWrap = createCtrl("Actions");
@@ -915,13 +914,11 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
   _syncSliders() {
     if (!this._instrument) return;
     for (const def of WebAudioSynthBlipFXControls.SLIDER_DEFS) {
+      if (def.param === "volume") continue;
       const slider = this._sliders[def.param];
       if (!slider) continue;
       if (def.param === "chance") {
         slider.value = this._chance;
-      } else if (def.param === "volume") {
-        // Volume lives on controls' _out, not on the instrument
-        continue;
       } else {
         slider.value = this._instrument[def.param];
       }
@@ -930,7 +927,16 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
 
   // ---- Sequencer integration ----
 
-  /** Step sequencer trigger — uses grid when available, falls back to chance-based. */
+  /**
+   * Step sequencer trigger.
+   *
+   * Unlocked (Rand/Trig ON): chance decides whether each step fires.
+   * When it fires, the step is marked active in the grid — building a
+   * visual trail of trigger positions.  The sound is also randomized.
+   *
+   * Locked (Rand/Trig OFF): the grid pattern plays back as-is (normal
+   * sequencer behavior), sound stays fixed.
+   */
   step(index, time, stepDurationSec) {
     if (!this._instrument) return;
 
@@ -980,28 +986,44 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     for (let si = 0; si < stepsToAdvance; si++) {
       const subTime = time + si * subStepDur;
       const stepIndex = this._seqPosition % 16;
-      const s = this._seq.steps[stepIndex];
+      const s = this._seq._steps[stepIndex];
 
-      if (s?.active) {
-        if (Math.random() < (s.probability ?? 1)) {
-          if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
-            stepFired = true;
-            if (!this._locked) {
-              this._instrument.randomize();
-              this._syncSliders();
-              this._syncExtraControls();
-            }
-
-            const ratchet = s.ratchet ?? 1;
-            if (ratchet > 1) {
-              const ratchetDuration = subStepDur / ratchet;
-              for (let i = 0; i < ratchet; i++) {
-                this._instrument.trigger(subTime + i * ratchetDuration);
+      if (this._locked) {
+        // Locked — play the grid pattern as-is
+        if (s?.active) {
+          if (Math.random() < (s.probability ?? 1)) {
+            if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+              stepFired = true;
+              const ratchet = s.ratchet ?? 1;
+              if (ratchet > 1) {
+                const ratchetDuration = subStepDur / ratchet;
+                for (let i = 0; i < ratchet; i++) {
+                  this._instrument.trigger(subTime + i * ratchetDuration);
+                }
+              } else {
+                this._instrument.trigger(subTime);
               }
-            } else {
-              this._instrument.trigger(subTime);
             }
           }
+        }
+      } else {
+        // Unlocked — chance decides; paint trail into grid
+        if (Math.random() < this._chance) {
+          stepFired = true;
+          // Activate this step in the grid (trail)
+          if (s && !s.active) {
+            s.active = true;
+            const btn = this._seq._onBtns?.[stepIndex];
+            if (btn) {
+              btn.className = "wass-on on";
+              btn.textContent = "●";
+            }
+          }
+          // Randomize sound
+          this._instrument.randomize();
+          this._syncSliders();
+          this._syncExtraControls();
+          this._instrument.trigger(subTime);
         }
       }
 
