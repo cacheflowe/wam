@@ -444,7 +444,11 @@ export default class PlaygroundApp extends HTMLElement {
 
     // Save/load listeners
     this._onControlsChange = () => {
-      if (!this._isLoadingState) this._debouncedSave();
+      if (!this._isLoadingState) {
+        // Clear song association once user makes manual edits
+        if (this._currentSongName) this._setCurrentSongName(null);
+        this._debouncedSave();
+      }
     };
     this.addEventListener("controls-change", this._onControlsChange);
     this._transportEl.addEventListener("transport-change", this._onControlsChange);
@@ -603,7 +607,10 @@ export default class PlaygroundApp extends HTMLElement {
     entry.row = row;
 
     this._emptyMsg.style.display = "none";
-    if (triggerSave && !this._isLoadingState) this._debouncedSave();
+    if (triggerSave && !this._isLoadingState) {
+      if (this._currentSongName) this._setCurrentSongName(null);
+      this._debouncedSave();
+    }
 
     return entry;
   }
@@ -620,7 +627,10 @@ export default class PlaygroundApp extends HTMLElement {
     if (this._instruments.length === 0 && this._pendingInstruments.length === 0) {
       this._emptyMsg.style.display = "";
     }
-    if (!this._isLoadingState) this._debouncedSave();
+    if (!this._isLoadingState) {
+      if (this._currentSongName) this._setCurrentSongName(null);
+      this._debouncedSave();
+    }
   }
 
   // ---- State Serialization ----

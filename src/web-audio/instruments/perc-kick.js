@@ -26,6 +26,8 @@ export default class WebAudioPercKick extends WebAudioInstrumentBase {
     Hard: { startFreq: 250, endFreq: 45, sweepTime: 0.04, decay: 0.3, click: 0.8, drive: 0.5, volume: 1 },
     Distorted: { startFreq: 180, endFreq: 40, sweepTime: 0.06, decay: 0.35, click: 0.4, drive: 0.8, volume: 0.9 },
     Sub: { startFreq: 80, endFreq: 30, sweepTime: 0.2, decay: 0.7, click: 0, drive: 0, volume: 1 },
+    Punch: { startFreq: 401, endFreq: 51, sweepTime: 0.15, decay: 1.09, click: 0.65, drive: 0.38, volume: 1 },
+    Disthump: { startFreq: 279, endFreq: 26, sweepTime: 0.15, decay: 0.94, click: 0.26, drive: 0.51, volume: 1 },
   };
 
   constructor(ctx, preset = "Default") {
