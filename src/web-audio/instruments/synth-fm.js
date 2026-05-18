@@ -663,7 +663,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
 
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
-    this._makePresetDropdown(WebAudioSynthFM.PRESETS, toneCtrl);
+
     const randPresetWrap = createCtrl("Rand Preset", { tooltip: "Load a random preset." });
     const randPresetBtn = document.createElement("button");
     randPresetBtn.textContent = "⚄";

@@ -430,6 +430,15 @@ export function injectControlsCSS() {
     .wam-action-btn:hover,
     .wam-jam-btn:hover,
     .wam-play-btn:hover { background: var(--slider-accent, #0f0); color: #000; }
+    .wam-jam-btn.wam-jam-learning {
+      background: var(--slider-accent, #0f0);
+      color: #000;
+      animation: wam-jam-pulse 0.6s ease-in-out infinite alternate;
+    }
+    @keyframes wam-jam-pulse {
+      from { opacity: 1; }
+      to   { opacity: 0.5; }
+    }
     .wam-play-btn.wam-playing {
       background: color-mix(in srgb, var(--slider-accent, #0f0) 20%, #111);
     }

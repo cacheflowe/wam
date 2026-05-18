@@ -379,7 +379,6 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
 
     // ---- Sample selection ----
     const { el: sampleEl, controls: sampleCtrl } = createSection("Sample");
-    this._makePresetDropdown(WebAudioSamplePlayer.PRESETS, sampleCtrl);
 
     // File dropdown
     const fileWrap = createCtrl("File", { tooltip: "Select which sample file to play." });

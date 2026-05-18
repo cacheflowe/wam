@@ -128,6 +128,18 @@ export default class WebAudioPercSnare extends WebAudioInstrumentBase {
       clapMode: false,
       volume: 0.6,
     },
+    Snappy: {
+      toneFreq: 302,
+      toneSweep: 74,
+      toneDecay: 0.13,
+      noiseFreq: 1022,
+      noiseDecay: 0.15,
+      noiseSweep: 0.13,
+      noiseMix: 0.53,
+      buzz: 0.02,
+      toneWave: "triangle",
+      clapMode: false,
+    },
   };
 
   constructor(ctx, preset = "Default") {
@@ -332,7 +344,7 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
     const color = options.color || this._defaultColor();
 
     const { el, controls: sec } = createSection("Snare");
-    this._makePresetDropdown(WebAudioPercSnare.PRESETS, sec);
+
     this._makeWaveSelect(["sine", "triangle", "square"], sec, { prop: "toneWave" });
 
     // Clap mode toggle

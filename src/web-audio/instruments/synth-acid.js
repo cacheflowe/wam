@@ -455,7 +455,7 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
     this._makeWaveSelect(["sawtooth", "square"], toneCtrl);
-    this._makePresetDropdown(WebAudioSynthAcid.PRESETS, toneCtrl);
+
     controls.appendChild(toneEl);
 
     // ---- Filter ----

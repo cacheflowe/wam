@@ -198,7 +198,7 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
     const color = options.color || this._defaultColor();
 
     const { el, controls: sec } = createSection("Kick");
-    this._makePresetDropdown(WebAudioPercKick.PRESETS, sec);
+
     sec.appendChild(mkSlider({ param: "startFreq", label: "Start", min: 50, max: 500, step: 1 }));
     sec.appendChild(mkSlider({ param: "endFreq", label: "End", min: 20, max: 200, step: 1 }));
     sec.appendChild(mkSlider({ param: "sweepTime", label: "Sweep", min: 0.01, max: 0.5, step: 0.01 }));

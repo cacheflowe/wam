@@ -479,7 +479,7 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     const color = options.color || this._defaultColor();
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
-    this._makePresetDropdown(WebAudioSynthPad.PRESETS, toneCtrl);
+
     this._makeWaveSelect(["sine", "triangle", "sawtooth", "square"], toneCtrl);
     toneCtrl.appendChild(mkSlider({ param: "detune2", label: "Spread", min: 0, max: 60, step: 1 }));
     controls.appendChild(toneEl);

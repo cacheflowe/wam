@@ -354,7 +354,7 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
 
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
-    this._makePresetDropdown(WebAudioSynth808.PRESETS, toneCtrl);
+
     toneCtrl.appendChild(mkSlider({ param: "tone", label: "Tone", min: 50, max: 8000, step: 1, scale: "log" }));
     controls.appendChild(toneEl);
 
