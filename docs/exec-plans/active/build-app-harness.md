@@ -39,4 +39,4 @@ All instruments and effects exist in `src/web-audio/` but there is no app layer 
 
 - Move this plan to `exec-plans/completed/`
 - Update [roadmap.md](../roadmap.md) to reflect completion
-- Add the app layer to [ARCHITECTURE.md](../../../ARCHITECTURE.md)
+- Add the app layer to [ARCHITECTURE.md](../../ARCHITECTURE.md)

@@ -306,12 +306,7 @@ export default class WebAudioStepSeq extends HTMLElement {
       const onBtn = document.createElement("button");
       onBtn.className = `wass-on${step.active ? " on" : ""}`;
       onBtn.textContent = step.active ? "●" : "○";
-      onBtn.addEventListener("click", () => {
-        this._steps[i].active = !this._steps[i].active;
-        onBtn.className = `wass-on${this._steps[i].active ? " on" : ""}`;
-        onBtn.textContent = this._steps[i].active ? "●" : "○";
-        this._dispatch(i);
-      });
+      onBtn.addEventListener("click", () => this.toggleStep(i));
       el.appendChild(onBtn);
       this._onBtns.push(onBtn);
 
@@ -535,23 +530,7 @@ export default class WebAudioStepSeq extends HTMLElement {
       ...(this._hasConditions ? { conditions: s.conditions ?? "off" } : {}),
     }));
     // Update UI in place without full re-render
-    this._steps.forEach((step, i) => {
-      const btn = this._onBtns[i];
-      if (btn) {
-        btn.className = `wass-on${step.active ? " on" : ""}`;
-        btn.textContent = step.active ? "●" : "○";
-      }
-      const sel = this._noteSelects[i];
-      if (sel) sel.value = step.note;
-      const chk = this._accentChks[i];
-      if (chk) chk.checked = step.accent ?? false;
-      const probInput = this._probabilityInputs[i];
-      if (probInput) probInput.value = Math.round((step.probability ?? 1) * 100);
-      const ratchetSel = this._ratchetSelects[i];
-      if (ratchetSel) ratchetSel.value = step.ratchet ?? 1;
-      const condSel = this._conditionSelects[i];
-      if (condSel) condSel.value = step.conditions ?? "off";
-    });
+    this._steps.forEach((_step, i) => this._syncStepCell(i));
   }
 
   /**
@@ -585,11 +564,46 @@ export default class WebAudioStepSeq extends HTMLElement {
   }
 
   /**
+   * Toggle a step on/off programmatically (same as clicking it). Lets external
+   * controllers (e.g. the Launch Control XL's 16 buttons) drive the pattern.
+   * @param {number} i
+   */
+  toggleStep(i) {
+    if (!this._steps[i]) return;
+    this._steps[i].active = !this._steps[i].active;
+    this._syncStepCell(i);
+    this._dispatch(i);
+  }
+
+  /** Update one step cell's controls from its current data (no re-render). */
+  _syncStepCell(i) {
+    const step = this._steps[i];
+    if (!step) return;
+    const btn = this._onBtns[i];
+    if (btn) {
+      btn.className = `wass-on${step.active ? " on" : ""}`;
+      btn.textContent = step.active ? "●" : "○";
+    }
+    const sel = this._noteSelects[i];
+    if (sel) sel.value = step.note;
+    const chk = this._accentChks[i];
+    if (chk) chk.checked = step.accent ?? false;
+    const probInput = this._probabilityInputs[i];
+    if (probInput) probInput.value = Math.round((step.probability ?? 1) * 100);
+    const ratchetSel = this._ratchetSelects[i];
+    if (ratchetSel) ratchetSel.value = step.ratchet ?? 1;
+    const condSel = this._conditionSelects[i];
+    if (condSel) condSel.value = step.conditions ?? "off";
+  }
+
+  /**
    * Highlight the currently playing step; pass -1 to clear all.
    * @param {number} i
    */
   setActiveStep(i) {
     this._stepEls.forEach((el, idx) => el.classList.toggle("wass-active", idx === i));
+    // Let external listeners (e.g. hardware LED playhead) follow the position.
+    this.dispatchEvent(new CustomEvent("step-active", { bubbles: true, detail: { index: i } }));
   }
 
   /**
@@ -626,23 +640,7 @@ export default class WebAudioStepSeq extends HTMLElement {
     const offset = ((n % len) + len) % len; // normalize to positive
     this._steps = [...this._steps.slice(offset), ...this._steps.slice(0, offset)];
     // Update UI in place
-    this._steps.forEach((step, i) => {
-      const btn = this._onBtns[i];
-      if (btn) {
-        btn.className = `wass-on${step.active ? " on" : ""}`;
-        btn.textContent = step.active ? "●" : "○";
-      }
-      const sel = this._noteSelects[i];
-      if (sel) sel.value = step.note;
-      const chk = this._accentChks[i];
-      if (chk) chk.checked = step.accent ?? false;
-      const probInput = this._probabilityInputs[i];
-      if (probInput) probInput.value = Math.round((step.probability ?? 1) * 100);
-      const ratchetSel = this._ratchetSelects[i];
-      if (ratchetSel) ratchetSel.value = step.ratchet ?? 1;
-      const condSel = this._conditionSelects[i];
-      if (condSel) condSel.value = step.conditions ?? "off";
-    });
+    this._steps.forEach((_step, i) => this._syncStepCell(i));
     this.dispatchEvent(new CustomEvent("step-change", { bubbles: true, detail: { rotated: n } }));
   }
 }

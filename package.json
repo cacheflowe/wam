@@ -10,16 +10,20 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "update-libs": "npx npm-check-updates -u && npm install"
+    "update-libs": "npx npm-check-updates -u && npm install",
+    "ai-sync": "node .ai/scripts/sync.js",
+    "ai-watch": "node .ai/scripts/sync.js --watch",
+    "postinstall": "node .ai/scripts/sync.js"
   },
   "devDependencies": {
     "@vitejs/plugin-basic-ssl": "^2.3.0",
-    "@vitest/coverage-v8": "^4.1.5",
+    "@vitest/coverage-v8": "^4.1.8",
     "jsdom": "^29.1.1",
-    "vite": "^8.0.10",
-    "vitest": "^4.1.5"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
   },
   "dependencies": {
-    "p5": "^2.2.3"
+    "oversite": "^1.0.9",
+    "p5": "^2.3.0"
   }
 }

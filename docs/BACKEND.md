@@ -83,6 +83,17 @@ All effects expose the same `connect()` / `input` interface as instruments.
 | `WebAudioFxDistortion` | `fx-distortion.js` | Yes | Soft-clip waveshaper |
 | `WebAudioFxUnit` | `fx-unit.js` | Per-effect | Web Component composing all above |
 
+### Bus-based FX (instrument-tap inputs)
+
+Unlike the inline FX above, these take their input from one or more **instrument bus taps** (selected at runtime via `<wam-instrument-source-picker>`) rather than sitting in a single instrument's chain. Each ships a `*Controls` panel extending `WebAudioControlsBase`.
+
+| Class | File | Control element | Notes |
+|---|---|---|---|
+| `WebAudioSidechainFx` | `fx-sidechain.js` | `<wam-sidechain-controls>` | Master-bus ducker. Envelope follower (rectify → LP → ducking shaper) maps a trigger tap to a negative gain delta on the playground `sidechainGain`. Params: `depth` (0–1), `speed` (envelope-follower cutoff, Hz). No audio output of its own. |
+| `WebAudioVocoderFx` | `fx-vocoder.js` | `<wam-vocoder-fx-controls>` | Wraps `WebAudioVocoder` in `external` carrier mode. Two taps — modulator (analysis, e.g. vocals) and carrier (resynthesis, e.g. a pad). Internal osc/noise gains are 0; external sources only. |
+
+`WebAudioVocoder` (in `vocoder.js`) gained a `carrierType = "external"` mode exposing `carrierInput` and `modulatorInput` GainNodes so the bus-tap wrapper can feed it.
+
 ### FxUnit Internal Routing
 
 ```
@@ -139,3 +150,16 @@ seq.bpm = 140; // live tempo change
 ## Audio Routing Convention
 
 See [references/audio-routing.md](references/audio-routing.md) for the full `connect()` / `input` routing protocol and graph assembly patterns.
+
+## MIDI Hardware Control
+
+Hardware drivers live in [src/web-audio/midi/](../src/web-audio/midi/). They sit below the UI and consume the normalized input layer (see [docs/FRONTEND.md](FRONTEND.md#input-abstraction--learn)).
+
+| File | Export | Purpose |
+|---|---|---|
+| `launch-control-xl.js` | `CONTROLS`, `LED`, `setLedsMessage()`, `templateFromChannel()`, … | Full Novation Launch Control XL reference: control map, LED color palette, and sysex/channel-message builders. See [references/launch-control-xl.md](references/launch-control-xl.md). |
+| `midi-output.js` | `MidiOutput` | Safe, rate-limited LED/sysex output: queues changes and flushes at most once per `requestAnimationFrame` as a single multi-pair sysex, deduped on quantized color. |
+| `led-feedback.js` | `ledFeedback` singleton | Mirrors `wam-binding-feedback` (bound / unbound / value) to LCXL LEDs. |
+| `sequencer-hardware.js` | `sequencerHardware` singleton | Maps the LCXL's 16 buttons to sequencer steps; lights active steps + playhead and follows the focused instrument via `wam-instrument-focus-change`. |
+
+**Reliability is load-bearing here.** On Windows, flooding sysex (one message per incoming CC) or opening a second `MIDIAccess` wedges the device's input until it is physically replugged. Always batch LED output through `MidiOutput` and reuse the single `MIDIAccess` owned by `<wam-midi-input-picker>`. Full failure mode + mitigation: [docs/RELIABILITY.md](RELIABILITY.md) and [references/launch-control-xl.md](references/launch-control-xl.md#reliability--hard-won-lessons-windows-especially).

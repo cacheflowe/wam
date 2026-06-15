@@ -27,8 +27,18 @@ import WebAudioSynthPad from "../web-audio/instruments/synth-pad.js";
 import WebAudioSynthBlipFX from "../web-audio/instruments/synth-blipfx.js";
 import WebAudioLoopPlayer from "../web-audio/instruments/sample-looper.js";
 import WebAudioSamplePlayer from "../web-audio/instruments/sample-player.js";
+import WebAudioVocoderFx from "../web-audio/fx/fx-vocoder.js";
+import WebAudioSidechainFx from "../web-audio/fx/fx-sidechain.js";
 import { tryGlobKeys, tryGlobModules, resolveSamples, resolveSongs } from "../web-audio/global/sample-utils.js";
 import "../web-audio/ui/arrangement-library.js";
+import { focusManager } from "../web-audio/ui/focus-manager.js";
+import { sequencerHardware } from "../web-audio/midi/sequencer-hardware.js";
+import { ledFeedback } from "../web-audio/midi/led-feedback.js";
+import { autoMap } from "../web-audio/midi/auto-map.js";
+import { StoreKeys } from "../web-audio/global/store-keys.js";
+import "../web-audio/ui/drawer.js";
+import "../web-audio/ui/midi-monitor.js";
+import "../web-audio/ui/midi-input-picker.js";
 
 import electroBreakState from "../data/songs/electro-break.json" with { type: "json" };
 import letsGoState from "../data/songs/lets-go.json" with { type: "json" };
@@ -259,9 +269,27 @@ const INSTRUMENT_TYPES = [
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
+    id: "vocoder",
+    label: "Vocoder",
+    color: "#4fd",
+    make: (ctx) => new WebAudioVocoderFx(ctx),
+    tag: "wam-vocoder-fx-controls",
+    bindOpts: () => ({ color: "#4fd" }),
+    step: null,
+  },
+  {
+    id: "sidechain",
+    label: "Sidechain Comp",
+    color: "#f4a",
+    make: (ctx) => new WebAudioSidechainFx(ctx),
+    tag: "wam-sidechain-controls",
+    bindOpts: () => ({ color: "#f4a" }),
+    step: null,
+  },
+  {
     id: "loop-vocals",
     label: "Loop Player (Vocals)",
-    color: "rgb(46, 149, 93)",
+    color: "rgb(192, 157, 68)",
     make: (ctx) =>
       new WebAudioLoopPlayer(ctx, {
         speedMultiplier: 1,
@@ -273,7 +301,7 @@ const INSTRUMENT_TYPES = [
         useTimeStretch: true,
       }),
     tag: "wam-sample-looper-controls",
-    bindOpts: (bpm) => ({ color: "rgb(46, 149, 93)", files: LOOP_FILES_VOCALS, basePath: "", fx: { bpm } }),
+    bindOpts: (bpm) => ({ color: "rgb(192, 157, 68)", files: LOOP_FILES_VOCALS, basePath: "", fx: { bpm } }),
     // Loop player uses (globalStep, bpm, time) — owner tracks globalStep externally
     step: null,
   },
@@ -288,10 +316,12 @@ export default class PlaygroundApp extends HTMLElement {
     this._seq = null;
     this._globalStep = 0;
 
-    // Live instrument entries: [{ def, ctrl, instrument, instanceId }]
+    // Live instrument entries: [{ def, ctrl, instrument, instanceId, row, tapNode? }]
     this._instruments = [];
     // Instruments waiting for the next bar boundary before joining the active list
     this._pendingInstruments = [];
+    // Bus of tappable instrument outputs: instanceId → { label, tapNode }
+    this._instrumentBus = new Map();
 
     this._instanceCounter = 0;
     this._isLoadingState = false;
@@ -299,10 +329,29 @@ export default class PlaygroundApp extends HTMLElement {
 
     this._buildUI();
     this._loadInitialState();
+
+    // Hardware control: track the focused instrument and let the Launch Control
+    // XL's 16 buttons drive its sequencer. Guarantee a jam binding on focus.
+    focusManager.start();
+    sequencerHardware.start();
+    autoMap.start();
+    this._onInstrumentFocus = (e) => {
+      const ctrl = e.detail?.controls;
+      const idx = ctrl ? this._instruments.findIndex((en) => en.ctrl === ctrl) : -1;
+      // Publish the focused instrument's serializable id (not the element).
+      window._store?.set(StoreKeys.FOCUS_INSTRUMENT_ID, idx >= 0 ? this._instruments[idx].instanceId : null);
+      if (!ctrl?.ensureJamBinding) return;
+      ctrl.ensureJamBinding(idx >= 0 && idx < 9 ? String(idx + 1) : null);
+    };
+    document.addEventListener("wam-instrument-focus-change", this._onInstrumentFocus);
   }
 
   disconnectedCallback() {
     this.removeEventListener("controls-change", this._onControlsChange);
+    document.removeEventListener("wam-instrument-focus-change", this._onInstrumentFocus);
+    sequencerHardware.stop();
+    autoMap.stop();
+    focusManager.stop();
   }
 
   // ---- UI ----
@@ -313,23 +362,57 @@ export default class PlaygroundApp extends HTMLElement {
     main.style.cssText = "padding-bottom:4rem;";
     this.appendChild(main);
 
-    // Arrangement library
-    const libRow = document.createElement("section");
-    libRow.style.cssText = "margin-bottom:1.5rem;";
+    // Shared tool drawer (panels registered below).
+    this._drawer = document.createElement("wam-drawer");
+    this.appendChild(this._drawer);
 
-    const detailsEl = document.createElement("details");
-    // Optionally remove 'open' attribute if you want it collapsed by default
-    // detailsEl.open = true;
+    // ---- Sticky top bar: transport + tool launcher toolbar ----
+    const topBar = document.createElement("section");
+    topBar.style.cssText =
+      "position:sticky;top:0;z-index:50;background:#0d0d14;padding:0.5rem 0 0.6rem;margin-bottom:1.25rem;border-bottom:1px solid #24243a;";
 
-    const summaryEl = document.createElement("summary");
-    summaryEl.innerHTML = `Arrangements & Saves <span id="current-song-label" style="opacity:0.8; margin-left:0.5rem; font-weight:normal; color:#4f8;"></span>`;
-    detailsEl.appendChild(summaryEl);
-    this._currentSongLabel = summaryEl.querySelector("#current-song-label");
+    this._transportEl = document.createElement("wam-transport");
+    topBar.appendChild(this._transportEl);
 
+    const toolbar = document.createElement("div");
+    toolbar.style.cssText = "display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;align-items:center;";
+    const mkLauncher = (id, label) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.dataset.drawerLauncher = id;
+      b.style.cssText =
+        "background:#1a1a2e;border:1px solid #3a3a5a;color:#cfcff0;padding:.35rem .75rem;border-radius:4px;cursor:pointer;font-size:.8rem;";
+      b.addEventListener("click", () => this._drawer.toggle(id));
+      toolbar.appendChild(b);
+      return b;
+    };
+    mkLauncher("add", "+ Add Instrument");
+    mkLauncher("songs", "♪ Songs");
+    mkLauncher("midi", "🎛 MIDI");
+
+    this._currentSongLabel = document.createElement("span");
+    this._currentSongLabel.style.cssText = "opacity:0.85;margin-left:0.5rem;font-size:0.8rem;color:#4f8;";
+    toolbar.appendChild(this._currentSongLabel);
+
+    topBar.appendChild(toolbar);
+    main.appendChild(topBar);
+
+    // Highlight the launcher whose panel is open.
+    this._drawer.addEventListener("drawer-toggle", (e) => {
+      toolbar.querySelectorAll("[data-drawer-launcher]").forEach((b) => {
+        const active = e.detail.open && b.dataset.drawerLauncher === e.detail.id;
+        b.style.background = active ? "#2a2060" : "#1a1a2e";
+        b.style.borderColor = active ? "#9b8dff" : "#3a3a5a";
+      });
+      window._store?.set(StoreKeys.DRAWER_OPEN_ID, e.detail.open ? e.detail.id : null);
+    });
+
+    // ---- Add-instrument palette (drawer panel) ----
+    const palette = document.createElement("div");
+    palette.style.cssText = "display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;";
+
+    // ---- Arrangement library (drawer panel) ----
     this._libraryEl = document.createElement("wam-arrangement-library");
-    detailsEl.appendChild(this._libraryEl);
-
-    // Connect library events
     this._libraryEl.addEventListener("arrangement-save", (e) => {
       this._setCurrentSongName(e.detail.name);
       e.detail.callback(this._getState());
@@ -347,21 +430,37 @@ export default class PlaygroundApp extends HTMLElement {
     this._libraryEl.addEventListener("arrangement-export", (e) => {
       e.detail.callback(this._getState());
     });
-
-    libRow.appendChild(detailsEl);
-    main.appendChild(libRow);
     this._libraryEl.setSampleSongs(SAMPLE_SONGS);
+    this._drawer.addPanel("songs", this._libraryEl, "Songs & Saves");
 
-    // Transport row
-    const transportRow = document.createElement("section");
-    transportRow.style.cssText = "margin-bottom:1.5rem;";
-    this._transportEl = document.createElement("wam-transport");
-    transportRow.appendChild(this._transportEl);
-    main.appendChild(transportRow);
+    // ---- MIDI panel (drawer): input picker + debug monitor ----
+    this._midiPanelEl = document.createElement("div");
+    this._midiPanelEl.style.cssText = "display:flex;flex-direction:column;gap:1rem;";
 
-    // Add-instrument palette
-    const palette = document.createElement("section");
-    palette.style.cssText = "margin-bottom:1.5rem;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;";
+    this._midiPicker = document.createElement("wam-midi-input-picker");
+    this._midiPicker.setAttribute("sysex", ""); // sysex access enables LED feedback output
+    // Share the single MIDIAccess with the LED-feedback sink (auto-selects the
+    // Launch Control output, lights mapped controls + sequencer buttons).
+    this._midiPicker.addEventListener("midi-access-ready", (e) => ledFeedback.adoptAccess(e.detail.access));
+    // Publish device selection to the shared store (device follows the app, not
+    // a song — not part of arrangement state).
+    this._midiPicker.addEventListener("midi-input-change", () =>
+      window._store?.set(StoreKeys.MIDI_INPUT_ID, this._midiPicker.value),
+    );
+    this._midiPanelEl.appendChild(this._midiPicker);
+
+    // Auto-map ("device follows focus") opt-out.
+    const autoMapLabel = document.createElement("label");
+    autoMapLabel.style.cssText = "display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:#c8c8e0;";
+    const autoMapToggle = document.createElement("input");
+    autoMapToggle.type = "checkbox";
+    autoMapToggle.checked = autoMap.enabled;
+    autoMapToggle.addEventListener("change", () => autoMap.setEnabled(autoMapToggle.checked));
+    autoMapLabel.append(autoMapToggle, "Auto-map device to focused instrument");
+    this._midiPanelEl.appendChild(autoMapLabel);
+
+    this._midiPanelEl.appendChild(document.createElement("wam-midi-monitor"));
+    this._drawer.addPanel("midi", this._midiPanelEl, "MIDI");
 
     // Visualizer panel
     const vizRow = document.createElement("section");
@@ -421,7 +520,7 @@ export default class PlaygroundApp extends HTMLElement {
       btn.addEventListener("click", () => this._addInstrument(def));
       palette.appendChild(btn);
     }
-    main.appendChild(palette);
+    this._drawer.addPanel("add", palette, "Add Instrument");
 
     // Instruments list
     this._instrumentList = document.createElement("div");
@@ -472,7 +571,11 @@ export default class PlaygroundApp extends HTMLElement {
       color: "#6366f1",
       showScales: true,
     });
-    this._transportEl.connect(this._ctx.destination);
+    // Insert a dedicated gain node after the master so sidechain can modulate it
+    this._sidechainGain = this._ctx.createGain();
+    this._sidechainGain.gain.value = 1.0;
+    this._transportEl.connect(this._sidechainGain);
+    this._sidechainGain.connect(this._ctx.destination);
 
     // Wire visualizer analysis bus
     this._analysisBus.setContext(this._ctx);
@@ -540,8 +643,8 @@ export default class PlaygroundApp extends HTMLElement {
         if (entry.def.step) {
           entry.def.step(entry.ctrl, step, time, dur);
         } else {
-          // Loop player
-          entry.ctrl.step(this._globalStep, this._transportEl.bpm, time);
+          // Loop player (and any other step-less instrument that implements step())
+          entry.ctrl.step?.(this._globalStep, this._transportEl.bpm, time);
         }
       }
       const uiDelay = Math.max(0, (time - this._ctx.currentTime) * 1000);
@@ -554,6 +657,22 @@ export default class PlaygroundApp extends HTMLElement {
     });
 
     this._transportEl.broadcastScale();
+  }
+
+  // ---- Instrument Bus ----
+
+  /** Read-only map of tappable instrument outputs: instanceId → { label, tapNode }. */
+  get instrumentBus() {
+    return this._instrumentBus;
+  }
+
+  _dispatchBusUpdate() {
+    this.dispatchEvent(
+      new CustomEvent("instrument-bus-update", {
+        bubbles: true,
+        detail: { bus: this._instrumentBus },
+      }),
+    );
   }
 
   // ---- Add / Remove ----
@@ -583,6 +702,17 @@ export default class PlaygroundApp extends HTMLElement {
     this._analysisBus.addInstrument(analysisKey, ctrl);
 
     const entry = { def, ctrl, instrument, instanceId, analysisKey };
+
+    // Tap node for cross-instrument routing (vocoder carrier, sidechain trigger, etc.)
+    // Routing instruments (vocoder, sidechain) produce no useful audio output, so skip them.
+    const isBusSource = def.id !== "vocoder" && def.id !== "sidechain";
+    if (isBusSource) {
+      const tapNode = this._ctx.createGain();
+      ctrl.preFaderOutput.connect(tapNode); // pre-fader tap: post-FX, bypasses mute/volume
+      entry.tapNode = tapNode;
+      this._instrumentBus.set(instanceId, { label: `${def.label} (${instanceId + 1})`, tapNode });
+      this._dispatchBusUpdate();
+    }
 
     // If the transport is running, hold until the next bar so the pattern starts in phase
     if (this._transportEl.playing) {
@@ -619,6 +749,11 @@ export default class PlaygroundApp extends HTMLElement {
     this._analysisBus.removeInstrument(entry.analysisKey);
     this._transportEl.unregisterInstrument(entry.ctrl);
     entry.ctrl.disconnect();
+    if (entry.tapNode) {
+      entry.tapNode.disconnect();
+      this._instrumentBus.delete(entry.instanceId);
+      this._dispatchBusUpdate();
+    }
     if (row && row.parentNode === this._instrumentList) {
       this._instrumentList.removeChild(row);
     }
@@ -637,6 +772,7 @@ export default class PlaygroundApp extends HTMLElement {
 
   _setCurrentSongName(name) {
     this._currentSongName = name || null;
+    window._store?.set(StoreKeys.SONG_NAME, this._currentSongName);
     if (this._currentSongLabel) {
       if (this._currentSongName) {
         this._currentSongLabel.textContent = `— Playing: ${this._currentSongName}`;
@@ -662,12 +798,15 @@ export default class PlaygroundApp extends HTMLElement {
       this._analysisBus.removeInstrument(entry.analysisKey);
       this._transportEl.unregisterInstrument(entry.ctrl);
       entry.ctrl.disconnect();
+      if (entry.tapNode) entry.tapNode.disconnect();
       if (entry.row && entry.row.parentNode === this._instrumentList) {
         this._instrumentList.removeChild(entry.row);
       }
     }
     this._instruments = [];
     this._pendingInstruments = [];
+    this._instrumentBus.clear();
+    this._dispatchBusUpdate();
 
     // 2. Load transport state
     if (state.transport) {

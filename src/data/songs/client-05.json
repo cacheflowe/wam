@@ -1,0 +1,1042 @@
+{
+  "v": 1,
+  "songName": null,
+  "transport": {
+    "bpm": 128,
+    "masterVolume": 1,
+    "muted": false,
+    "root": 29,
+    "scale": "Phrygian",
+    "midiInputId": "input-1",
+    "midiParamBindings": {},
+    "fx": {
+      "reverbWet": 0,
+      "reverbDecay": 2.5,
+      "reverbPreDelay": 0,
+      "reverbHpFreq": 80,
+      "reverbLpFreq": 8000,
+      "reverbDamping": 0.5,
+      "reverbWidth": 1,
+      "delayInterval": 0.75,
+      "delayFeedback": 0.3499999940395355,
+      "delayMix": 0,
+      "delayFilterSweep": 0,
+      "delayModulation": 0,
+      "chorusVoices": 3,
+      "chorusRate": 0.8,
+      "chorusDepth": 0.5,
+      "chorusDelay": 10,
+      "chorusFeedback": 0,
+      "chorusWet": 0,
+      "chorusSpread": 1,
+      "chorusShape": 0,
+      "filterSweep": 0,
+      "filterQ": 0.699999988079071
+    },
+    "fxVisible": false
+  },
+  "instruments": [
+    {
+      "id": "snare",
+      "instanceId": 0,
+      "state": {
+        "params": {
+          "toneFreq": 400,
+          "toneSweep": 99,
+          "toneDecay": 0.09999999999999999,
+          "noiseFreq": 4000,
+          "noiseDecay": 0.04,
+          "noiseSweep": 0.03,
+          "noiseMix": 0.77,
+          "buzz": 0.67,
+          "volume": 0.6299999952316284,
+          "clapMode": true,
+          "toneWave": "square"
+        },
+        "fx": {
+          "reverbWet": 0.6200000047683716,
+          "reverbDecay": 1.2000000000000002,
+          "reverbPreDelay": 25.00000037252903,
+          "reverbHpFreq": 103,
+          "reverbLpFreq": 5241,
+          "reverbDamping": 0.5,
+          "reverbWidth": 1,
+          "delayInterval": 0.75,
+          "delayFeedback": 0.3499999940395355,
+          "delayMix": 0.23000000417232513,
+          "delayFilterSweep": 0,
+          "delayModulation": 0,
+          "chorusVoices": 5,
+          "chorusRate": 0.8,
+          "chorusDepth": 0.72,
+          "chorusDelay": 8.2,
+          "chorusFeedback": 0.2199999988079071,
+          "chorusWet": 0.800000011920929,
+          "chorusSpread": 1,
+          "chorusShape": 1,
+          "filterSweep": 0,
+          "filterQ": 0.699999988079071
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "1"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": false,
+          "seq": false,
+          "fx": false
+        },
+        "steps": [
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          }
+        ]
+      }
+    },
+    {
+      "id": "kick",
+      "instanceId": 1,
+      "state": {
+        "params": {
+          "startFreq": 250,
+          "endFreq": 45,
+          "sweepTime": 0.04,
+          "decay": 0.3,
+          "click": 0.8,
+          "drive": 0.24,
+          "volume": 0.3499999940395355
+        },
+        "fx": {
+          "reverbWet": 0,
+          "reverbDecay": 2.5,
+          "reverbPreDelay": 0,
+          "reverbHpFreq": 80,
+          "reverbLpFreq": 8000,
+          "reverbDamping": 0.5,
+          "reverbWidth": 1,
+          "delayInterval": 0.75,
+          "delayFeedback": 0.3499999940395355,
+          "delayMix": 0,
+          "delayFilterSweep": 0,
+          "delayModulation": 0,
+          "chorusVoices": 3,
+          "chorusRate": 0.8,
+          "chorusDepth": 0.5,
+          "chorusDelay": 10,
+          "chorusFeedback": 0,
+          "chorusWet": 0,
+          "chorusSpread": 1,
+          "chorusShape": 0,
+          "filterSweep": -0.347,
+          "filterQ": 0.699999988079071
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "2"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": true,
+          "seq": false,
+          "fx": false
+        },
+        "steps": [
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          }
+        ]
+      }
+    },
+    {
+      "id": "hihat",
+      "instanceId": 2,
+      "state": {
+        "params": {
+          "tone": 273,
+          "metalMix": 0.76,
+          "filterFreq": 6190,
+          "filterQ": 0.699999988079071,
+          "decay": 0.06,
+          "openDecay": 0.3,
+          "volume": 0.4699999988079071
+        },
+        "fx": {
+          "reverbWet": 0.3100000023841858,
+          "reverbDecay": 1.6,
+          "reverbPreDelay": 71.99999690055847,
+          "reverbHpFreq": 151,
+          "reverbLpFreq": 8092,
+          "reverbDamping": 0.5,
+          "reverbWidth": 1,
+          "delayInterval": 0.75,
+          "delayFeedback": 0.3499999940395355,
+          "delayMix": 0,
+          "delayFilterSweep": 0,
+          "delayModulation": 0,
+          "chorusVoices": 4,
+          "chorusRate": 0.91,
+          "chorusDepth": 0.98,
+          "chorusDelay": 15.8,
+          "chorusFeedback": 0.699999988079071,
+          "chorusWet": 0.800000011920929,
+          "chorusSpread": 1,
+          "chorusShape": 0,
+          "filterSweep": 0,
+          "filterQ": 0.699999988079071
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "3"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": false,
+          "seq": false,
+          "fx": false
+        },
+        "steps": [
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          }
+        ]
+      }
+    },
+    {
+      "id": "acid",
+      "instanceId": 3,
+      "state": {
+        "params": {
+          "volume": 0.20999999344348907,
+          "cutoff": 627.0000000000001,
+          "resonance": 18,
+          "envMod": 0.56,
+          "decay": 0.16,
+          "attack": 0.001,
+          "distortion": 0.26,
+          "portamento": 0.027,
+          "unisonVoices": 1,
+          "unisonDetune": 0,
+          "octaveOffset": 0,
+          "octaveJumpProb": 0.42,
+          "oscType": "sawtooth",
+          "filterLfoActive": true,
+          "filterLfoLow": 203,
+          "filterLfoHigh": 627,
+          "filterLfoInterval": 2,
+          "filterLfoOffset": 0
+        },
+        "fx": {
+          "reverbWet": 0,
+          "reverbDecay": 2.6,
+          "reverbPreDelay": 1.0000000474974513,
+          "reverbHpFreq": 80,
+          "reverbLpFreq": 8000,
+          "reverbDamping": 0.5,
+          "reverbWidth": 1,
+          "delayInterval": 0.75,
+          "delayFeedback": 0.3499999940395355,
+          "delayMix": 0.23000000417232513,
+          "delayFilterSweep": 0.833,
+          "delayModulation": 1.000000008692344,
+          "chorusVoices": 3,
+          "chorusRate": 0.8,
+          "chorusDepth": 0.5,
+          "chorusDelay": 10,
+          "chorusFeedback": 0,
+          "chorusWet": 0.7200000286102295,
+          "chorusSpread": 1,
+          "chorusShape": 0,
+          "filterSweep": 0,
+          "filterQ": 0.699999988079071
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "b"
+        },
+        "midiParamBindings": {
+          "cutoff": {
+            "source": "midi",
+            "type": "cc",
+            "channel": 9,
+            "controller": 77
+          }
+        },
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": false,
+          "seq": false,
+          "fx": false
+        },
+        "steps": [
+          {
+            "active": false,
+            "note": 29,
+            "accent": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 25,
+            "accent": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "note": 27,
+            "accent": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "note": 24,
+            "accent": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "note": 30,
+            "accent": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 27,
+            "accent": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 25,
+            "accent": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "note": 27,
+            "accent": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "note": 25,
+            "accent": true,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "note": 29,
+            "accent": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 34,
+            "accent": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "note": 27,
+            "accent": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 34,
+            "accent": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 36,
+            "accent": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "note": 32,
+            "accent": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "note": 29,
+            "accent": false,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          }
+        ],
+        "preset": "Default"
+      }
+    },
+    {
+      "id": "bass808",
+      "instanceId": 4,
+      "state": {
+        "params": {
+          "volume": 0.36000001430511475,
+          "decay": 3,
+          "pitchSweepSemitones": 12,
+          "pitchDecay": 0.3,
+          "distortion": 0.18,
+          "click": 0.8300000000000001,
+          "subOscMix": 0.31,
+          "tone": 2000,
+          "octaveOffset": 0,
+          "octaveJumpProb": 0.15
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "5"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": false,
+          "seq": false,
+          "fx": false
+        },
+        "steps": [
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          }
+        ]
+      }
+    },
+    {
+      "id": "blipfx",
+      "instanceId": 5,
+      "state": {
+        "params": {
+          "volume": 0.41999998688697815,
+          "frequency": 586.5804641293871,
+          "attack": 0.011856272044979542,
+          "decay": 0.04255179852319471,
+          "sustain": 0.07167870587355951,
+          "sustainVolume": 0.6395494108501902,
+          "release": 0.3120439940007495,
+          "slide": 18.06608974113658,
+          "deltaSlide": 4.643928945154048,
+          "pitchJump": 3.9322221052766224,
+          "pitchJumpTime": 0.11443234248658103,
+          "repeatTime": 0,
+          "noise": 0.24123698472995292,
+          "modulation": 0.023298227510503422,
+          "shapeCurve": 1.6695768362385226,
+          "tremolo": 0.07127991796715134,
+          "bitCrush": 0.07537395265548634,
+          "lpfFreq": 1200,
+          "hpfFreq": 80,
+          "lpfResonance": 1,
+          "chance": 0.02,
+          "shape": 0,
+          "locked": false
+        },
+        "fx": {
+          "reverbWet": 0,
+          "reverbDecay": 2.5,
+          "reverbPreDelay": 0,
+          "reverbHpFreq": 80,
+          "reverbLpFreq": 8000,
+          "reverbDamping": 0.5,
+          "reverbWidth": 1,
+          "delayInterval": 0.75,
+          "delayFeedback": 0.3499999940395355,
+          "delayMix": 0,
+          "delayFilterSweep": 0,
+          "delayModulation": 0,
+          "chorusVoices": 3,
+          "chorusRate": 0.8,
+          "chorusDepth": 0.5,
+          "chorusDelay": 10,
+          "chorusFeedback": 0,
+          "chorusWet": 0,
+          "chorusSpread": 1,
+          "chorusShape": 0,
+          "filterSweep": 0,
+          "filterQ": 0.699999988079071
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "v"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": false,
+          "seq": false,
+          "fx": false
+        },
+        "steps": [
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          }
+        ]
+      }
+    }
+  ]
+}

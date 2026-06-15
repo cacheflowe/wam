@@ -46,6 +46,12 @@ await ctx.audioWorklet.addModule(
 **Cause**: Saved state references parameters that were renamed or removed.
 **Mitigation**: `fromJSON()` uses `?? defaultValue` for all keys. Removing a parameter from `SLIDER_DEFS` should also add a migration comment if old saved states exist.
 
+### 7. MIDI hardware input wedges after sysex output (Windows)
+**Symptom**: A connected controller's input goes dead (knobs/buttons stop registering) while LED/sysex **output** still works. It stays dead across page reloads; only physically unplugging and replugging the device restores it.
+**Cause**: Two failure triggers, both observed on the Launch Control XL. (1) Sending a separate sysex per incoming MIDI event — e.g. echoing an LED on every CC tick during a knob sweep — floods the port; bursts of tiny `F0…F7` messages stall the device's input callback (a long-standing Chromium/Windows behavior). (2) Opening two `MIDIAccess` objects that contend for the same ports. The stall lives in the OS/driver layer, so a page reload can't clear it.
+**Mitigation**: Queue LED changes and flush at most once per animation frame as a single multi-pair sysex (`setLedsMessage` takes many `[index, velocity]` pairs); dedupe on the quantized color. Use exactly one `MIDIAccess` per page — reuse `<wam-midi-input-picker>`'s `.midiAccess` (set its `sysex` attribute) instead of requesting your own. See `_scheduleLedFlush` in [src/app/launch-control-xl.js](../src/app/launch-control-xl.js) and the full writeup in [docs/references/launch-control-xl.md](references/launch-control-xl.md#reliability--hard-won-lessons-windows-especially).
+**Recovery**: Replug the device (or restart the browser) to reset the stuck OS port handle.
+
 ## Resilience Patterns
 
 - **Idempotent CSS injection**: CSS is injected once per page via a static `#cssInjected` flag. Re-rendering components multiple times is safe.

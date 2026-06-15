@@ -1,4 +1,11 @@
 import PicoTheme from "./pico-theme.js";
+import AppStore from "oversite/src/app-store/app-store-.mjs";
+
+// Global shared-state store. The constructor sets window._store and fires an
+// "appstore-ready" event. Created before any app/component mounts so every
+// component can read/write window._store. Swap for AppStoreDistributed later to
+// get remote-control / multi-machine sync for free.
+new AppStore();
 
 // import apps
 import "../app/playground.js";
@@ -6,6 +13,7 @@ import "../app/generative-music.js";
 import "../app/generative-music-plants.js";
 import "../app/generative-ambient.js";
 import "../app/vocoder.js";
+import "../app/launch-control-xl.js";
 
 class CustomApp extends HTMLElement {
   connectedCallback() {
@@ -71,7 +79,8 @@ class CustomApp extends HTMLElement {
             <a href="#generative-music" role="button">Generative Music</a><br /><br />
             <a href="#generative-music-plants" role="button">Plantasia</a><br /><br />
             <a href="#generative-ambient" role="button">Generative Ambient</a><br /><br />
-            <a href="#vocoder-app" role="button">Vocoder</a>
+            <a href="#vocoder-app" role="button">Vocoder</a><br /><br />
+            <a href="#launch-control-xl-app" role="button">Launch Control XL Tester</a>
           </div>
         </section>
       </main>

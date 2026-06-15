@@ -12,6 +12,10 @@ All UI is built with vanilla Web Components (`HTMLElement` subclasses). No Shado
 | `WebAudioStepSeq` | `<wam-step-seq>` | `step-seq.js` | 16-step pattern grid with note select and accent toggles |
 | `WebAudioWaveform` | `<wam-waveform>` | `waveform.js` | Click-to-cycle visualizer: oscilloscope → spectrogram waterfall → FFT bars |
 | `WebAudioFxUnit` | `<wam-fx-unit>` | `fx-unit.js` | Composed FX Web Component (reverb + delay + chorus + filter) |
+| `WamDrawer` | `<wam-drawer>` | `drawer.js` | Shared slide-out tool panel; one panel open at a time, dismissed via close/backdrop/Escape |
+| `WamMidiInputPicker` | `<wam-midi-input-picker>` | `midi-input-picker.js` | Web MIDI access manager + device dropdown; normalizes note/CC into `wam-midi-message` events |
+| `WamMidiMonitor` | `<wam-midi-monitor>` | `midi-monitor.js` | Live debug view of normalized `wam-control-input` events |
+| `InstrumentSourcePicker` | `<wam-instrument-source-picker>` | `instrument-source-picker.js` | Instrument-bus dropdown for FX modulator/carrier/trigger routing; emits `source-change` |
 | `*Controls` | various | per-instrument files | UI panel for each instrument; wraps instrument + analyser + FxUnit + waveform |
 
 ## Controls Companion Pattern
@@ -250,6 +254,26 @@ The component fires `step-change` events. Controls serialize/restore step state 
 1. **Oscilloscope** — time-domain waveform
 2. **Spectrogram waterfall** — scrolling frequency content over time
 3. **FFT bars** — frequency magnitude bars
+
+## Input Abstraction & Learn
+
+Control input from the computer keyboard and MIDI hardware is normalized into a single source-agnostic stream so the "learn" system never has to special-case a device. The layer lives in [src/web-audio/input/](../src/web-audio/input/):
+
+- **`input-bindings.js`** — the contract. Adapters call `registerBindingType(source, { equals, format })`; the rest of the app compares bindings with `bindingsEqual()` and labels them with `formatBinding()` without knowing the source. Adapters dispatch normalized `wam-control-input` events (a `wam-control-input` event carries `{ binding, value: 0..1, trigger }`) and the learn UI dispatches `wam-binding-feedback` (bound / unbound / value) so hardware can mirror state. `migrateLegacyBinding()` upgrades pre-abstraction saved bindings (e.g. a bare keyboard `key` string) to the tagged shape.
+- **`keyboard-source.js`** — `KeyboardInputSource` (singleton via `ensureKeyboardInputSource()`) maps key press/release to `wam-control-input`.
+- **`midi-source.js`** — `MidiInputSource` (singleton via `ensureMidiInputSource()`) converts raw `wam-midi-message` events from the picker into `wam-control-input`. Raw MIDI still broadcasts so device-specific handlers (LED feedback, template tracking) can listen too.
+
+### Input Learn Mixin
+
+`input-learn.js` exports `InputLearnMixin` + `applyInputLearnMixin(targetClass)`. Applying the mixin gives any control panel source-agnostic learn: **hold a UI control and move a controller** (or right-click) to bind it; the bound parameter then tracks the normalized 0..1 value. It is applied to `WebAudioControlsBase` (all instrument panels) and `WebAudioTransportControls`. The jam button uses the same path — its binding is the source-tagged `_jamBinding` object (formerly a bare `_jamKey` string).
+
+### Focus Manager
+
+`focus-manager.js` exports the `focusManager` singleton. It tracks the focused instrument panel, outlines it with `.wam-focused`, and broadcasts `wam-instrument-focus-change`. Controls dispatch focus on pointerdown so hardware (notably the sequencer buttons) follows the active instrument. Call `focusManager.start()` once at app init.
+
+### MIDI hardware
+
+Device drivers live in [src/web-audio/midi/](../src/web-audio/midi/) — see [docs/BACKEND.md](BACKEND.md#midi-hardware-control) and the [Launch Control XL map](references/launch-control-xl.md). The on-screen `<wam-midi-input-picker>` owns the single `MIDIAccess` for the page; everything else reuses its `.midiAccess` (see [docs/RELIABILITY.md](RELIABILITY.md) for why one access object is mandatory). Manual hardware test checklist: [docs/testing/midi-input-and-led-testing.md](testing/midi-input-and-led-testing.md).
 
 ## State Persistence
 
