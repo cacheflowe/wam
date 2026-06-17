@@ -357,7 +357,7 @@ Goal: make sequenced patterns feel more organic and less machine-rigid.
 | Effect | Notes |
 |---|---|
 | **Parametric EQ** | 3–4 band parametric EQ (low shelf, mid peaking, high shelf + optional mid 2) using `BiquadFilterNode`; new `eq.js` with audio engine + UI controls; first effect in FX unit chain so it shapes tone before reverb/delay/etc. |
-| **Sidechain Compressor** | Duck one instrument based on another's amplitude (envelope follower → gain modulation) |
+| ~~**Sidechain Compressor**~~ | ✅ Done — `WebAudioFxCompressor` (AudioWorklet envelope follower), final stage of the per-channel FX strip; key source picked via `<wam-instrument-source-picker>` |
 | **Phaser** | Multi-stage all-pass filter sweep; LFO-modulated; stereo |
 | **Compressor** | Wrapper + UI around `DynamicsCompressorNode` |
 | **Ping-Pong Delay** | `stereo: "pingpong"` mode in existing delay; alternates echoes L→R |

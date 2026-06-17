@@ -7,7 +7,6 @@
     "muted": false,
     "root": 29,
     "scale": "Phrygian",
-    "midiInputId": "input-1",
     "midiParamBindings": {},
     "fx": {
       "reverbWet": 0,
@@ -38,7 +37,7 @@
   "instruments": [
     {
       "id": "snare",
-      "instanceId": 0,
+      "instanceId": 12,
       "state": {
         "params": {
           "toneFreq": 400,
@@ -198,7 +197,7 @@
     },
     {
       "id": "kick",
-      "instanceId": 1,
+      "instanceId": 13,
       "state": {
         "params": {
           "startFreq": 250,
@@ -248,7 +247,7 @@
           "rotationIntervalBars": 1
         },
         "sections": {
-          "ctrl": true,
+          "ctrl": false,
           "seq": false,
           "fx": false
         },
@@ -354,7 +353,7 @@
     },
     {
       "id": "hihat",
-      "instanceId": 2,
+      "instanceId": 14,
       "state": {
         "params": {
           "tone": 273,
@@ -363,7 +362,7 @@
           "filterQ": 0.699999988079071,
           "decay": 0.06,
           "openDecay": 0.3,
-          "volume": 0.4699999988079071
+          "volume": 0.4099999964237213
         },
         "fx": {
           "reverbWet": 0.3100000023841858,
@@ -510,11 +509,11 @@
     },
     {
       "id": "acid",
-      "instanceId": 3,
+      "instanceId": 15,
       "state": {
         "params": {
           "volume": 0.20999999344348907,
-          "cutoff": 627.0000000000001,
+          "cutoff": 531.5476039708722,
           "resonance": 18,
           "envMod": 0.56,
           "decay": 0.16,
@@ -535,7 +534,7 @@
         "fx": {
           "reverbWet": 0,
           "reverbDecay": 2.6,
-          "reverbPreDelay": 1.0000000474974513,
+          "reverbPreDelay": 0.9367726743221283,
           "reverbHpFreq": 80,
           "reverbLpFreq": 8000,
           "reverbDamping": 0.5,
@@ -717,10 +716,10 @@
     },
     {
       "id": "bass808",
-      "instanceId": 4,
+      "instanceId": 16,
       "state": {
         "params": {
-          "volume": 0.36000001430511475,
+          "volume": 0.4000000059604645,
           "decay": 3,
           "pitchSweepSemitones": 12,
           "pitchDecay": 0.3,
@@ -847,7 +846,7 @@
             "note": 29,
             "probability": 1,
             "ratchet": 1,
-            "conditions": "off"
+            "conditions": "1:2"
           },
           {
             "active": false,
@@ -868,26 +867,26 @@
     },
     {
       "id": "blipfx",
-      "instanceId": 5,
+      "instanceId": 17,
       "state": {
         "params": {
           "volume": 0.41999998688697815,
-          "frequency": 586.5804641293871,
-          "attack": 0.011856272044979542,
-          "decay": 0.04255179852319471,
-          "sustain": 0.07167870587355951,
-          "sustainVolume": 0.6395494108501902,
-          "release": 0.3120439940007495,
-          "slide": 18.06608974113658,
-          "deltaSlide": 4.643928945154048,
-          "pitchJump": 3.9322221052766224,
-          "pitchJumpTime": 0.11443234248658103,
+          "frequency": 597.666711278266,
+          "attack": 0.014943902611493445,
+          "decay": 0.0868251760362776,
+          "sustain": 0.009512967953999044,
+          "sustainVolume": 0.9786765213947335,
+          "release": 0.2019748516369088,
+          "slide": 16.694482894066542,
+          "deltaSlide": 2.6476929512715968,
+          "pitchJump": 13.577062022055362,
+          "pitchJumpTime": 0.052724855868700314,
           "repeatTime": 0,
-          "noise": 0.24123698472995292,
-          "modulation": 0.023298227510503422,
-          "shapeCurve": 1.6695768362385226,
-          "tremolo": 0.07127991796715134,
-          "bitCrush": 0.07537395265548634,
+          "noise": 0.01471324583195188,
+          "modulation": 0,
+          "shapeCurve": 1.835732208008313,
+          "tremolo": 0.03146119493132227,
+          "bitCrush": 0.41614513361626787,
           "lpfFreq": 1200,
           "hpfFreq": 80,
           "lpfResonance": 1,
@@ -1032,6 +1031,196 @@
           {
             "active": true,
             "probability": 0.5,
+            "ratchet": 1,
+            "conditions": "off"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mono",
+      "instanceId": 18,
+      "state": {
+        "params": {
+          "attack": 0.001,
+          "decay": 0.1,
+          "sustain": 0,
+          "release": 0.2,
+          "filterFreq": 3883,
+          "filterQ": 11.4,
+          "filterEnvAmt": 3,
+          "filterAttack": 0.6970000000000001,
+          "filterDecay": 0.08,
+          "filterSustain": 0.08,
+          "filterRelease": 1,
+          "detune": 0,
+          "unisonVoices": 1,
+          "unisonDetune": 0,
+          "subGain": 0,
+          "portamento": 0,
+          "lfoRate": 12.36,
+          "lfoDepth": 0.5700000000000001,
+          "octaveOffset": 0,
+          "octaveJumpProb": 0.17,
+          "volume": 0.25,
+          "oscType": "square",
+          "filterType": "lowpass",
+          "lfoShape": "sine",
+          "lfoDest": "filter"
+        },
+        "fx": {
+          "reverbWet": 0.18000000715255737,
+          "reverbDecay": 2.5,
+          "reverbPreDelay": 0,
+          "reverbHpFreq": 80,
+          "reverbLpFreq": 8000,
+          "reverbDamping": 0.5,
+          "reverbWidth": 1,
+          "delayInterval": 0.75,
+          "delayFeedback": 0.4399999976158142,
+          "delayMix": 0.23999999463558197,
+          "delayFilterSweep": 0.4590000000000001,
+          "delayModulation": 0.6899999765058359,
+          "chorusVoices": 3,
+          "chorusRate": 0.8,
+          "chorusDepth": 0.5,
+          "chorusDelay": 10,
+          "chorusFeedback": 0,
+          "chorusWet": 0,
+          "chorusSpread": 1,
+          "chorusShape": 0,
+          "filterSweep": 0,
+          "filterQ": 0.699999988079071
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0.009999999776482582,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "7"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": false,
+          "seq": false,
+          "fx": false
+        },
+        "steps": [
+          {
+            "active": true,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "1:2"
+          },
+          {
+            "active": false,
+            "note": 61,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 29,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 58,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 39,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "note": 36,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 48,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 65,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 54,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 60,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": true,
+            "note": 54,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 39,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 72,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 37,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 51,
+            "probability": 1,
+            "ratchet": 1,
+            "conditions": "off"
+          },
+          {
+            "active": false,
+            "note": 42,
+            "probability": 1,
             "ratchet": 1,
             "conditions": "off"
           }

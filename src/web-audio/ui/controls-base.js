@@ -1181,7 +1181,13 @@ export class WebAudioControlsBase extends HTMLElement {
     return this;
   }
 
+  /** Forward the host track's bus id to the FX sidechain picker so it can't sidechain off itself. */
+  setSidechainHostId(id) {
+    this._fxUnit?.setSidechainHostId?.(id);
+  }
+
   disconnect() {
+    this._fxUnit?.destroy?.();
     (this._pan ?? this._out)?.disconnect();
   }
 }

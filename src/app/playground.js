@@ -28,7 +28,6 @@ import WebAudioSynthBlipFX from "../web-audio/instruments/synth-blipfx.js";
 import WebAudioLoopPlayer from "../web-audio/instruments/sample-looper.js";
 import WebAudioSamplePlayer from "../web-audio/instruments/sample-player.js";
 import WebAudioVocoderFx from "../web-audio/fx/fx-vocoder.js";
-import WebAudioSidechainFx from "../web-audio/fx/fx-sidechain.js";
 import { tryGlobKeys, tryGlobModules, resolveSamples, resolveSongs } from "../web-audio/global/sample-utils.js";
 import "../web-audio/ui/arrangement-library.js";
 import { focusManager } from "../web-audio/ui/focus-manager.js";
@@ -275,15 +274,6 @@ const INSTRUMENT_TYPES = [
     make: (ctx) => new WebAudioVocoderFx(ctx),
     tag: "wam-vocoder-fx-controls",
     bindOpts: () => ({ color: "#4fd" }),
-    step: null,
-  },
-  {
-    id: "sidechain",
-    label: "Sidechain Comp",
-    color: "#f4a",
-    make: (ctx) => new WebAudioSidechainFx(ctx),
-    tag: "wam-sidechain-controls",
-    bindOpts: () => ({ color: "#f4a" }),
     step: null,
   },
   {
@@ -571,11 +561,7 @@ export default class PlaygroundApp extends HTMLElement {
       color: "#6366f1",
       showScales: true,
     });
-    // Insert a dedicated gain node after the master so sidechain can modulate it
-    this._sidechainGain = this._ctx.createGain();
-    this._sidechainGain.gain.value = 1.0;
-    this._transportEl.connect(this._sidechainGain);
-    this._sidechainGain.connect(this._ctx.destination);
+    this._transportEl.connect(this._ctx.destination);
 
     // Wire visualizer analysis bus
     this._analysisBus.setContext(this._ctx);
@@ -703,9 +689,12 @@ export default class PlaygroundApp extends HTMLElement {
 
     const entry = { def, ctrl, instrument, instanceId, analysisKey };
 
-    // Tap node for cross-instrument routing (vocoder carrier, sidechain trigger, etc.)
-    // Routing instruments (vocoder, sidechain) produce no useful audio output, so skip them.
-    const isBusSource = def.id !== "vocoder" && def.id !== "sidechain";
+    // Tell this track's FX sidechain picker its own id so it can't sidechain off itself.
+    ctrl.setSidechainHostId?.(instanceId);
+
+    // Tap node for cross-instrument routing (vocoder carrier, sidechain key, etc.)
+    // Routing instruments (vocoder) produce no useful audio output, so skip them.
+    const isBusSource = def.id !== "vocoder";
     if (isBusSource) {
       const tapNode = this._ctx.createGain();
       ctrl.preFaderOutput.connect(tapNode); // pre-fader tap: post-FX, bypasses mute/volume

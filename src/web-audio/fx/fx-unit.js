@@ -2,13 +2,14 @@
  * WebAudioFxUnit — reusable effects web component (reverb + delay + chorus + filter).
  *
  * Composed from standalone FX classes:
- *   - WebAudioFxReverb  (convolution reverb with wet/dry)
- *   - WebAudioFxDelay   (dub-style delay with BPM sync, feedback filter, LFO)
- *   - WebAudioFxChorus  (multi-voice chorus with stereo spread)
- *   - WebAudioFxFilter  (combined HP + LP with shared Q)
+ *   - WebAudioFxReverb     (convolution reverb with wet/dry)
+ *   - WebAudioFxDelay      (dub-style delay with BPM sync, feedback filter, LFO)
+ *   - WebAudioFxChorus     (multi-voice chorus with stereo spread)
+ *   - WebAudioFxFilter     (combined HP + LP with shared Q)
+ *   - WebAudioFxCompressor (sidechain ducking compressor — off until a source is picked)
  *
  * Audio chain (serial):
- *   in → filter → delay → chorus → reverb → out
+ *   in → filter → delay → chorus → reverb → compressor → out
  * Each stage handles its own dry/wet internally.
  *
  * Usage:
@@ -24,12 +25,25 @@ import WebAudioFxReverb from "./fx-reverb.js";
 import WebAudioFxDelay from "./fx-delay.js";
 import WebAudioFxChorus from "./fx-chorus.js";
 import WebAudioFxFilter from "./fx-filter.js";
+import WebAudioFxCompressor from "./fx-compressor.js";
 import "../ui/slider.js";
 import "../ui/filter-sweep.js";
-import { injectControlsCSS, createSection } from "../ui/slider.js";
+import "../ui/instrument-source-picker.js";
+import { injectControlsCSS, createSection, createCtrl } from "../ui/slider.js";
 
 export default class WebAudioFxUnit extends HTMLElement {
   static #cssInjected = false;
+
+  // Tempo-sync release divisions, indexed by the "compReleaseBeats" knob.
+  // `beats` = length in quarter-note beats.
+  static RELEASE_DIVISIONS = [
+    { label: "1/1", beats: 4 },
+    { label: "1/2", beats: 2 },
+    { label: "1/4", beats: 1 },
+    { label: "1/8", beats: 0.5 },
+    { label: "1/8T", beats: 1 / 3 },
+    { label: "1/16", beats: 0.25 },
+  ];
 
   constructor() {
     super();
@@ -40,6 +54,8 @@ export default class WebAudioFxUnit extends HTMLElement {
     this._delay = null;
     this._chorus = null;
     this._filter = null;
+    this._compressor = null;
+    this._sidechainPicker = null;
   }
 
   /**
@@ -66,6 +82,12 @@ export default class WebAudioFxUnit extends HTMLElement {
    * @param {number}  [options.chorusShape='sine']
    * @param {number}  [options.filterSweep=0]  Bipolar sweep -1..+1 (LP←0→HP)
    * @param {number}  [options.filterQ=0.7]
+   * @param {number}  [options.compAmount=0.7]     Sidechain duck depth (0–1)
+   * @param {number}  [options.compAttack=10]      Sidechain attack (ms)
+   * @param {number}  [options.compRelease=200]    Sidechain release (ms, used when Sync off)
+   * @param {number}  [options.compSync=0]         Tempo-sync release (0/1)
+   * @param {number}  [options.compReleaseBeats=3] Synced release division index (see RELEASE_DIVISIONS)
+   * @param {number}  [options.compThreshold=0.1]  Key level (0–1) at which ducking begins
    */
   init(ctx, options = {}) {
     this._ctx = ctx;
@@ -109,11 +131,23 @@ export default class WebAudioFxUnit extends HTMLElement {
       width: options.reverbWidth ?? 1,
     });
 
+    this._compressor = new WebAudioFxCompressor(ctx, {
+      amount: options.compAmount ?? 0.7,
+      attack: (options.compAttack ?? 10) / 1000,
+      release: (options.compRelease ?? 200) / 1000,
+      threshold: options.compThreshold ?? 0.1,
+    });
+    this._bpm = options.bpm ?? 120;
+    this._compSync = (options.compSync ?? 0) >= 0.5;
+    this._compReleaseBeats = options.compReleaseBeats ?? 3;
+    this._compReleaseMs = options.compRelease ?? 200;
+
     this._in.connect(this._filter.input);
     this._filter.connect(this._delay.input);
     this._delay.connect(this._chorus.input);
     this._chorus.connect(this._reverb.input);
-    this._reverb.connect(this._out);
+    this._reverb.connect(this._compressor.input);
+    this._compressor.connect(this._out);
 
     // ---- UI ----
     WebAudioFxUnit._injectCSS();
@@ -123,7 +157,22 @@ export default class WebAudioFxUnit extends HTMLElement {
   // ---- Properties ----
 
   set bpm(v) {
+    this._bpm = v;
     if (this._delay) this._delay.bpm = v;
+    if (this._compSync) this._applyCompRelease();
+  }
+
+  /** Apply the compressor release time from either the free (ms) or tempo-synced setting. */
+  _applyCompRelease() {
+    if (!this._compressor) return;
+    if (this._compSync) {
+      const divs = WebAudioFxUnit.RELEASE_DIVISIONS;
+      const div = divs[this._compReleaseBeats] ?? divs[3];
+      const secPerBeat = 60 / (this._bpm || 120);
+      this._compressor.release = Math.max(0.01, div.beats * secPerBeat);
+    } else {
+      this._compressor.release = this._compReleaseMs / 1000;
+    }
   }
 
   // ---- Routing ----
@@ -135,6 +184,16 @@ export default class WebAudioFxUnit extends HTMLElement {
   connect(node) {
     this._out.connect(node.input ?? node);
     return this;
+  }
+
+  /** Hide a bus instance from the sidechain source picker (the host track, to avoid self-feedback). */
+  setSidechainHostId(id) {
+    if (this._sidechainPicker) this._sidechainPicker.excludeId = id;
+  }
+
+  /** Tear down internal nodes. Called when the host channel is removed. */
+  destroy() {
+    this._compressor?.destroy();
   }
 
   // ---- Serialization ----
@@ -163,6 +222,13 @@ export default class WebAudioFxUnit extends HTMLElement {
       chorusShape: ["sine", "triangle"].indexOf(this._chorus?.shape ?? "sine"),
       filterSweep: this._filter?.sweep ?? 0,
       filterQ: this._filter?.q ?? 0.7,
+      compAmount: this._compressor?.amount ?? 0.7,
+      compAttack: Math.round((this._compressor?.attack ?? 0.01) * 1000),
+      compRelease: this._compReleaseMs ?? 200,
+      compSync: this._compSync ? 1 : 0,
+      compReleaseBeats: this._compReleaseBeats ?? 3,
+      compThreshold: this._compressor?.threshold ?? 0.1,
+      compSourceId: this._sidechainPicker?.value ?? null,
     };
   }
 
@@ -229,6 +295,23 @@ export default class WebAudioFxUnit extends HTMLElement {
       if (obj.hpFreq != null && this._filter) this._filter.hpFreq = obj.hpFreq;
     }
     restore("filterQ", obj.filterQ);
+
+    // Sidechain compressor
+    restore("compAmount", obj.compAmount);
+    restore("compAttack", obj.compAttack);
+    restore("compRelease", obj.compRelease);
+    restore("compSync", obj.compSync);
+    restore("compReleaseBeats", obj.compReleaseBeats);
+    restore("compThreshold", obj.compThreshold);
+    if (obj.compSourceId != null) {
+      // Defer: the instrument bus may not be populated yet on load.
+      setTimeout(() => {
+        if (!this._sidechainPicker) return;
+        this._sidechainPicker.value = obj.compSourceId;
+        const tap = this._sidechainPicker.tapNode;
+        if (tap) this._compressor?.setSidechainSource(tap);
+      }, 0);
+    }
   }
 
   // ---- UI ----
@@ -376,6 +459,72 @@ export default class WebAudioFxUnit extends HTMLElement {
     );
     this.appendChild(revEl);
 
+    // ---- Sidechain compressor ----
+    const { el: scEl, controls: scCtrl } = createSection("Sidechain");
+    const srcWrap = createCtrl("Source", {
+      wide: true,
+      tooltip: "Track whose level ducks this channel. Off until a source is selected — pick a kick for a classic pump.",
+    });
+    this._sidechainPicker = document.createElement("wam-instrument-source-picker");
+    srcWrap.appendChild(this._sidechainPicker);
+    scCtrl.appendChild(srcWrap);
+    scCtrl.appendChild(
+      this._addSlider("compAmount", "Amount", 0, 1, 0.01, options.compAmount ?? 0.7, {
+        tooltip: "How much the volume ducks. 0 = no effect, 1 = full duck to silence.",
+      }),
+    );
+    scCtrl.appendChild(
+      this._addSlider("compAttack", "Attack", 1, 200, 1, options.compAttack ?? 10, {
+        scale: "log",
+        tooltip: "How fast the duck engages, in ms. Short = snappy pump.",
+      }),
+    );
+    scCtrl.appendChild(
+      this._addSlider("compRelease", "Release", 10, 1500, 1, options.compRelease ?? 200, {
+        scale: "log",
+        tooltip: "How fast the volume returns, in ms. Used when Sync is off. Longer = smoother pump.",
+      }),
+    );
+    scCtrl.appendChild(
+      this._addSlider("compSync", "Sync", 0, 1, 1, options.compSync ?? 0, {
+        tooltip: "Tempo-sync the release. 0 = free (Release ms), 1 = locked to the Div beat division.",
+      }),
+    );
+    scCtrl.appendChild(
+      this._addSlider("compReleaseBeats", "Div", 0, 5, 1, options.compReleaseBeats ?? 3, {
+        tooltip: "Release as a beat division when Sync is on: 0=1/1, 1=1/2, 2=1/4, 3=1/8, 4=1/8T, 5=1/16.",
+      }),
+    );
+    scCtrl.appendChild(
+      this._addSlider("compThreshold", "Thresh", 0, 1, 0.01, options.compThreshold ?? 0.1, {
+        tooltip: "Source level at which ducking begins. Lower = ducks on quieter hits.",
+      }),
+    );
+
+    // Live gain-reduction meter
+    const grWrap = createCtrl("Reduction", {
+      wide: true,
+      tooltip: "Live gain reduction — how much this channel is currently ducking.",
+    });
+    this._grMeter = document.createElement("div");
+    this._grMeter.className = "wam-gr-meter";
+    this._grFill = document.createElement("div");
+    this._grFill.className = "wam-gr-fill";
+    this._grMeter.appendChild(this._grFill);
+    grWrap.appendChild(this._grMeter);
+    scCtrl.appendChild(grWrap);
+
+    this.appendChild(scEl);
+
+    this._compressor.onReduction = (gr) => {
+      if (this._grFill) this._grFill.style.width = `${Math.min(100, gr * 100)}%`;
+    };
+    this._applyCompRelease();
+
+    this._sidechainPicker.addEventListener("source-change", (e) => {
+      this._compressor?.setSidechainSource(e.detail.tapNode);
+    });
+
     // Delegated listener for all knobs and sliders
     const handleFxInput = (e) => {
       const { param, value } = e.detail;
@@ -446,6 +595,27 @@ export default class WebAudioFxUnit extends HTMLElement {
         case "filterQ":
           if (this._filter) this._filter.q = value;
           break;
+        case "compAmount":
+          if (this._compressor) this._compressor.amount = value;
+          break;
+        case "compAttack":
+          if (this._compressor) this._compressor.attack = value / 1000;
+          break;
+        case "compRelease":
+          this._compReleaseMs = value;
+          this._applyCompRelease();
+          break;
+        case "compSync":
+          this._compSync = value >= 0.5;
+          this._applyCompRelease();
+          break;
+        case "compReleaseBeats":
+          this._compReleaseBeats = Math.round(value);
+          this._applyCompRelease();
+          break;
+        case "compThreshold":
+          if (this._compressor) this._compressor.threshold = value;
+          break;
       }
     };
     this.addEventListener("knob-input", handleFxInput);
@@ -480,6 +650,21 @@ export default class WebAudioFxUnit extends HTMLElement {
         background: #0d0d0d;
         font-family: monospace;
         --slider-accent: var(--fx-accent, #0f0);
+      }
+      wam-fx-unit .wam-gr-meter {
+        position: relative;
+        width: 100%;
+        height: 8px;
+        background: #222;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      wam-fx-unit .wam-gr-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 0%;
+        background: var(--fx-accent, #0f0);
+        transition: width 60ms linear;
       }
     `;
     document.head.appendChild(style);

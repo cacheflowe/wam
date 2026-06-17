@@ -16,6 +16,10 @@
  */
 import p5 from "p5";
 
+// p5's sketch checker parses the built app bundle and can flag minified helper
+// names as false p5 global collisions. WAM uses p5 in instance mode only.
+p5.disableSketchChecker = true;
+
 export default class WamVisualizer extends HTMLElement {
   constructor() {
     super();

@@ -57,7 +57,8 @@ Each instrument file also exports a `*Controls` companion class (e.g., `WebAudio
 | `fx-chorus.js` | `WebAudioFxChorus` | Multi-voice chorus (1-6 voices) with stereo spread, feedback |
 | `fx-filter.js` | `WebAudioFxFilter` | Combined HP + LP with shared Q, always inline (no dry/wet) |
 | `fx-distortion.js` | `WebAudioFxDistortion` | Soft-clip waveshaper with dry/wet |
-| `fx-unit.js` | `WebAudioFxUnit` | **Web Component** composing reverb + delay + chorus + filter with full UI |
+| `fx-compressor.js` | `WebAudioFxCompressor` | Per-channel sidechain ducker (AudioWorklet); off until a key source is picked |
+| `fx-unit.js` | `WebAudioFxUnit` | **Web Component** composing filter → delay → chorus → reverb → compressor with full UI |
 
 ### Audio processing
 
@@ -263,13 +264,10 @@ This gives most slider travel to the perceptually useful range (e.g., 80-2000 Hz
 `WebAudioFxUnit` is a web component that composes standalone effect instances:
 
 ```
-in -> WebAudioFxReverb (dry=1, wet adjustable)  -> preOut
-in -> WebAudioFxDelay  (internal dry/wet)        -> preOut
-in -> WebAudioFxChorus (internal dry/wet)        -> preOut
-preOut -> WebAudioFxFilter (HP -> LP, always inline) -> out
+in -> WebAudioFxFilter -> WebAudioFxDelay -> WebAudioFxChorus -> WebAudioFxReverb -> WebAudioFxCompressor -> out
 ```
 
-Each effect is a standalone class with its own `input`/`connect()` routing. The FX unit just wires them in parallel (reverb, delay, chorus all receive the input) through a shared filter on the output. This makes it trivial to add new effects.
+Each effect is a standalone class with its own `input`/`connect()` routing, wired **serially** so each stage feeds the next. This makes it trivial to add or reorder effects. The final stage, `WebAudioFxCompressor`, is a sidechain ducker driven by a track tap selected in the UI — inactive until a source is chosen.
 
 The FX unit provides slider UIs for all effect parameters and handles `toJSON()`/`fromJSON()` serialization.
 

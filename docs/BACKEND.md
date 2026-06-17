@@ -81,6 +81,7 @@ All effects expose the same `connect()` / `input` interface as instruments.
 | `WebAudioFxChorus` | `fx-chorus.js` | Yes | 1–6 voices, stereo spread, feedback |
 | `WebAudioFxFilter` | `fx-filter.js` | No (always inline) | Series HP → LP, shared Q |
 | `WebAudioFxDistortion` | `fx-distortion.js` | Yes | Soft-clip waveshaper |
+| `WebAudioFxCompressor` | `fx-compressor.js` | Bypass until source picked | Per-channel sidechain ducker. AudioWorklet envelope follower (attack/release/threshold) ducks the channel by a key tap chosen in the FX UI. Params: `amount`, `attack`, `release`, `threshold`. Release can tempo-sync to a beat division; worklet posts live gain reduction (`comp.reduction` / `onReduction`) for a meter. |
 | `WebAudioFxUnit` | `fx-unit.js` | Per-effect | Web Component composing all above |
 
 ### Bus-based FX (instrument-tap inputs)
@@ -89,18 +90,21 @@ Unlike the inline FX above, these take their input from one or more **instrument
 
 | Class | File | Control element | Notes |
 |---|---|---|---|
-| `WebAudioSidechainFx` | `fx-sidechain.js` | `<wam-sidechain-controls>` | Master-bus ducker. Envelope follower (rectify → LP → ducking shaper) maps a trigger tap to a negative gain delta on the playground `sidechainGain`. Params: `depth` (0–1), `speed` (envelope-follower cutoff, Hz). No audio output of its own. |
 | `WebAudioVocoderFx` | `fx-vocoder.js` | `<wam-vocoder-fx-controls>` | Wraps `WebAudioVocoder` in `external` carrier mode. Two taps — modulator (analysis, e.g. vocals) and carrier (resynthesis, e.g. a pad). Internal osc/noise gains are 0; external sources only. |
 
 `WebAudioVocoder` (in `vocoder.js`) gained a `carrierType = "external"` mode exposing `carrierInput` and `modulatorInput` GainNodes so the bus-tap wrapper can feed it.
 
+> Sidechain ducking is now a per-channel FX-strip stage (`WebAudioFxCompressor`), not a bus-based master effect — see the FX table above. The old master-bus `WebAudioSidechainFx` was retired in favor of that pattern.
+
 ### FxUnit Internal Routing
 
+Stages run **serially**, each feeding the next:
+
 ```
-input → WebAudioFxReverb  (parallel) ─┐
-input → WebAudioFxDelay   (parallel) ─┤→ preOut → WebAudioFxFilter → out
-input → WebAudioFxChorus  (parallel) ─┘
+input → WebAudioFxFilter → WebAudioFxDelay → WebAudioFxChorus → WebAudioFxReverb → WebAudioFxCompressor → out
 ```
+
+The compressor is the final stage. Its sidechain key (input 1) comes from a track tap selected via `<wam-instrument-source-picker>` in the FX UI; with no source selected it passes audio through untouched. See [audio-routing.md](docs/references/audio-routing.md) for the sidechain detail.
 
 ## AudioWorklet Processors
 
@@ -108,6 +112,7 @@ input → WebAudioFxChorus  (parallel) ─┘
 |---|---|
 | `pitch-shift.worklet.js` | Granular overlap-add pitch shift (loaded by `WebAudioPitchShift`) |
 | `time-stretch.worklet.js` | Granular time-stretch with independent speed/pitch (loaded by `WebAudioTimeStretch`) |
+| `fx-compressor.worklet.js` | Sidechain ducking envelope follower (loaded by `WebAudioFxCompressor`) — 2 inputs (audio + key), attack/release/threshold/amount |
 
 Worklets must be registered before use:
 

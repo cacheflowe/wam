@@ -8,8 +8,9 @@
  *   none-label  — Text for the "none / off" option (default: "— None —")
  *
  * Properties:
- *   value    — instanceId of the selected instrument, or null
- *   tapNode  — GainNode tap for the selected instrument, or null
+ *   value      — instanceId of the selected instrument, or null
+ *   tapNode    — GainNode tap for the selected instrument, or null
+ *   excludeId  — instanceId to hide from the list (e.g. the host track itself), or null
  *
  * Events:
  *   source-change  { instanceId: number|null, tapNode: GainNode|null }  bubbles
@@ -54,6 +55,7 @@ export default class InstrumentSourcePicker extends HTMLElement {
     const prev = this._select.value;
     while (this._select.options.length > 1) this._select.remove(1);
     for (const [id, { label }] of bus) {
+      if (this._excludeId != null && id === this._excludeId) continue;
       const opt = document.createElement("option");
       opt.value = String(id);
       opt.textContent = label;
@@ -84,6 +86,16 @@ export default class InstrumentSourcePicker extends HTMLElement {
   get tapNode() {
     const id = this.value;
     return id != null ? (this._bus?.get(id)?.tapNode ?? null) : null;
+  }
+
+  /** Hide a given instanceId from the list (e.g. the host track, to prevent self-feedback). */
+  get excludeId() {
+    return this._excludeId ?? null;
+  }
+
+  set excludeId(id) {
+    this._excludeId = id == null ? null : typeof id === "string" ? parseInt(id, 10) : id;
+    if (this._bus) this._updateOptions(this._bus);
   }
 }
 
