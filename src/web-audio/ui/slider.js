@@ -679,7 +679,7 @@ export function createSection(label) {
  */
 export function createChannelStrip(
   parentEl,
-  { title, getOutGain, initialVol = 1, initialPan = 0, pan = true, noCollapse = false },
+  { title, getOutGain, initialVol = 1, initialPan = 0, pan = true, noCollapse = false, showMuteSolo = true },
 ) {
   if (!noCollapse && CHANNEL_STRIP_COLLAPSED_DEFAULT) parentEl.setAttribute("data-collapsed", "");
 
@@ -741,19 +741,23 @@ export function createChannelStrip(
     mixGroup.appendChild(panSlider);
   }
 
-  const muteBtn = document.createElement("button");
-  muteBtn.className = "wam-mute-btn";
-  muteBtn.textContent = "Mute";
-  const muteWrap = createCtrl("Mute", { tooltip: "Mute/unmute this channel." });
-  muteWrap.appendChild(muteBtn);
-  mixGroup.appendChild(muteWrap);
+  const muteBtn = showMuteSolo ? document.createElement("button") : null;
+  if (muteBtn) {
+    muteBtn.className = "wam-mute-btn";
+    muteBtn.textContent = "Mute";
+    const muteWrap = createCtrl("Mute", { tooltip: "Mute/unmute this channel." });
+    muteWrap.appendChild(muteBtn);
+    mixGroup.appendChild(muteWrap);
+  }
 
-  const soloBtn = document.createElement("button");
-  soloBtn.className = "wam-solo-btn";
-  soloBtn.textContent = "Solo";
-  const soloWrap = createCtrl("Solo", { tooltip: "Solo this channel — mute all others." });
-  soloWrap.appendChild(soloBtn);
-  mixGroup.appendChild(soloWrap);
+  const soloBtn = showMuteSolo ? document.createElement("button") : null;
+  if (soloBtn) {
+    soloBtn.className = "wam-solo-btn";
+    soloBtn.textContent = "Solo";
+    const soloWrap = createCtrl("Solo", { tooltip: "Solo this channel — mute all others." });
+    soloWrap.appendChild(soloBtn);
+    mixGroup.appendChild(soloWrap);
+  }
 
   strip.appendChild(mixGroup);
 
@@ -771,11 +775,13 @@ export function createChannelStrip(
   let preSoloVolume = 1;
 
   const syncMuteButton = () => {
+    if (!muteBtn) return;
     muteBtn.classList.toggle("wam-muted", muted);
     muteBtn.textContent = "Mute";
   };
 
   const syncSoloButton = () => {
+    if (!soloBtn) return;
     soloBtn.classList.toggle("wam-soloed", soloed);
     soloBtn.textContent = "Solo";
   };
@@ -794,12 +800,12 @@ export function createChannelStrip(
     syncMuteButton();
   };
 
-  muteBtn.addEventListener("click", () => {
+  muteBtn?.addEventListener("click", () => {
     applyMuteState(!muted, { restoreOnUnmute: true });
     parentEl.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
   });
 
-  soloBtn.addEventListener("click", () => {
+  soloBtn?.addEventListener("click", () => {
     soloed = !soloed;
     syncSoloButton();
     parentEl.dispatchEvent(new CustomEvent("solo-change", { bubbles: true, detail: { soloed } }));

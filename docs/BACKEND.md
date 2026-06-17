@@ -38,6 +38,7 @@ class WebAudioSynthAcid {
 | `WebAudioSynthFM` | `synth-fm.js` | Poly FM | 2-op FM, mod envelope, BPM-synced filter LFO, chord mode |
 | `WebAudioSynthMono` | `synth-mono.js` | Mono | Saw/square/tri, ADSR, filter envelope, sub osc |
 | `WebAudioSynthPad` | `synth-pad.js` | Poly pad | Chord voicing, constant-power voice scaling |
+| `WebAudioSynthPoly` | `synth-poly.js` | Poly subtractive | Dual osc + sub + noise, unison, per-voice filter ADSR + key track, dual tempo-syncable LFOs, voice stealing, chords. Built on the shared `dsp/` primitives. |
 | `WebAudioSynthBlipFX` | `synth-blipfx.js` | SFX | 6 waveforms, FM, bit-crush, randomization |
 | `WebAudioPercKick` | `perc-kick.js` | Percussion | Sine sweep, pitch envelope |
 | `WebAudioPercHihat` | `perc-hihat.js` | Percussion | Bandpass noise, open/closed character |
@@ -69,6 +70,23 @@ applyPreset(name) {
 ```
 
 The `!= null` guard allows partial presets; new parameters can be added without invalidating existing preset objects.
+
+### Shared DSP primitives (`global/dsp/`)
+
+Common per-voice DSP is factored into standalone functions that **schedule on existing AudioParams or create nodes at a caller-controlled point** — keeping the fire-and-forget model (no stateful classes, synths still own their node graph and creation order).
+
+| File | Export | Used by | Purpose |
+|---|---|---|---|
+| `dsp/envelope.js` | `applyADSR` | mono, pad, poly | Linear ADSR contour on a VCA gain param. |
+| `dsp/envelope.js` | `applyFilterEnv` | mono, poly | Octave-based ADSR filter sweep (`base·2^envAmt`). |
+| `dsp/oscillator.js` | `createUnisonOscBank` | mono, poly | Detuned unison oscillators with optional portamento glide. |
+| `dsp/distortion.js` | `makeSoftClipCurve` | acid, 808 | Soft-clip waveshaper curve. |
+
+`WebAudioSynthPoly` (the flagship subtractive synth) is built entirely on these primitives — it's the proof that the foundation supports new instruments.
+
+These are intentionally not forced onto every synth: acid's unison (per-voice gain + cleanup), pad's shared-filter envelope, and FM's exponential operator envelopes are genuinely distinct and stay bespoke. The primitives are also the foundation for future synths.
+
+**Regression guard:** [tests/synth-dsp-snapshot.test.js](tests/synth-dsp-snapshot.test.js) records each synth's exact `trigger()` automation (via [tests/helpers/recording-context.js](tests/helpers/recording-context.js)) so any change to the scheduled sound shows up as a snapshot diff. The refactor above is byte-identical against these snapshots.
 
 ## Effects Classes
 

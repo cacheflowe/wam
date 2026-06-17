@@ -94,6 +94,7 @@ export class WebAudioTransportControls extends HTMLElement {
    * @param {string}  [options.title]        Panel label (default "Transport")
    * @param {string}  [options.color]        Accent color (default "#fff")
    * @param {boolean} [options.showScales]   Show key/scale section (default true)
+   * @param {boolean} [options.showRecorder] Show inline recorder row below strip (default true)
    * @param {object}  [options.fx]           Passed to wam-fx-unit init
    */
   init(ctx, options = {}) {
@@ -103,6 +104,7 @@ export class WebAudioTransportControls extends HTMLElement {
     const color = options.color ?? "#fff";
     const title = options.title ?? "Transport";
     const showScales = options.showScales !== false;
+    const showRecorder = options.showRecorder !== false;
 
     this.innerHTML = "";
     this.classList.add("wam-panel");
@@ -123,6 +125,7 @@ export class WebAudioTransportControls extends HTMLElement {
       initialVol: 1,
       pan: false,
       noCollapse: true,
+      showMuteSolo: false,
     });
     this._muteHandle = {
       isMuted: strip.isMuted,
@@ -157,18 +160,18 @@ export class WebAudioTransportControls extends HTMLElement {
     this._playBtn.addEventListener("click", () => (this._playing ? this._stop() : this._play()));
     strip.jamGroup.appendChild(this._playBtn);
 
-    // ---- Recorder → own row below the strip ----
-    const toolsRow = document.createElement("div");
-    toolsRow.className = "wam-transport-tools-row";
-
     this._recorderEl = document.createElement("wam-recorder");
-    toolsRow.appendChild(this._recorderEl);
+    // ---- Recorder → optional row below the strip ----
+    if (showRecorder) {
+      const toolsRow = document.createElement("div");
+      toolsRow.className = "wam-transport-tools-row";
+      toolsRow.appendChild(this._recorderEl);
+      this.appendChild(toolsRow);
+    }
 
     // MIDI input device selection is owned by the app (e.g. the playground's
     // MIDI drawer), not the transport. The transport keeps only its own
     // BPM/volume param-learn, which works off the global input adapter.
-
-    this.appendChild(toolsRow);
 
     // ---- BPM → dedicated strip group (inserted before mix group) ----
     const bpmGroup = document.createElement("div");
@@ -382,7 +385,6 @@ export class WebAudioTransportControls extends HTMLElement {
   get _learnRegistry() {
     return this._midiControls;
   }
-
 
   // ---- Play / Stop ----
 

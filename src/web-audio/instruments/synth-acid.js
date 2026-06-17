@@ -4,6 +4,7 @@ import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/sca
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 import { createCtrl } from "../ui/slider.js";
+import { makeSoftClipCurve } from "../global/dsp/distortion.js";
 
 /**
  * WebAudioSynthAcid — TB-303-style monophonic acid bass synthesizer.
@@ -127,7 +128,7 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
   constructor(ctx, preset = "Default") {
     super(ctx, null); // creates ctx + _out but skips preset
     this._distortion = 0;
-    this._distortionCurve = this._makeDistortionCurve(0);
+    this._distortionCurve = makeSoftClipCurve(0);
     this._lastScheduledFreq = null;
     this.unisonVoices = 1;
     this.unisonDetune = 0;
@@ -154,21 +155,10 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
 
   set distortion(v) {
     this._distortion = v;
-    this._distortionCurve = this._makeDistortionCurve(v);
+    this._distortionCurve = makeSoftClipCurve(v);
   }
 
   // ---- Helpers ----
-
-  _makeDistortionCurve(amount) {
-    const n = 512;
-    const curve = new Float32Array(n);
-    const k = amount * 200;
-    for (let i = 0; i < n; i++) {
-      const x = (i * 2) / n - 1;
-      curve[i] = k > 0 ? ((Math.PI + k) * x) / (Math.PI + k * Math.abs(x)) : x;
-    }
-    return curve;
-  }
 
   /** Clear portamento memory — call when stopping/restarting the sequencer. */
   reset() {

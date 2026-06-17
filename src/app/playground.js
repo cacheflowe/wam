@@ -11,6 +11,7 @@ import "../web-audio/instruments/synth-808.js";
 import "../web-audio/instruments/synth-fm.js";
 import "../web-audio/instruments/synth-mono.js";
 import "../web-audio/instruments/synth-pad.js";
+import "../web-audio/instruments/synth-poly.js";
 import "../web-audio/instruments/synth-blipfx.js";
 import "../web-audio/instruments/sample-looper.js";
 import "../web-audio/instruments/sample-player.js";
@@ -24,6 +25,7 @@ import WebAudioSynth808 from "../web-audio/instruments/synth-808.js";
 import WebAudioSynthFM from "../web-audio/instruments/synth-fm.js";
 import WebAudioSynthMono from "../web-audio/instruments/synth-mono.js";
 import WebAudioSynthPad from "../web-audio/instruments/synth-pad.js";
+import WebAudioSynthPoly from "../web-audio/instruments/synth-poly.js";
 import WebAudioSynthBlipFX from "../web-audio/instruments/synth-blipfx.js";
 import WebAudioLoopPlayer from "../web-audio/instruments/sample-looper.js";
 import WebAudioSamplePlayer from "../web-audio/instruments/sample-player.js";
@@ -191,6 +193,15 @@ const INSTRUMENT_TYPES = [
     make: (ctx) => new WebAudioSynthPad(ctx),
     tag: "wam-synth-pad-controls",
     bindOpts: (bpm) => ({ color: "#a8f", fx: { bpm, reverbWet: 0.3, delayMix: 0.1 } }),
+    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
+  },
+  {
+    id: "poly",
+    label: "Poly Synth",
+    color: "#7cf",
+    make: (ctx) => new WebAudioSynthPoly(ctx),
+    tag: "wam-synth-poly-controls",
+    bindOpts: (bpm) => ({ color: "#7cf", fx: { bpm, reverbWet: 0.15, delayMix: 0 } }),
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
@@ -379,6 +390,8 @@ export default class PlaygroundApp extends HTMLElement {
     mkLauncher("add", "+ Add Instrument");
     mkLauncher("songs", "♪ Songs");
     mkLauncher("midi", "🎛 MIDI");
+    mkLauncher("record", "⏺ Record");
+    mkLauncher("viz", "◎ Viz");
 
     this._currentSongLabel = document.createElement("span");
     this._currentSongLabel.style.cssText = "opacity:0.85;margin-left:0.5rem;font-size:0.8rem;color:#4f8;";
@@ -452,18 +465,22 @@ export default class PlaygroundApp extends HTMLElement {
     this._midiPanelEl.appendChild(document.createElement("wam-midi-monitor"));
     this._drawer.addPanel("midi", this._midiPanelEl, "MIDI");
 
-    // Visualizer panel
-    const vizRow = document.createElement("section");
-    vizRow.style.cssText = "margin-bottom:1.5rem;";
-    const vizDetails = document.createElement("details");
-    vizDetails.open = true;
-    const vizSummary = document.createElement("summary");
-    vizSummary.textContent = "Visualizer";
-    vizDetails.appendChild(vizSummary);
+    // ---- Record panel (drawer): populated after transport init ----
+    this._recordPanelEl = document.createElement("div");
+    this._recordPanelEl.style.cssText = "display:flex;flex-direction:column;gap:0.75rem;";
+    const recordHint = document.createElement("p");
+    recordHint.textContent = "Recorder appears here once audio is initialized.";
+    recordHint.style.cssText = "margin:0;opacity:0.7;font-size:0.85rem;";
+    this._recordPanelEl.appendChild(recordHint);
+    this._drawer.addPanel("record", this._recordPanelEl, "Record");
+
+    // ---- Viz panel (drawer) ----
+    const vizPanelEl = document.createElement("div");
+    vizPanelEl.style.cssText = "display:flex;flex-direction:column;gap:0.75rem;";
 
     // Sketch selector
-    const vizToolbar = document.createElement("div");
-    vizToolbar.style.cssText = "display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;";
+    const vizSketchRow = document.createElement("div");
+    vizSketchRow.style.cssText = "display:flex;align-items:center;gap:0.5rem;";
     const sketchLabel = document.createElement("label");
     sketchLabel.textContent = "Sketch:";
     sketchLabel.style.cssText = "font-size:0.8rem;opacity:0.7;";
@@ -486,16 +503,48 @@ export default class PlaygroundApp extends HTMLElement {
       this._loadSketchByPath(this._sketchSelect.value, sketchModules);
     });
     this._sketchModules = sketchModules;
-    vizToolbar.appendChild(sketchLabel);
-    vizToolbar.appendChild(this._sketchSelect);
-    vizDetails.appendChild(vizToolbar);
+    vizSketchRow.appendChild(sketchLabel);
+    vizSketchRow.appendChild(this._sketchSelect);
+    vizPanelEl.appendChild(vizSketchRow);
 
+    // Position toggle
+    const vizPosRow = document.createElement("div");
+    vizPosRow.style.cssText = "display:flex;align-items:center;gap:0.5rem;";
+    const vizPosLabel = document.createElement("label");
+    vizPosLabel.textContent = "Position:";
+    vizPosLabel.style.cssText = "font-size:0.8rem;opacity:0.7;";
+    const mkVizPosBtn = (label, mode) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.dataset.vizMode = mode;
+      b.style.cssText =
+        "font-size:0.8rem;padding:0.25rem 0.6rem;border-radius:4px;cursor:pointer;background:#1a1a2e;border:1px solid #3a3a5a;color:#cfcff0;";
+      b.addEventListener("click", () => {
+        this._setVizMode(mode);
+        vizPosRow.querySelectorAll("[data-viz-mode]").forEach((btn) => {
+          btn.style.background = btn.dataset.vizMode === mode ? "#2a2060" : "#1a1a2e";
+          btn.style.borderColor = btn.dataset.vizMode === mode ? "#9b8dff" : "#3a3a5a";
+        });
+      });
+      return b;
+    };
+    const noneBtn = mkVizPosBtn("None", "none");
+    const bgBtn = mkVizPosBtn("Fullscreen", "background");
+    const cornerBtn = mkVizPosBtn("Corner", "corner");
+    noneBtn.style.background = "#2a2060";
+    noneBtn.style.borderColor = "#9b8dff";
+    vizPosRow.appendChild(vizPosLabel);
+    vizPosRow.appendChild(noneBtn);
+    vizPosRow.appendChild(bgBtn);
+    vizPosRow.appendChild(cornerBtn);
+    vizPanelEl.appendChild(vizPosRow);
+
+    this._drawer.addPanel("viz", vizPanelEl, "Visualizer");
+
+    // Visualizer element — fixed in the background, outside normal layout flow.
     this._vizEl = document.createElement("wam-visualizer");
-    this._vizEl.style.cssText =
-      "display:block;width:100%;height:300px;border:1px solid #333;border-radius:6px;overflow:hidden;margin-top:0.5rem;";
-    vizDetails.appendChild(this._vizEl);
-    vizRow.appendChild(vizDetails);
-    main.appendChild(vizRow);
+    this._vizEl.setAttribute("mode", "none");
+    document.body.appendChild(this._vizEl);
 
     for (const def of INSTRUMENT_TYPES) {
       const btn = document.createElement("button");
@@ -560,8 +609,15 @@ export default class PlaygroundApp extends HTMLElement {
       seq: this._seq,
       color: "#6366f1",
       showScales: true,
+      showRecorder: false,
     });
     this._transportEl.connect(this._ctx.destination);
+
+    // Move recorder controls into the shared side drawer instead of the transport strip area.
+    if (this._recordPanelEl && this._transportEl.recorder) {
+      this._recordPanelEl.innerHTML = "";
+      this._recordPanelEl.appendChild(this._transportEl.recorder);
+    }
 
     // Wire visualizer analysis bus
     this._analysisBus.setContext(this._ctx);
@@ -882,6 +938,10 @@ export default class PlaygroundApp extends HTMLElement {
     }
     const mod = await loader();
     this._vizEl.loadSketchModule(mod.default);
+  }
+
+  _setVizMode(mode) {
+    this._vizEl?.setMode(mode);
   }
 
   _shareURL() {

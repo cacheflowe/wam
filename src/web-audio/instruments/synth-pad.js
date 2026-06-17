@@ -2,6 +2,7 @@ import WebAudioInstrumentBase from "../global/instrument-base.js";
 import "../ui/step-seq.js";
 import { scaleNoteOptions, scaleNotesInRange, buildChordFromScale } from "../global/scales.js";
 import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
+import { applyADSR } from "../global/dsp/envelope.js";
 
 export default class WebAudioSynthPad extends WebAudioInstrumentBase {
   static PRESETS = {
@@ -303,11 +304,15 @@ export default class WebAudioSynthPad extends WebAudioInstrumentBase {
         osc.detune.value = detuneOffset;
 
         const vol = detuneOffset === 0 ? perVoice * mixerGain : perVoice * 0.6;
-        amp.gain.setValueAtTime(0, t);
-        amp.gain.linearRampToValueAtTime(vol, t + this.attack);
-        amp.gain.linearRampToValueAtTime(vol * this.sustain, t + this.attack + this.decay);
-        amp.gain.setValueAtTime(vol * this.sustain, t + durationSec);
-        amp.gain.linearRampToValueAtTime(0, t + durationSec + this.release);
+        applyADSR(amp.gain, {
+          start: t,
+          peak: vol,
+          attack: this.attack,
+          decay: this.decay,
+          sustain: this.sustain,
+          release: this.release,
+          releaseAt: t + durationSec,
+        });
 
         osc.connect(amp);
         amp.connect(this._filter);
