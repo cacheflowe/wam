@@ -79,8 +79,9 @@ seq.start();
 - MIDI device input
 - Pitch bend / modulation wheel from MIDI
 - Polyphonic aftertouch
-- Voice stealing or polyphony limits
 - Undo / redo history
+
+Voice stealing / polyphony limits were originally out of scope but are now implemented in `WebAudioSynthPoly` (oldest-first stealing bounds active node count); see [docs/BACKEND.md](../BACKEND.md).
 
 ## Related Specs
 

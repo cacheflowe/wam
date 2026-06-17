@@ -246,6 +246,11 @@ Do not use `.wam-controls` as a section container — use `createSection()` inst
 - **Note select** (dropdown): MIDI note from the current scale
 - **Accent toggle** (shift-click or secondary button): boosts velocity
 
+Opt-in per-step controls (enabled via the `init` options `accent` / `probability` / `ratchet` / `conditions`):
+- **Probability** (slider, 0–1): chance the step fires
+- **Ratchet** (selector, 1/2/3): subdivides the step into repeats
+- **Trig condition** (dropdown): Elektron-style `X:Y` bar-cycle gate — the step fires only on pass X of every Y bars. Options are built from `CONDITION_GROUPS` in [src/web-audio/global/sequencer-conditions.js](../src/web-audio/global/sequencer-conditions.js) into grouped `<optgroup>`s; that module is the single source of truth shared with the playback evaluator (see [docs/BACKEND.md](BACKEND.md#step-trig-conditions-gate-by-bar-cycle)).
+
 The component fires `step-change` events. Controls serialize/restore step state via `toJSON()`/`fromJSON()`.
 
 ## Waveform Visualizer
