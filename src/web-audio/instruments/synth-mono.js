@@ -709,27 +709,6 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     this._globalStep++;
   }
 
-  _meetsCondition(condition, barIndex) {
-    switch (condition) {
-      case "off":
-        return true;
-      case "1:2":
-        return barIndex % 2 === 0;
-      case "1:3":
-        return barIndex % 3 === 0;
-      case "1:4":
-        return barIndex % 4 === 0;
-      case "2:4":
-        return barIndex % 4 === 1;
-      case "3:4":
-        return barIndex % 4 === 2;
-      case "fill":
-        return barIndex % 4 === 3;
-      default:
-        return true;
-    }
-  }
-
   setActiveStep() {
     this._seq?.setActiveStep((this._seqPosition - 1 + 16) % 16);
   }

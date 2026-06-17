@@ -2,6 +2,7 @@ import "./slider.js";
 import { bindingsEqual, formatBinding, migrateLegacyBinding } from "../input/input-bindings.js";
 import { injectControlsCSS, createChannelStrip, createSection, createCtrl } from "./slider.js";
 import { injectInputLearnCSS, InputLearnMixin, applyInputLearnMixin } from "./input-learn.js";
+import { meetsBarCondition } from "../global/sequencer-conditions.js";
 
 /**
  * WebAudioControlsBase — shared foundation for all instrument control panels.
@@ -1150,6 +1151,14 @@ export class WebAudioControlsBase extends HTMLElement {
 
   /** Restore extra top-level fields (e.g. steps, chordSize). */
   _restoreExtra(obj) {}
+
+  /**
+   * Whether a step's bar-cycle condition ("X:Y" trig condition) fires on the
+   * given global bar index. Shared by every instrument's step() loop.
+   */
+  _meetsCondition(condition, barIndex) {
+    return meetsBarCondition(condition, barIndex);
+  }
 
   // ---- Routing ----
 

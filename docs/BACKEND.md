@@ -157,6 +157,14 @@ seq.start();
 seq.bpm = 140; // live tempo change
 ```
 
+### Step trig conditions ("gate by bar cycle")
+
+Per-step `X:Y` conditions (Elektron-style) gate a step to fire only on pass X of every Y bars. `global/sequencer-conditions.js` is the single source of truth:
+
+- `CONDITION_GROUPS` — grouped dropdown options (Off, Every 2 / 3 / 4 / 8 bars), built into `<optgroup>`s by `<wam-step-seq>`.
+- `meetsBarCondition(condition, barIndex)` — the evaluator, called from `WebAudioControlsBase._meetsCondition()` so every instrument's `step()` loop shares one implementation (previously duplicated as an identical switch in all 11 control panels).
+- `normalizeCondition()` — upgrades the legacy `"fill"` value to its explicit `"4:4"` form on load.
+
 ## Music Theory Utilities
 
 `scales.js` exports:
