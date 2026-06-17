@@ -651,6 +651,12 @@ export default class WebAudioFxUnit extends HTMLElement {
         font-family: monospace;
         --slider-accent: var(--fx-accent, #0f0);
       }
+      /* FX sections are narrow (~3 inner columns), so the shared "span 4" wide
+         control overflows. Make wide controls fill the section's row instead. */
+      wam-fx-unit .wam-ctrl-wide {
+        grid-column: 1 / -1;
+        min-width: 0;
+      }
       wam-fx-unit .wam-gr-meter {
         position: relative;
         width: 100%;
@@ -663,6 +669,7 @@ export default class WebAudioFxUnit extends HTMLElement {
         position: absolute;
         inset: 0 auto 0 0;
         width: 0%;
+        max-width: 100%;
         background: var(--fx-accent, #0f0);
         transition: width 60ms linear;
       }
