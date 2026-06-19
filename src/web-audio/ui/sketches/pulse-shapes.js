@@ -7,7 +7,13 @@
  * Other instruments → small diamond (purple)
  *
  * Each particle scales up and fades out from center.
+ *
+ * Shape `baseSize` values are authored against REFERENCE_DIM and scaled at
+ * draw time by the larger canvas dimension, so they stay proportional on any
+ * sketch size.
  */
+const REFERENCE_DIM = 600;
+
 export default function pulseShapes(p, bus, ctx, container) {
   const particles = [];
 
@@ -42,13 +48,14 @@ export default function pulseShapes(p, bus, ctx, container) {
       }
       const alpha = pt.life * 100;
       const scale = p.map(pt.life, 1, 0, 1, pt.maxScale);
-      const size = pt.baseSize * scale;
+      const dimScale = p.max(p.width, p.height) / REFERENCE_DIM;
+      const size = pt.baseSize * scale * dimScale;
 
       p.push();
       p.translate(p.width / 2, p.height / 2);
       p.noFill();
       p.stroke(pt.hue, pt.sat, pt.bri, alpha);
-      p.strokeWeight(pt.weight * pt.life);
+      p.strokeWeight(pt.weight * pt.life * dimScale);
 
       if (pt.shape === "square") {
         p.rect(0, 0, size, size);
