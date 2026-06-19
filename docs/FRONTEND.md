@@ -268,6 +268,14 @@ Control input from the computer keyboard and MIDI hardware is normalized into a 
 - **`keyboard-source.js`** — `KeyboardInputSource` (singleton via `ensureKeyboardInputSource()`) maps key press/release to `wam-control-input`.
 - **`midi-source.js`** — `MidiInputSource` (singleton via `ensureMidiInputSource()`) converts raw `wam-midi-message` events from the picker into `wam-control-input`. Raw MIDI still broadcasts so device-specific handlers (LED feedback, template tracking) can listen too.
 
+### Commands
+
+Beyond per-parameter control input, a binding can be mapped to a high-level **command** — an app action like transport play/stop or instrument navigation, independent of any device. The contract lives in `input-bindings.js`:
+
+- `registerCommandBinding(binding, command)` / `commandForBinding(binding)` — a source-agnostic map keyed by a canonicalized binding (sorted-key serialization, so property order doesn't matter).
+- Each adapter checks `commandForBinding()` **before** emitting normal control input; on a match it calls `dispatchCommand(command, …)` which fires a `wam-command` event (`detail = { command, … }`) and skips the control-input path. Commands fire **once, on press** — MIDI note-off is already filtered by the picker, CC releases (value 0) are dropped, and the keyboard adapter ignores the key-up. The keyboard adapter also `preventDefault()`s a matched key so arrows/space don't scroll the page.
+- `PlaygroundApp` listens for `wam-command` and runs the action (`_handleCommand`). Default bindings, registered at app init: Launch Control XL **Device** button and keyboard **Space** → `play-stop`; XL **↑/↓** arrows and keyboard **↑/↓** → `prev`/`next-instrument`. The XL control→command defaults live declaratively in `midi/launch-control-xl.js` as `DEFAULT_COMMAND_CONTROLS`; the app turns them into bindings via `bindingFor()`.
+
 ### Input Learn Mixin
 
 `input-learn.js` exports `InputLearnMixin` + `applyInputLearnMixin(targetClass)`. Applying the mixin gives any control panel source-agnostic learn: **hold a UI control and move a controller** (or right-click) to bind it; the bound parameter then tracks the normalized 0..1 value. It is applied to `WebAudioControlsBase` (all instrument panels) and `WebAudioTransportControls`. The jam button uses the same path — its binding is the source-tagged `_jamBinding` object (formerly a bare `_jamKey` string).
@@ -275,6 +283,8 @@ Control input from the computer keyboard and MIDI hardware is normalized into a 
 ### Focus Manager
 
 `focus-manager.js` exports the `focusManager` singleton. It tracks the focused instrument panel, outlines it with `.wam-focused`, and broadcasts `wam-instrument-focus-change`. Controls dispatch focus on pointerdown so hardware (notably the sequencer buttons) follows the active instrument. Call `focusManager.start()` once at app init.
+
+On focus change, `PlaygroundApp` emphasizes the active instrument: it **expands all three of the focused instrument's panels** (Ctrl/Seq/FX) and **collapses every other instrument's**, then scrolls the focused row to just below the sticky transport bar. `controls-base.js` exposes `setAllPanels(visible)` for this.
 
 ### MIDI hardware
 

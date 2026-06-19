@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { bindingsEqual, formatBinding, CONTROL_INPUT_EVENT } from "../src/web-audio/input/input-bindings.js";
+import {
+  bindingsEqual,
+  formatBinding,
+  CONTROL_INPUT_EVENT,
+  COMMAND_EVENT,
+  registerCommandBinding,
+} from "../src/web-audio/input/input-bindings.js";
 import KeyboardInputSource from "../src/web-audio/input/keyboard-source.js";
 
 function keyEvent(type, key, extra = {}) {
@@ -51,5 +57,24 @@ describe("KeyboardInputSource", () => {
     src.stop();
     target.dispatchEvent(keyEvent("keydown", "b"));
     expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("dispatches a command (not control-input) for a bound key, on press only", () => {
+    registerCommandBinding({ source: "keyboard", key: "arrowup" }, "prev-instrument");
+
+    const target = new EventTarget();
+    const src = new KeyboardInputSource(target).start();
+    const onCommand = vi.fn();
+    const onControlInput = vi.fn();
+    target.addEventListener(COMMAND_EVENT, onCommand);
+    target.addEventListener(CONTROL_INPUT_EVENT, onControlInput);
+
+    target.dispatchEvent(keyEvent("keydown", "ArrowUp"));
+    target.dispatchEvent(keyEvent("keyup", "ArrowUp")); // release: no event
+
+    expect(onCommand).toHaveBeenCalledOnce();
+    expect(onCommand.mock.calls[0][0].detail.command).toBe("prev-instrument");
+    expect(onControlInput).not.toHaveBeenCalled();
+    src.stop();
   });
 });

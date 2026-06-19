@@ -10,7 +10,7 @@
  * storage, so existing saved shortcuts migrate cleanly. Typing into a text
  * field is ignored, matching prior behavior.
  */
-import { registerBindingType, dispatchControlInput } from "./input-bindings.js";
+import { registerBindingType, dispatchControlInput, dispatchCommand, commandForBinding } from "./input-bindings.js";
 
 registerBindingType("keyboard", {
   equals: (a, b) => a.key === b.key,
@@ -30,6 +30,16 @@ export default class KeyboardInputSource {
       if (e.repeat) return;
       const key = (e.key || "").toLowerCase();
       if (!key) return;
+
+      // Commands fire once, on press only. Don't track them in _down so the
+      // keyup pairing below skips them (no release event for a command).
+      const command = commandForBinding({ source: "keyboard", key });
+      if (command) {
+        e.preventDefault(); // arrows/space would otherwise scroll the page
+        dispatchCommand(command, { raw: e }, this._target);
+        return;
+      }
+
       this._down.add(key);
       dispatchControlInput(
         { binding: { source: "keyboard", key }, value: 1, kind: "trigger", pressed: true, raw: e },

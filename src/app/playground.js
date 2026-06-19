@@ -36,6 +36,10 @@ import { focusManager } from "../web-audio/ui/focus-manager.js";
 import { sequencerHardware } from "../web-audio/midi/sequencer-hardware.js";
 import { ledFeedback } from "../web-audio/midi/led-feedback.js";
 import { autoMap } from "../web-audio/midi/auto-map.js";
+import { bindingFor, COMMANDS, DEFAULT_COMMAND_CONTROLS, DEFAULT_TEMPLATE } from "../web-audio/midi/launch-control-xl.js";
+import { registerCommandBinding } from "../web-audio/input/input-bindings.js";
+import { ensureMidiInputSource } from "../web-audio/input/midi-source.js";
+import { ensureKeyboardInputSource } from "../web-audio/input/keyboard-source.js";
 import { StoreKeys } from "../web-audio/global/store-keys.js";
 import "../web-audio/ui/drawer.js";
 import "../web-audio/ui/midi-monitor.js";
@@ -336,20 +340,88 @@ export default class PlaygroundApp extends HTMLElement {
     focusManager.start();
     sequencerHardware.start();
     autoMap.start();
+
+    // Make sure raw MIDI and keyboard are translated into normalized
+    // control-input/command events even before learn mode is engaged, then
+    // register the default command bindings (transport + instrument nav) for
+    // both the Launch Control XL and the computer keyboard.
+    ensureMidiInputSource();
+    ensureKeyboardInputSource();
+    for (const [controlId, command] of Object.entries(DEFAULT_COMMAND_CONTROLS)) {
+      const binding = bindingFor(controlId, DEFAULT_TEMPLATE);
+      if (binding) registerCommandBinding(binding, command);
+    }
+    // Keyboard mirrors the XL: ↑/↓ step instruments, space toggles transport.
+    registerCommandBinding({ source: "keyboard", key: "arrowup" }, COMMANDS.PREV_INSTRUMENT);
+    registerCommandBinding({ source: "keyboard", key: "arrowdown" }, COMMANDS.NEXT_INSTRUMENT);
+    registerCommandBinding({ source: "keyboard", key: " " }, COMMANDS.PLAY_STOP);
+
     this._onInstrumentFocus = (e) => {
       const ctrl = e.detail?.controls;
       const idx = ctrl ? this._instruments.findIndex((en) => en.ctrl === ctrl) : -1;
       // Publish the focused instrument's serializable id (not the element).
       window._store?.set(StoreKeys.FOCUS_INSTRUMENT_ID, idx >= 0 ? this._instruments[idx].instanceId : null);
+
+      // Highlight the focused instrument: expand all three of its panels and
+      // collapse every other instrument's, then scroll it near the top.
+      for (const entry of this._instruments) {
+        entry.ctrl.setAllPanels?.(entry.ctrl === ctrl);
+      }
+      if (idx >= 0) this._scrollInstrumentIntoView(this._instruments[idx].row);
+
       if (!ctrl?.ensureJamBinding) return;
       ctrl.ensureJamBinding(idx >= 0 && idx < 9 ? String(idx + 1) : null);
     };
     document.addEventListener("wam-instrument-focus-change", this._onInstrumentFocus);
+    this._onCommand = (e) => this._handleCommand(e);
+    document.addEventListener("wam-command", this._onCommand);
+  }
+
+  _handleCommand(e) {
+    const { command } = e.detail;
+    switch (command) {
+      case "play-stop":
+        if (!this._transportEl) break;
+        this._transportEl.playing ? this._transportEl.stop() : this._transportEl.play();
+        break;
+      case "next-instrument":
+        this._stepInstrument(1);
+        break;
+      case "prev-instrument":
+        this._stepInstrument(-1);
+        break;
+    }
+  }
+
+  _stepInstrument(dir) {
+    if (this._instruments.length === 0) return;
+    const currentId = window._store?.get(StoreKeys.FOCUS_INSTRUMENT_ID);
+    const idx = this._instruments.findIndex((inst) => inst.instanceId === currentId);
+    let nextIdx = idx + dir;
+    if (nextIdx < 0) nextIdx = this._instruments.length - 1;
+    if (nextIdx >= this._instruments.length) nextIdx = 0;
+
+    const nextInst = this._instruments[nextIdx];
+    // Focus it
+    const ctrl = nextInst.ctrl;
+    ctrl.dispatchEvent(new CustomEvent("wam-instrument-focus", {
+      bubbles: true,
+      detail: { controls: ctrl }
+    }));
+  }
+
+  /** Scroll an instrument row to just below the sticky transport bar. */
+  _scrollInstrumentIntoView(row) {
+    if (!row) return;
+    const topBarH = this._topBar?.offsetHeight ?? 0;
+    const y = row.getBoundingClientRect().top + window.scrollY - topBarH - 12;
+    window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
   }
 
   disconnectedCallback() {
     this.removeEventListener("controls-change", this._onControlsChange);
     document.removeEventListener("wam-instrument-focus-change", this._onInstrumentFocus);
+    document.removeEventListener("wam-command", this._onCommand);
     sequencerHardware.stop();
     autoMap.stop();
     focusManager.stop();
@@ -369,6 +441,7 @@ export default class PlaygroundApp extends HTMLElement {
 
     // ---- Sticky top bar: transport + tool launcher toolbar ----
     const topBar = document.createElement("section");
+    this._topBar = topBar;
     topBar.style.cssText =
       "position:sticky;top:0;z-index:50;background:#0d0d14;padding:0.5rem 0 0.6rem;margin-bottom:1.25rem;border-bottom:1px solid #24243a;";
 

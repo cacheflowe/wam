@@ -95,10 +95,22 @@ When an instrument is focused, the LCXL knobs/faders auto-bind to its parameters
 
 **Phase 4 complete.** All planned LCXL phases done.
 
-### Phase 5 — Polish
+### Phase 5 — Command layer & multi-input (transport + instrument navigation) ✅
+A binding can now map to a high-level **command** (app action) rather than a parameter, so transport and instrument navigation are device-agnostic and shared between the LCXL and the computer keyboard.
+
+- [x] `input-bindings.js`: `registerCommandBinding`/`commandForBinding` (canonicalized-binding map) + `dispatchCommand`/`COMMAND_EVENT` (`wam-command`).
+- [x] Both adapters check `commandForBinding()` before control input and emit `wam-command` instead; **press-only** (CC value-0 release dropped, keyboard key-up skipped, matched keys `preventDefault()`ed so arrows/space don't scroll).
+- [x] `launch-control-xl.js` exports `COMMANDS` + declarative `DEFAULT_COMMAND_CONTROLS` (Device → play-stop; ↑/↓ → prev/next-instrument). App wires them via `bindingFor()`.
+- [x] `PlaygroundApp._handleCommand`: play-stop toggles `<wam-transport>`; prev/next step focus via `_stepInstrument` (dispatches `wam-instrument-focus`). Keyboard mirrors: Space, ↑, ↓. Spacebar handler **removed from `transport.js`** — now owned by the command layer.
+- [x] Focus emphasis: on focus change, expand the focused instrument's three panels and collapse the rest (`controls-base.setAllPanels`), then scroll the focused row below the sticky transport.
+- [x] Tests: command press/release + dispatch in `midi-source.test.js` and `keyboard-source.test.js`.
+
+### Phase 6 — Polish
+- [ ] Make command bindings learnable + persisted (currently hardcoded defaults).
 - [ ] Persist MIDI focus + per-instrument seq-button-enabled flag in `toJSON/fromJSON`.
 - [ ] Handle template switches mid-session (LEDs re-paint on the now-displayed template).
 - [ ] Update the LCXL tester demo to exercise both flows, or add a short how-to.
+- [ ] **Hardware caveat:** confirm the XL's Device/arrow buttons transmit on factory template 5; if not, fall back to side buttons (Mute/Solo/Record Arm).
 
 ## Open questions / risks
 

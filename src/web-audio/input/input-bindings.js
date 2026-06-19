@@ -18,28 +18,44 @@
  * the learn system can compare and label bindings without knowing the device.
  * Adding a new controller means writing an adapter + one registerBindingType()
  * call — no component changes.
+ *
+ * `wam-control-input` is dispatched for parameter changes and interactions.
+ * `wam-command` is dispatched for high-level actions (play, next instrument).
  */
-
 export const CONTROL_INPUT_EVENT = "wam-control-input";
-
-/**
- * Feedback intent event: the learn layer announces binding changes/values so a
- * device-feedback sink (e.g. LCXL LEDs) can react, without the learn layer
- * knowing anything about the device. detail = { kind, binding, value? } where
- * kind is "bound" | "unbound" | "value".
- */
 export const BINDING_FEEDBACK_EVENT = "wam-binding-feedback";
 
+/**
+ * Dispatch a normalized control-input event.
+ * Adapters call this; consumers listen for CONTROL_INPUT_EVENT.
+ * `target` defaults to document so the event is global, matching how `wam-midi-message` is broadcast today.
+ */
+export function dispatchControlInput(detail, target = document) {
+  target.dispatchEvent(new CustomEvent(CONTROL_INPUT_EVENT, { detail }));
+}
+
+/** Command events are dispatched via `wam-command`. */
+export const COMMAND_EVENT = "wam-command";
+
+/** Dispatch a command event. */
+export function dispatchCommand(command, extra = {}, target = document) {
+  target.dispatchEvent(new CustomEvent(COMMAND_EVENT, {
+    detail: { command, ...extra }
+  }));
+}
+
+/**
+ * Dispatch binding feedback. detail = { kind, binding, value? }
+ */
 export function dispatchBindingFeedback(detail, target = document) {
   target.dispatchEvent(new CustomEvent(BINDING_FEEDBACK_EVENT, { detail }));
 }
 
-/** source string → { equals(a, b) => bool, format(binding) => string } */
+/** registry for equality + formatting */
 const registry = new Map();
 
 /**
- * Register equality + formatting for a binding source. Called once per adapter
- * (typically at module load). Re-registering replaces the prior entry.
+ * Register equality + formatting for a binding source.
  */
 export function registerBindingType(source, { equals, format } = {}) {
   registry.set(source, {
@@ -48,38 +64,60 @@ export function registerBindingType(source, { equals, format } = {}) {
   });
 }
 
-/** True if two bindings refer to the same control. Dispatches on binding.source. */
 export function bindingsEqual(a, b) {
   if (!a || !b || a.source !== b.source) return false;
   return registry.get(a.source)?.equals(a, b) ?? false;
 }
 
-/** Human-readable label for a binding (e.g. "CC7", "Key A"). "" if unknown. */
 export function formatBinding(binding) {
   if (!binding) return "";
   return registry.get(binding.source)?.format(binding) ?? "";
 }
 
-/** True if a source has been registered (useful for guarding / tests). */
 export function hasBindingType(source) {
   return registry.has(source);
 }
 
-/**
- * Tag a legacy (untagged) binding as MIDI. Before the input abstraction,
- * bindings had no `source` field and were always MIDI; saved state restored
- * from that era must be migrated so it matches the now source-tagged events.
- */
 export function migrateLegacyBinding(binding) {
   if (!binding || typeof binding !== "object") return binding;
   return binding.source ? binding : { source: "midi", ...binding };
 }
 
 /**
- * Dispatch a normalized control-input event. Adapters call this; consumers
- * listen for CONTROL_INPUT_EVENT. `target` defaults to document so the event
- * is global, matching how `wam-midi-message` is broadcast today.
+ * Produce a stable string key for a binding so equivalent bindings collapse to
+ * one map entry regardless of property order. Source-agnostic: it serializes
+ * whatever discriminating fields the binding carries (e.g. midi's
+ * source/type/channel/note|controller) with sorted keys.
  */
-export function dispatchControlInput(detail, target = document) {
-  target.dispatchEvent(new CustomEvent(CONTROL_INPUT_EVENT, { detail }));
+function canonicalizeBinding(binding) {
+  if (!binding || typeof binding !== "object") return String(binding);
+  return JSON.stringify(
+    Object.keys(binding)
+      .sort()
+      .reduce((acc, k) => {
+        if (binding[k] !== undefined) acc[k] = binding[k];
+        return acc;
+      }, {}),
+  );
+}
+
+/** Command bindings: maps a binding to an app-level command name. */
+const commandBindings = new Map();
+
+/**
+ * Register a mapping between a binding and a command name.
+ * @param {object} binding - The binding (e.g. { source: "midi", type: "note", channel: 1, note: 41 })
+ * @param {string} command - The command name (e.g. "play-stop")
+ */
+export function registerCommandBinding(binding, command) {
+  commandBindings.set(canonicalizeBinding(binding), command);
+}
+
+/**
+ * Look up a command for a given binding.
+ * @param {object} binding
+ * @returns {string|null} The command name or null.
+ */
+export function commandForBinding(binding) {
+  return commandBindings.get(canonicalizeBinding(binding)) ?? null;
 }

@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { parseMidiMessage } from "../src/web-audio/ui/midi-input-picker.js";
-import { bindingsEqual, formatBinding, CONTROL_INPUT_EVENT } from "../src/web-audio/input/input-bindings.js";
+import {
+  bindingsEqual,
+  formatBinding,
+  CONTROL_INPUT_EVENT,
+  COMMAND_EVENT,
+  registerCommandBinding,
+} from "../src/web-audio/input/input-bindings.js";
 import MidiInputSource, { midiMessageToControlInput } from "../src/web-audio/input/midi-source.js";
 
 describe("MidiInputSource normalization", () => {
@@ -56,5 +62,38 @@ describe("MidiInputSource normalization", () => {
     source.stop();
     target.dispatchEvent(new CustomEvent("wam-midi-message", { detail: parseMidiMessage([0xbc, 13, 50]) }));
     expect(handler).toHaveBeenCalledOnce(); // no further events after stop()
+  });
+
+  describe("command bindings", () => {
+    it("emits a CC command on press only, not on release", () => {
+      // ch13 CC106 (left arrow) → a command. Press sends 127, release sends 0.
+      registerCommandBinding({ source: "midi", type: "cc", channel: 13, controller: 106 }, "prev-instrument");
+
+      const press = parseMidiMessage([0xbc, 106, 127]);
+      const release = parseMidiMessage([0xbc, 106, 0]);
+      expect(midiMessageToControlInput(press)).toEqual({ command: "prev-instrument", raw: press });
+      expect(midiMessageToControlInput(release)).toBeNull();
+    });
+
+    it("dispatches wam-command (not wam-control-input) for a bound command", () => {
+      registerCommandBinding({ source: "midi", type: "cc", channel: 13, controller: 107 }, "next-instrument");
+
+      const target = new EventTarget();
+      const source = new MidiInputSource(target).start();
+      const onCommand = vi.fn();
+      const onControlInput = vi.fn();
+      target.addEventListener(COMMAND_EVENT, onCommand);
+      target.addEventListener(CONTROL_INPUT_EVENT, onControlInput);
+
+      target.dispatchEvent(new CustomEvent("wam-midi-message", { detail: parseMidiMessage([0xbc, 107, 127]) }));
+      expect(onCommand).toHaveBeenCalledOnce();
+      expect(onCommand.mock.calls[0][0].detail.command).toBe("next-instrument");
+      expect(onControlInput).not.toHaveBeenCalled();
+
+      // Release dispatches nothing.
+      target.dispatchEvent(new CustomEvent("wam-midi-message", { detail: parseMidiMessage([0xbc, 107, 0]) }));
+      expect(onCommand).toHaveBeenCalledOnce();
+      source.stop();
+    });
   });
 });

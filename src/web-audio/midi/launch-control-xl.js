@@ -121,6 +121,25 @@ function buildControls() {
 /** All 56 physical controls: 24 knobs, 8 faders, 24 buttons. */
 export const CONTROLS = buildControls();
 
+/** High-level app commands the XL can be mapped to drive. */
+export const COMMANDS = {
+  PLAY_STOP: "play-stop",
+  NEXT_INSTRUMENT: "next-instrument",
+  PREV_INSTRUMENT: "prev-instrument",
+};
+
+/**
+ * Default control → command map. Uses buttons the sequencer (channel buttons
+ * focus1-8/control1-8) and auto-map (knobs/faders) don't claim: the standalone
+ * side/arrow buttons. The app layer turns this into command bindings via
+ * bindingFor() + registerCommandBinding(); this module stays declarative.
+ */
+export const DEFAULT_COMMAND_CONTROLS = {
+  device: COMMANDS.PLAY_STOP, // top side button
+  up: COMMANDS.PREV_INSTRUMENT, // up arrow
+  down: COMMANDS.NEXT_INSTRUMENT, // down arrow
+};
+
 const controlsById = new Map(CONTROLS.map((c) => [c.id, c]));
 
 export function getControl(id) {

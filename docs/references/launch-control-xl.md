@@ -21,6 +21,8 @@ The device has 16 template slots: **0–7 user**, **8–15 factory**. Every temp
 
 Buttons send velocity 127 on press, 0 on release. Note the type disambiguation: CC 105 is the Down arrow while note 105 is the Device button.
 
+**App command defaults:** the **Device** button drives `play-stop`, and the **↑ / ↓** arrows step `prev` / `next-instrument` (see `DEFAULT_COMMAND_CONTROLS` in `launch-control-xl.js` and the [command layer](../FRONTEND.md#commands)). These fire on press only — the value-0 release is ignored. The computer keyboard mirrors them: **Space** = play/stop, **↑ / ↓** = prev/next instrument.
+
 ## LED control
 
 Faders have no LEDs. Knobs and channel buttons mix red + green (→ amber); Device/Mute/Solo/Record Arm are yellow-only; arrows are red-only.

@@ -81,8 +81,6 @@ export class WebAudioTransportControls extends HTMLElement {
   }
 
   disconnectedCallback() {
-    if (this._keyHandler) document.removeEventListener("keydown", this._keyHandler);
-    this._keyHandler = null;
     this._teardownInputLearn();
   }
 
@@ -268,16 +266,8 @@ export class WebAudioTransportControls extends HTMLElement {
     this._fxUnit = document.createElement("wam-fx-unit");
     this._fxSection.appendChild(this._fxUnit);
 
-    // Spacebar play/stop
-    if (this._keyHandler) document.removeEventListener("keydown", this._keyHandler);
-    this._keyHandler = (e) => {
-      if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
-      if (e.key !== " ") return;
-      e.preventDefault();
-      if (this._ctx?.state === "suspended") this._ctx.resume();
-      this._playing ? this._stop() : this._play();
-    };
-    document.addEventListener("keydown", this._keyHandler);
+    // Spacebar play/stop is handled by the global input/command layer
+    // (keyboard " " → "play-stop" command); the playground owns that binding.
     this._attachInputLearn();
 
     // Audio routing

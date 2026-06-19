@@ -1092,15 +1092,28 @@ export class WebAudioControlsBase extends HTMLElement {
         this._rotateIntervalInput.value = obj.patternParams.rotationIntervalBars;
     }
     if (obj.sections) {
-      const applySection = (section, btn, visible) => {
-        if (!section || !btn) return;
-        section.toggleAttribute("data-hidden", !visible);
-        btn.toggleAttribute("data-active", visible);
-      };
-      applySection(this._ctrlSection, this._ctrlBtn, obj.sections.ctrl ?? false);
-      applySection(this._seqSection, this._seqBtn, obj.sections.seq ?? true);
-      applySection(this._fxSection, this._fxBtn, obj.sections.fx ?? false);
+      this._applyPanel(this._ctrlSection, this._ctrlBtn, obj.sections.ctrl ?? false);
+      this._applyPanel(this._seqSection, this._seqBtn, obj.sections.seq ?? true);
+      this._applyPanel(this._fxSection, this._fxBtn, obj.sections.fx ?? false);
     }
+  }
+
+  /** Show/hide one section and sync its toggle button's active state. */
+  _applyPanel(section, btn, visible) {
+    if (!section || !btn) return;
+    section.toggleAttribute("data-hidden", !visible);
+    btn.toggleAttribute("data-active", visible);
+  }
+
+  /**
+   * Show or hide all three sections (Ctrl/Seq/FX) at once. Used to emphasize
+   * the focused instrument (expand all) and de-emphasize the rest (collapse
+   * all) so the active one stands out.
+   */
+  setAllPanels(visible) {
+    this._applyPanel(this._ctrlSection, this._ctrlBtn, visible);
+    this._applyPanel(this._seqSection, this._seqBtn, visible);
+    this._applyPanel(this._fxSection, this._fxBtn, visible);
   }
 
   /** Restore a single param. Override for special handling (e.g. oscType → wave buttons). */
