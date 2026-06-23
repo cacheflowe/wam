@@ -5,6 +5,7 @@
 - `WamAnalysisBus` (src/web-audio/ui/analysis-bus.js) — singleton aggregator that collects audio data from all sources
 - `<wam-visualizer>` (src/web-audio/ui/visualizer.js) — Web Component hosting a p5.js instance-mode canvas
 - Sketches (src/web-audio/ui/sketches/*.js) — hot-loadable ES modules, each exports a default function(p, bus, ctx, container)
+- p5's sketch checker is disabled in the component because deployment builds are bundled/minified ES modules; the checker parses the final app script and can report false global-name collisions such as `nf`.
 
 ## Data Flow
 

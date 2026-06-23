@@ -4,6 +4,7 @@ import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/sca
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 import { createCtrl } from "../ui/slider.js";
+import { makeSoftClipCurve } from "../global/dsp/distortion.js";
 
 /**
  * WebAudioSynthAcid — TB-303-style monophonic acid bass synthesizer.
@@ -127,7 +128,7 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
   constructor(ctx, preset = "Default") {
     super(ctx, null); // creates ctx + _out but skips preset
     this._distortion = 0;
-    this._distortionCurve = this._makeDistortionCurve(0);
+    this._distortionCurve = makeSoftClipCurve(0);
     this._lastScheduledFreq = null;
     this.unisonVoices = 1;
     this.unisonDetune = 0;
@@ -154,21 +155,10 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
 
   set distortion(v) {
     this._distortion = v;
-    this._distortionCurve = this._makeDistortionCurve(v);
+    this._distortionCurve = makeSoftClipCurve(v);
   }
 
   // ---- Helpers ----
-
-  _makeDistortionCurve(amount) {
-    const n = 512;
-    const curve = new Float32Array(n);
-    const k = amount * 200;
-    for (let i = 0; i < n; i++) {
-      const x = (i * 2) / n - 1;
-      curve[i] = k > 0 ? ((Math.PI + k) * x) / (Math.PI + k * Math.abs(x)) : x;
-    }
-    return curve;
-  }
 
   /** Clear portamento memory — call when stopping/restarting the sequencer. */
   reset() {
@@ -736,27 +726,6 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
   }
 
   /** Check if a step meets its condition (e.g., "1:2" = every other bar). */
-  _meetsCondition(condition, barIndex) {
-    switch (condition) {
-      case "off":
-        return true;
-      case "1:2":
-        return barIndex % 2 === 0;
-      case "1:3":
-        return barIndex % 3 === 0;
-      case "1:4":
-        return barIndex % 4 === 0;
-      case "2:4":
-        return barIndex % 4 === 1;
-      case "3:4":
-        return barIndex % 4 === 2;
-      case "fill":
-        return barIndex % 4 === 3;
-      default:
-        return true;
-    }
-  }
-
   /** Highlight the currently playing step. */
   setActiveStep() {
     this._seq?.setActiveStep((this._seqPosition - 1 + 16) % 16);

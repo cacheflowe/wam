@@ -12,6 +12,10 @@ All UI is built with vanilla Web Components (`HTMLElement` subclasses). No Shado
 | `WebAudioStepSeq` | `<wam-step-seq>` | `step-seq.js` | 16-step pattern grid with note select and accent toggles |
 | `WebAudioWaveform` | `<wam-waveform>` | `waveform.js` | Click-to-cycle visualizer: oscilloscope → spectrogram waterfall → FFT bars |
 | `WebAudioFxUnit` | `<wam-fx-unit>` | `fx-unit.js` | Composed FX Web Component (reverb + delay + chorus + filter) |
+| `WamDrawer` | `<wam-drawer>` | `drawer.js` | Shared slide-out tool panel; one panel open at a time, dismissed via close/backdrop/Escape |
+| `WamMidiInputPicker` | `<wam-midi-input-picker>` | `midi-input-picker.js` | Web MIDI access manager + device dropdown; normalizes note/CC into `wam-midi-message` events |
+| `WamMidiMonitor` | `<wam-midi-monitor>` | `midi-monitor.js` | Live debug view of normalized `wam-control-input` events |
+| `InstrumentSourcePicker` | `<wam-instrument-source-picker>` | `instrument-source-picker.js` | Instrument-bus dropdown for FX modulator/carrier/trigger routing; emits `source-change` |
 | `*Controls` | various | per-instrument files | UI panel for each instrument; wraps instrument + analyser + FxUnit + waveform |
 
 ## Controls Companion Pattern
@@ -242,6 +246,11 @@ Do not use `.wam-controls` as a section container — use `createSection()` inst
 - **Note select** (dropdown): MIDI note from the current scale
 - **Accent toggle** (shift-click or secondary button): boosts velocity
 
+Opt-in per-step controls (enabled via the `init` options `accent` / `probability` / `ratchet` / `conditions`):
+- **Probability** (slider, 0–1): chance the step fires
+- **Ratchet** (selector, 1/2/3): subdivides the step into repeats
+- **Trig condition** (dropdown): Elektron-style `X:Y` bar-cycle gate — the step fires only on pass X of every Y bars. Options are built from `CONDITION_GROUPS` in [src/web-audio/global/sequencer-conditions.js](../src/web-audio/global/sequencer-conditions.js) into grouped `<optgroup>`s; that module is the single source of truth shared with the playback evaluator (see [docs/BACKEND.md](BACKEND.md#step-trig-conditions-gate-by-bar-cycle)).
+
 The component fires `step-change` events. Controls serialize/restore step state via `toJSON()`/`fromJSON()`.
 
 ## Waveform Visualizer
@@ -250,6 +259,36 @@ The component fires `step-change` events. Controls serialize/restore step state 
 1. **Oscilloscope** — time-domain waveform
 2. **Spectrogram waterfall** — scrolling frequency content over time
 3. **FFT bars** — frequency magnitude bars
+
+## Input Abstraction & Learn
+
+Control input from the computer keyboard and MIDI hardware is normalized into a single source-agnostic stream so the "learn" system never has to special-case a device. The layer lives in [src/web-audio/input/](../src/web-audio/input/):
+
+- **`input-bindings.js`** — the contract. Adapters call `registerBindingType(source, { equals, format })`; the rest of the app compares bindings with `bindingsEqual()` and labels them with `formatBinding()` without knowing the source. Adapters dispatch normalized `wam-control-input` events (a `wam-control-input` event carries `{ binding, value: 0..1, trigger }`) and the learn UI dispatches `wam-binding-feedback` (bound / unbound / value) so hardware can mirror state. `migrateLegacyBinding()` upgrades pre-abstraction saved bindings (e.g. a bare keyboard `key` string) to the tagged shape.
+- **`keyboard-source.js`** — `KeyboardInputSource` (singleton via `ensureKeyboardInputSource()`) maps key press/release to `wam-control-input`.
+- **`midi-source.js`** — `MidiInputSource` (singleton via `ensureMidiInputSource()`) converts raw `wam-midi-message` events from the picker into `wam-control-input`. Raw MIDI still broadcasts so device-specific handlers (LED feedback, template tracking) can listen too.
+
+### Commands
+
+Beyond per-parameter control input, a binding can be mapped to a high-level **command** — an app action like transport play/stop or instrument navigation, independent of any device. The contract lives in `input-bindings.js`:
+
+- `registerCommandBinding(binding, command)` / `commandForBinding(binding)` — a source-agnostic map keyed by a canonicalized binding (sorted-key serialization, so property order doesn't matter).
+- Each adapter checks `commandForBinding()` **before** emitting normal control input; on a match it calls `dispatchCommand(command, …)` which fires a `wam-command` event (`detail = { command, … }`) and skips the control-input path. Commands fire **once, on press** — MIDI note-off is already filtered by the picker, CC releases (value 0) are dropped, and the keyboard adapter ignores the key-up. The keyboard adapter also `preventDefault()`s a matched key so arrows/space don't scroll the page.
+- `PlaygroundApp` listens for `wam-command` and runs the action (`_handleCommand`). Default bindings, registered at app init: Launch Control XL **Device** button and keyboard **Space** → `play-stop`; XL **↑/↓** arrows and keyboard **↑/↓** → `prev`/`next-instrument`. The XL control→command defaults live declaratively in `midi/launch-control-xl.js` as `DEFAULT_COMMAND_CONTROLS`; the app turns them into bindings via `bindingFor()`.
+
+### Input Learn Mixin
+
+`input-learn.js` exports `InputLearnMixin` + `applyInputLearnMixin(targetClass)`. Applying the mixin gives any control panel source-agnostic learn: **hold a UI control and move a controller** (or right-click) to bind it; the bound parameter then tracks the normalized 0..1 value. It is applied to `WebAudioControlsBase` (all instrument panels) and `WebAudioTransportControls`. The jam button uses the same path — its binding is the source-tagged `_jamBinding` object (formerly a bare `_jamKey` string).
+
+### Focus Manager
+
+`focus-manager.js` exports the `focusManager` singleton. It tracks the focused instrument panel, outlines it with `.wam-focused`, and broadcasts `wam-instrument-focus-change`. Controls dispatch focus on pointerdown so hardware (notably the sequencer buttons) follows the active instrument. Call `focusManager.start()` once at app init.
+
+On focus change, `PlaygroundApp` emphasizes the active instrument: it **expands all three of the focused instrument's panels** (Ctrl/Seq/FX) and **collapses every other instrument's**, then scrolls the focused row to just below the sticky transport bar. `controls-base.js` exposes `setAllPanels(visible)` for this.
+
+### MIDI hardware
+
+Device drivers live in [src/web-audio/midi/](../src/web-audio/midi/) — see [docs/BACKEND.md](BACKEND.md#midi-hardware-control) and the [Launch Control XL map](references/launch-control-xl.md). The on-screen `<wam-midi-input-picker>` owns the single `MIDIAccess` for the page; everything else reuses its `.midiAccess` (see [docs/RELIABILITY.md](RELIABILITY.md) for why one access object is mandatory). Manual hardware test checklist: [docs/testing/midi-input-and-led-testing.md](testing/midi-input-and-led-testing.md).
 
 ## State Persistence
 

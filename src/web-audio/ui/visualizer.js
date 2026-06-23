@@ -6,7 +6,7 @@
  *
  * Attributes:
  *   sketch — path to the sketch module (relative or absolute)
- *   mode   — "panel" | "background" | "corner" (default: "panel")
+ *   mode   — "none" | "panel" | "background" | "corner" (default: "panel")
  *
  * Usage:
  *   const viz = document.createElement("wam-visualizer");
@@ -15,6 +15,40 @@
  *   container.appendChild(viz);
  */
 import p5 from "p5";
+
+// p5's sketch checker parses the built app bundle and can flag minified helper
+// names as false p5 global collisions. WAM uses p5 in instance mode only.
+p5.disableSketchChecker = true;
+
+let _vizCssInjected = false;
+function injectVizCSS() {
+  if (_vizCssInjected || typeof document === "undefined") return;
+  _vizCssInjected = true;
+  const style = document.createElement("style");
+  style.textContent = `
+    .wam-viz { display: block; overflow: hidden; }
+    .wam-viz-none { display: none; }
+    .wam-viz-background {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+    .wam-viz-corner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 384px;
+      height: 32px;
+      z-index: 9999;
+      pointer-events: none;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default class WamVisualizer extends HTMLElement {
   constructor() {
@@ -27,6 +61,7 @@ export default class WamVisualizer extends HTMLElement {
   }
 
   connectedCallback() {
+    injectVizCSS();
     this._mode = this.getAttribute("mode") || "panel";
     this._applyMode();
     const sketchPath = this.getAttribute("sketch");
@@ -71,15 +106,29 @@ export default class WamVisualizer extends HTMLElement {
     this._startSketch();
   }
 
-  /** Set display mode: "panel", "background", or "corner". */
+  /** Set display mode: "none", "panel", "background", or "corner". */
   setMode(mode) {
     this._mode = mode;
     this.setAttribute("mode", mode);
     this._applyMode();
+    this._syncDrawLoop();
+    // Notify p5 sketch of the new container size without restarting it.
+    if (mode !== "none") {
+      requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
+    }
   }
 
   _applyMode() {
     this.className = `wam-viz wam-viz-${this._mode}`;
+  }
+
+  _syncDrawLoop() {
+    if (!this._p5) return;
+    if (this._mode === "none") {
+      this._p5.noLoop();
+      return;
+    }
+    this._p5.loop();
   }
 
   _startSketch() {
@@ -92,6 +141,9 @@ export default class WamVisualizer extends HTMLElement {
     this._p5 = new p5((p) => {
       sketchFn(p, bus, ctx, container);
     }, this);
+
+    // Ensure draw loop state matches current mode immediately after sketch start.
+    this._syncDrawLoop();
   }
 }
 

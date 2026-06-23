@@ -136,6 +136,11 @@ export default class WebAudioVocoder {
     }
   }
 
+  /** AudioNode to connect an external modulator source to (bypasses mic). */
+  get modulatorInput() {
+    return this._inputGain;
+  }
+
   /** AudioNode to connect an external carrier source to. */
   get carrierInput() {
     return this._carrierBus;

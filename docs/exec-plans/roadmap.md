@@ -77,6 +77,8 @@ Build a library of browser-based instruments that are:
 | **Vocoder polish & testing** | High | Gate threshold added, needs more testing; latency optimization; carrier routing verified |
 | **FM synth quality** | High | FM sounds inferior to Mono — investigate why; retune presets; fix silent presets |
 | **MIDI keyboard input** | Medium | Map note-on/off to currently-selected instrument's `trigger()`; see **MIDI** section below |
+| **MIDI sync to focused instrument** | High | Ensure transport-linked MIDI control targets the active/focused instrument UI + engine instance in real time; see **MIDI** section below |
+| **Launchpad XL full control mapping** | Medium | Create complete Launchpad XL mapping for transport, sequencer, mixer, and macro controls; include external controller PDF in docs and map by control ID |
 | **Double-click/tap reset to default** | Medium | Double-click (or double-tap) any UI control (sliders, knobs, dropdowns, toggles) resets it to its default value |
 | **True preset save/recall** | Medium | Two modes: (1) Vite dev — externalize presets to JSON files, auto-write on save/delete via dev middleware; (2) Static site — download preset collection as .json, drag-and-drop .json onto instrument to restore. Currently localStorage + clipboard export; see **Preset Persistence** section below |
 | **Per-section randomize** | Medium | Randomize individual control-panel sections (e.g. just Oscillator, just Filter, just Envelope) instead of all params at once; add a randomize button per section header |
@@ -84,6 +86,9 @@ Build a library of browser-based instruments that are:
 | **Parametric EQ** | Medium | 3-4 band EQ as first effect in FX unit chain; new `eq.js` with engine + UI; see **New Effects** section below |
 | **Sidechain compressor** | Medium | Duck instrument gain based on another instrument's amplitude; instrument selector UI (like vocoder carrier routing); see **New Effects** section below |
 | **MediaRecorder video+audio capture** | Medium | Record window/interface as video+audio; transport-aware loop recording; see **MediaRecorder Recording** section below |
+| **Visualizer corner positioning for LED output** | Medium | Add position presets (top-left/top-right/bottom-left/bottom-right) with emphasis on top-corner LED panel capture workflows |
+| **Visualizer focused-knob mode** | Medium | Add a mode where the active knob takes the full visualizer view with large label + live value readout |
+| **Major code review and refactor pass** | High | Repository-wide audit for duplication, dead code, naming consistency, and module boundaries; ship as phased refactor with regression checks |
 | Responsive volume / overload protection | Medium | See **Responsive Volume** section below |
 | Pattern evolution tools | Medium | Slow morph / mutation of sequences over time; see **Pattern Evolution** section below |
 | **Humanization tools** | Medium | Swing, trigger delay, velocity variation, timing jitter, ghost notes; see **Humanization** section below |
@@ -93,7 +98,7 @@ Build a library of browser-based instruments that are:
 | Refine existing instruments & effects | Ongoing | Tuning, preset quality, edge cases |
 | Add new instruments & effects | Ongoing | See **Possible Future Instruments** section below |
 | npm package publication | Low | Export each instrument as a named module; publish to npm |
-| **Multi-user jamming** | Future | WebSocket shared state for collaborative sessions; explore later |
+| **WebSocket remote-control jamming surface** | Future | Expand collaborative jamming into a dedicated remote-control UI surface with synced shared state over WebSocket |
 
 ## Open Questions
 
@@ -221,9 +226,54 @@ Planned tools:
 
 These would live in a `evolution.js` module, usable independently of the step sequencer UI.
 
-## Loop Player
+## Visualizer Modes
 
-**Status**: Completed 2026-05-04. `WebAudioLoopPlayer` is now the general-purpose BPM-synced loop instrument, replacing the breakbeat-only break player.
+Goal: support both stream/LED-friendly layouts and performance-centric parameter feedback.
+
+Planned additions:
+- **Output position presets**: corner placement options, prioritizing top-corner layouts for LED panel output capture
+- **Focused control overlay**: when a knob is active, visualizer can switch to full-view mode with large control label and value display
+
+## Loop Player / Time-Stretch
+
+**Status**: Completed 2026-05-04.
+
+## Reference Libraries
+
+Mature Web Audio libraries worth reading for inspiration, DSP patterns, and effect implementations. These are **not** runtime dependencies (see [core-beliefs.md](../design-docs/core-beliefs.md)) — the goal is to study their source for ideas and port algorithms selectively.
+
+### Tone.js
+
+[Tone.js](https://github.com/Tonejs/Tone.js) is the most widely used high-level Web Audio framework. Despite being excluded as a runtime dependency, its source is worth studying for:
+
+- **Signal graph patterns**: how it structures envelope, LFO, and modulation routing
+- **Transport and scheduling**: its `Transport` clock uses a lookahead worker similar to ours; worth comparing tick accuracy strategies
+- **Effect implementations**: Chorus, Phaser, Tremolo, PingPongDelay, AutoWah — all hand-rolled over Web Audio primitives with battle-tested parameter ranges
+- **Instrument architecture**: `Synth`, `AMSynth`, `FMSynth`, `PluckSynth` (Karplus-Strong) are clean reference implementations
+
+### Tuna.js
+
+[Tuna.js](https://github.com/Theodeus/tuna) is a focused Web Audio effects library — no instruments, no transport, just effects. Very readable source. Useful for:
+
+- **Effect parameter ranges**: well-tuned defaults for Chorus, Phaser, Compressor, Delay, Overdrive, Cabinet IR, Tremolo, PingPongDelay, MoogFilter, Bitcrusher
+- **Filter topology**: MoogFilter implementation using a ladder-filter approximation worth comparing to our BiquadFilter-based approach
+- **Bitcrusher**: clean implementation that could be lifted directly for the standalone Bitcrusher effect listed in the roadmap
+- **Overdrive / Waveshaper curves**: comparison point for our existing distortion WaveShaper curves
+
+### SoundTouchJS — potential usage or inspiration
+
+[SoundTouchJS](https://github.com/cutterbl/SoundTouchJS) is a JS port of the SoundTouch C++ library, which implements high-quality time-stretching and pitch-shifting via WSOLA (Waveform Similarity Overlap-Add) and phase vocoder algorithms. Worth investigating as an alternative or supplement to the current OLA pitch-shift worklet, particularly for:
+
+- **Better time-stretch quality**: WSOLA produces fewer transient smearing artifacts than plain OLA, especially at extreme ratios
+- **Decoupled pitch/tempo**: SoundTouch handles pitch shift and time stretch as independent operations, unlike our current approach which links them through the pitch-ratio calculation
+- **Vintage mode replacement**: could offer a more convincing "tape" character than the current grain-size hack
+
+**Trade-offs to evaluate**:
+- Runs in an AudioWorklet (or ScriptProcessorNode); assess latency vs. our current `BufferSourceNode`-as-source architecture
+- Library size and licensing (LGPL)
+- Whether it integrates cleanly with the existing `sample-looper.js` transport timing model (start/seek at `AudioContext.currentTime` offsets)
+
+ `WebAudioLoopPlayer` is now the general-purpose BPM-synced loop instrument, replacing the breakbeat-only break player.
 
 ### What Was Built
 
@@ -296,6 +346,9 @@ Goal: make sequenced patterns feel more organic and less machine-rigid.
 | Feature | Notes |
 |---|---|
 | **MIDI keyboard input** | Map note-on/off to currently-selected instrument's `trigger()`. Web MIDI API. Should work alongside QWERTY keyboard input. |
+| **MIDI sync to focused instrument** | Route incoming MIDI note/CC to the active/focused instrument by default; provide optional focus lock so routing stays pinned while browsing other panels. |
+| **Launchpad XL full control mapping** | Full mapping for pads/knobs/buttons across transport, sequencer, mixer, macros, and selected instrument controls. |
+| **Launchpad XL docs import** | Ingest controller PDF mappings into project docs so control IDs and behavior stay maintainable as mappings evolve. |
 | MIDI learn | Click slider, move CC knob to bind. Stored in Controls' `toJSON()`. |
 | MIDI clock sync | Sync `WebAudioSequencer` BPM to incoming MIDI clock (24 ppq). |
 
@@ -304,7 +357,7 @@ Goal: make sequenced patterns feel more organic and less machine-rigid.
 | Effect | Notes |
 |---|---|
 | **Parametric EQ** | 3–4 band parametric EQ (low shelf, mid peaking, high shelf + optional mid 2) using `BiquadFilterNode`; new `eq.js` with audio engine + UI controls; first effect in FX unit chain so it shapes tone before reverb/delay/etc. |
-| **Sidechain Compressor** | Duck one instrument based on another's amplitude (envelope follower → gain modulation) |
+| ~~**Sidechain Compressor**~~ | ✅ Done — `WebAudioFxCompressor` (AudioWorklet envelope follower), final stage of the per-channel FX strip; key source picked via `<wam-instrument-source-picker>` |
 | **Phaser** | Multi-stage all-pass filter sweep; LFO-modulated; stereo |
 | **Compressor** | Wrapper + UI around `DynamicsCompressorNode` |
 | **Ping-Pong Delay** | `stereo: "pingpong"` mode in existing delay; alternates echoes L→R |

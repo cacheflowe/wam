@@ -11,6 +11,7 @@ import "../web-audio/instruments/synth-808.js";
 import "../web-audio/instruments/synth-fm.js";
 import "../web-audio/instruments/synth-mono.js";
 import "../web-audio/instruments/synth-pad.js";
+import "../web-audio/instruments/synth-poly.js";
 import "../web-audio/instruments/synth-blipfx.js";
 import "../web-audio/instruments/sample-looper.js";
 import "../web-audio/instruments/sample-player.js";
@@ -24,11 +25,25 @@ import WebAudioSynth808 from "../web-audio/instruments/synth-808.js";
 import WebAudioSynthFM from "../web-audio/instruments/synth-fm.js";
 import WebAudioSynthMono from "../web-audio/instruments/synth-mono.js";
 import WebAudioSynthPad from "../web-audio/instruments/synth-pad.js";
+import WebAudioSynthPoly from "../web-audio/instruments/synth-poly.js";
 import WebAudioSynthBlipFX from "../web-audio/instruments/synth-blipfx.js";
 import WebAudioLoopPlayer from "../web-audio/instruments/sample-looper.js";
 import WebAudioSamplePlayer from "../web-audio/instruments/sample-player.js";
+import WebAudioVocoderFx from "../web-audio/fx/fx-vocoder.js";
 import { tryGlobKeys, tryGlobModules, resolveSamples, resolveSongs } from "../web-audio/global/sample-utils.js";
 import "../web-audio/ui/arrangement-library.js";
+import { focusManager } from "../web-audio/ui/focus-manager.js";
+import { sequencerHardware } from "../web-audio/midi/sequencer-hardware.js";
+import { ledFeedback } from "../web-audio/midi/led-feedback.js";
+import { autoMap } from "../web-audio/midi/auto-map.js";
+import { bindingFor, COMMANDS, DEFAULT_COMMAND_CONTROLS, DEFAULT_TEMPLATE } from "../web-audio/midi/launch-control-xl.js";
+import { registerCommandBinding } from "../web-audio/input/input-bindings.js";
+import { ensureMidiInputSource } from "../web-audio/input/midi-source.js";
+import { ensureKeyboardInputSource } from "../web-audio/input/keyboard-source.js";
+import { StoreKeys } from "../web-audio/global/store-keys.js";
+import "../web-audio/ui/drawer.js";
+import "../web-audio/ui/midi-monitor.js";
+import "../web-audio/ui/midi-input-picker.js";
 
 import electroBreakState from "../data/songs/electro-break.json" with { type: "json" };
 import letsGoState from "../data/songs/lets-go.json" with { type: "json" };
@@ -185,6 +200,15 @@ const INSTRUMENT_TYPES = [
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
+    id: "poly",
+    label: "Poly Synth",
+    color: "#7cf",
+    make: (ctx) => new WebAudioSynthPoly(ctx),
+    tag: "wam-synth-poly-controls",
+    bindOpts: (bpm) => ({ color: "#7cf", fx: { bpm, reverbWet: 0.15, delayMix: 0 } }),
+    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
+  },
+  {
     id: "blipfx",
     label: "BlipFX",
     color: "#fa8",
@@ -259,9 +283,18 @@ const INSTRUMENT_TYPES = [
     step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
   },
   {
+    id: "vocoder",
+    label: "Vocoder",
+    color: "#4fd",
+    make: (ctx) => new WebAudioVocoderFx(ctx),
+    tag: "wam-vocoder-fx-controls",
+    bindOpts: () => ({ color: "#4fd" }),
+    step: null,
+  },
+  {
     id: "loop-vocals",
     label: "Loop Player (Vocals)",
-    color: "rgb(46, 149, 93)",
+    color: "rgb(192, 157, 68)",
     make: (ctx) =>
       new WebAudioLoopPlayer(ctx, {
         speedMultiplier: 1,
@@ -273,7 +306,7 @@ const INSTRUMENT_TYPES = [
         useTimeStretch: true,
       }),
     tag: "wam-sample-looper-controls",
-    bindOpts: (bpm) => ({ color: "rgb(46, 149, 93)", files: LOOP_FILES_VOCALS, basePath: "", fx: { bpm } }),
+    bindOpts: (bpm) => ({ color: "rgb(192, 157, 68)", files: LOOP_FILES_VOCALS, basePath: "", fx: { bpm } }),
     // Loop player uses (globalStep, bpm, time) — owner tracks globalStep externally
     step: null,
   },
@@ -288,10 +321,12 @@ export default class PlaygroundApp extends HTMLElement {
     this._seq = null;
     this._globalStep = 0;
 
-    // Live instrument entries: [{ def, ctrl, instrument, instanceId }]
+    // Live instrument entries: [{ def, ctrl, instrument, instanceId, row, tapNode? }]
     this._instruments = [];
     // Instruments waiting for the next bar boundary before joining the active list
     this._pendingInstruments = [];
+    // Bus of tappable instrument outputs: instanceId → { label, tapNode }
+    this._instrumentBus = new Map();
 
     this._instanceCounter = 0;
     this._isLoadingState = false;
@@ -299,10 +334,97 @@ export default class PlaygroundApp extends HTMLElement {
 
     this._buildUI();
     this._loadInitialState();
+
+    // Hardware control: track the focused instrument and let the Launch Control
+    // XL's 16 buttons drive its sequencer. Guarantee a jam binding on focus.
+    focusManager.start();
+    sequencerHardware.start();
+    autoMap.start();
+
+    // Make sure raw MIDI and keyboard are translated into normalized
+    // control-input/command events even before learn mode is engaged, then
+    // register the default command bindings (transport + instrument nav) for
+    // both the Launch Control XL and the computer keyboard.
+    ensureMidiInputSource();
+    ensureKeyboardInputSource();
+    for (const [controlId, command] of Object.entries(DEFAULT_COMMAND_CONTROLS)) {
+      const binding = bindingFor(controlId, DEFAULT_TEMPLATE);
+      if (binding) registerCommandBinding(binding, command);
+    }
+    // Keyboard mirrors the XL: ↑/↓ step instruments, space toggles transport.
+    registerCommandBinding({ source: "keyboard", key: "arrowup" }, COMMANDS.PREV_INSTRUMENT);
+    registerCommandBinding({ source: "keyboard", key: "arrowdown" }, COMMANDS.NEXT_INSTRUMENT);
+    registerCommandBinding({ source: "keyboard", key: " " }, COMMANDS.PLAY_STOP);
+
+    this._onInstrumentFocus = (e) => {
+      const ctrl = e.detail?.controls;
+      const idx = ctrl ? this._instruments.findIndex((en) => en.ctrl === ctrl) : -1;
+      // Publish the focused instrument's serializable id (not the element).
+      window._store?.set(StoreKeys.FOCUS_INSTRUMENT_ID, idx >= 0 ? this._instruments[idx].instanceId : null);
+
+      // Highlight the focused instrument: expand all three of its panels and
+      // collapse every other instrument's, then scroll it near the top.
+      for (const entry of this._instruments) {
+        entry.ctrl.setAllPanels?.(entry.ctrl === ctrl);
+      }
+      if (idx >= 0) this._scrollInstrumentIntoView(this._instruments[idx].row);
+
+      if (!ctrl?.ensureJamBinding) return;
+      ctrl.ensureJamBinding(idx >= 0 && idx < 9 ? String(idx + 1) : null);
+    };
+    document.addEventListener("wam-instrument-focus-change", this._onInstrumentFocus);
+    this._onCommand = (e) => this._handleCommand(e);
+    document.addEventListener("wam-command", this._onCommand);
+  }
+
+  _handleCommand(e) {
+    const { command } = e.detail;
+    switch (command) {
+      case "play-stop":
+        if (!this._transportEl) break;
+        this._transportEl.playing ? this._transportEl.stop() : this._transportEl.play();
+        break;
+      case "next-instrument":
+        this._stepInstrument(1);
+        break;
+      case "prev-instrument":
+        this._stepInstrument(-1);
+        break;
+    }
+  }
+
+  _stepInstrument(dir) {
+    if (this._instruments.length === 0) return;
+    const currentId = window._store?.get(StoreKeys.FOCUS_INSTRUMENT_ID);
+    const idx = this._instruments.findIndex((inst) => inst.instanceId === currentId);
+    let nextIdx = idx + dir;
+    if (nextIdx < 0) nextIdx = this._instruments.length - 1;
+    if (nextIdx >= this._instruments.length) nextIdx = 0;
+
+    const nextInst = this._instruments[nextIdx];
+    // Focus it
+    const ctrl = nextInst.ctrl;
+    ctrl.dispatchEvent(new CustomEvent("wam-instrument-focus", {
+      bubbles: true,
+      detail: { controls: ctrl }
+    }));
+  }
+
+  /** Scroll an instrument row to just below the sticky transport bar. */
+  _scrollInstrumentIntoView(row) {
+    if (!row) return;
+    const topBarH = this._topBar?.offsetHeight ?? 0;
+    const y = row.getBoundingClientRect().top + window.scrollY - topBarH - 12;
+    window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
   }
 
   disconnectedCallback() {
     this.removeEventListener("controls-change", this._onControlsChange);
+    document.removeEventListener("wam-instrument-focus-change", this._onInstrumentFocus);
+    document.removeEventListener("wam-command", this._onCommand);
+    sequencerHardware.stop();
+    autoMap.stop();
+    focusManager.stop();
   }
 
   // ---- UI ----
@@ -313,23 +435,60 @@ export default class PlaygroundApp extends HTMLElement {
     main.style.cssText = "padding-bottom:4rem;";
     this.appendChild(main);
 
-    // Arrangement library
-    const libRow = document.createElement("section");
-    libRow.style.cssText = "margin-bottom:1.5rem;";
+    // Shared tool drawer (panels registered below).
+    this._drawer = document.createElement("wam-drawer");
+    this.appendChild(this._drawer);
 
-    const detailsEl = document.createElement("details");
-    // Optionally remove 'open' attribute if you want it collapsed by default
-    // detailsEl.open = true;
+    // ---- Sticky top bar: transport + tool launcher toolbar ----
+    const topBar = document.createElement("section");
+    this._topBar = topBar;
+    topBar.style.cssText =
+      "position:sticky;top:0;z-index:50;background:#0d0d14;padding:0.5rem 0 0.6rem;margin-bottom:1.25rem;border-bottom:1px solid #24243a;";
 
-    const summaryEl = document.createElement("summary");
-    summaryEl.innerHTML = `Arrangements & Saves <span id="current-song-label" style="opacity:0.8; margin-left:0.5rem; font-weight:normal; color:#4f8;"></span>`;
-    detailsEl.appendChild(summaryEl);
-    this._currentSongLabel = summaryEl.querySelector("#current-song-label");
+    this._transportEl = document.createElement("wam-transport");
+    topBar.appendChild(this._transportEl);
 
+    const toolbar = document.createElement("div");
+    toolbar.style.cssText = "display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;align-items:center;";
+    const mkLauncher = (id, label) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.dataset.drawerLauncher = id;
+      b.style.cssText =
+        "background:#1a1a2e;border:1px solid #3a3a5a;color:#cfcff0;padding:.35rem .75rem;border-radius:4px;cursor:pointer;font-size:.8rem;";
+      b.addEventListener("click", () => this._drawer.toggle(id));
+      toolbar.appendChild(b);
+      return b;
+    };
+    mkLauncher("add", "+ Add Instrument");
+    mkLauncher("songs", "♪ Songs");
+    mkLauncher("midi", "🎛 MIDI");
+    mkLauncher("record", "⏺ Record");
+    mkLauncher("viz", "◎ Viz");
+
+    this._currentSongLabel = document.createElement("span");
+    this._currentSongLabel.style.cssText = "opacity:0.85;margin-left:0.5rem;font-size:0.8rem;color:#4f8;";
+    toolbar.appendChild(this._currentSongLabel);
+
+    topBar.appendChild(toolbar);
+    main.appendChild(topBar);
+
+    // Highlight the launcher whose panel is open.
+    this._drawer.addEventListener("drawer-toggle", (e) => {
+      toolbar.querySelectorAll("[data-drawer-launcher]").forEach((b) => {
+        const active = e.detail.open && b.dataset.drawerLauncher === e.detail.id;
+        b.style.background = active ? "#2a2060" : "#1a1a2e";
+        b.style.borderColor = active ? "#9b8dff" : "#3a3a5a";
+      });
+      window._store?.set(StoreKeys.DRAWER_OPEN_ID, e.detail.open ? e.detail.id : null);
+    });
+
+    // ---- Add-instrument palette (drawer panel) ----
+    const palette = document.createElement("div");
+    palette.style.cssText = "display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;";
+
+    // ---- Arrangement library (drawer panel) ----
     this._libraryEl = document.createElement("wam-arrangement-library");
-    detailsEl.appendChild(this._libraryEl);
-
-    // Connect library events
     this._libraryEl.addEventListener("arrangement-save", (e) => {
       this._setCurrentSongName(e.detail.name);
       e.detail.callback(this._getState());
@@ -347,34 +506,54 @@ export default class PlaygroundApp extends HTMLElement {
     this._libraryEl.addEventListener("arrangement-export", (e) => {
       e.detail.callback(this._getState());
     });
-
-    libRow.appendChild(detailsEl);
-    main.appendChild(libRow);
     this._libraryEl.setSampleSongs(SAMPLE_SONGS);
+    this._drawer.addPanel("songs", this._libraryEl, "Songs & Saves");
 
-    // Transport row
-    const transportRow = document.createElement("section");
-    transportRow.style.cssText = "margin-bottom:1.5rem;";
-    this._transportEl = document.createElement("wam-transport");
-    transportRow.appendChild(this._transportEl);
-    main.appendChild(transportRow);
+    // ---- MIDI panel (drawer): input picker + debug monitor ----
+    this._midiPanelEl = document.createElement("div");
+    this._midiPanelEl.style.cssText = "display:flex;flex-direction:column;gap:1rem;";
 
-    // Add-instrument palette
-    const palette = document.createElement("section");
-    palette.style.cssText = "margin-bottom:1.5rem;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;";
+    this._midiPicker = document.createElement("wam-midi-input-picker");
+    this._midiPicker.setAttribute("sysex", ""); // sysex access enables LED feedback output
+    // Share the single MIDIAccess with the LED-feedback sink (auto-selects the
+    // Launch Control output, lights mapped controls + sequencer buttons).
+    this._midiPicker.addEventListener("midi-access-ready", (e) => ledFeedback.adoptAccess(e.detail.access));
+    // Publish device selection to the shared store (device follows the app, not
+    // a song — not part of arrangement state).
+    this._midiPicker.addEventListener("midi-input-change", () =>
+      window._store?.set(StoreKeys.MIDI_INPUT_ID, this._midiPicker.value),
+    );
+    this._midiPanelEl.appendChild(this._midiPicker);
 
-    // Visualizer panel
-    const vizRow = document.createElement("section");
-    vizRow.style.cssText = "margin-bottom:1.5rem;";
-    const vizDetails = document.createElement("details");
-    vizDetails.open = true;
-    const vizSummary = document.createElement("summary");
-    vizSummary.textContent = "Visualizer";
-    vizDetails.appendChild(vizSummary);
+    // Auto-map ("device follows focus") opt-out.
+    const autoMapLabel = document.createElement("label");
+    autoMapLabel.style.cssText = "display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:#c8c8e0;";
+    const autoMapToggle = document.createElement("input");
+    autoMapToggle.type = "checkbox";
+    autoMapToggle.checked = autoMap.enabled;
+    autoMapToggle.addEventListener("change", () => autoMap.setEnabled(autoMapToggle.checked));
+    autoMapLabel.append(autoMapToggle, "Auto-map device to focused instrument");
+    this._midiPanelEl.appendChild(autoMapLabel);
+
+    this._midiPanelEl.appendChild(document.createElement("wam-midi-monitor"));
+    this._drawer.addPanel("midi", this._midiPanelEl, "MIDI");
+
+    // ---- Record panel (drawer): populated after transport init ----
+    this._recordPanelEl = document.createElement("div");
+    this._recordPanelEl.style.cssText = "display:flex;flex-direction:column;gap:0.75rem;";
+    const recordHint = document.createElement("p");
+    recordHint.textContent = "Recorder appears here once audio is initialized.";
+    recordHint.style.cssText = "margin:0;opacity:0.7;font-size:0.85rem;";
+    this._recordPanelEl.appendChild(recordHint);
+    this._drawer.addPanel("record", this._recordPanelEl, "Record");
+
+    // ---- Viz panel (drawer) ----
+    const vizPanelEl = document.createElement("div");
+    vizPanelEl.style.cssText = "display:flex;flex-direction:column;gap:0.75rem;";
 
     // Sketch selector
-    const vizToolbar = document.createElement("div");
-    vizToolbar.style.cssText = "display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;";
+    const vizSketchRow = document.createElement("div");
+    vizSketchRow.style.cssText = "display:flex;align-items:center;gap:0.5rem;";
     const sketchLabel = document.createElement("label");
     sketchLabel.textContent = "Sketch:";
     sketchLabel.style.cssText = "font-size:0.8rem;opacity:0.7;";
@@ -397,16 +576,48 @@ export default class PlaygroundApp extends HTMLElement {
       this._loadSketchByPath(this._sketchSelect.value, sketchModules);
     });
     this._sketchModules = sketchModules;
-    vizToolbar.appendChild(sketchLabel);
-    vizToolbar.appendChild(this._sketchSelect);
-    vizDetails.appendChild(vizToolbar);
+    vizSketchRow.appendChild(sketchLabel);
+    vizSketchRow.appendChild(this._sketchSelect);
+    vizPanelEl.appendChild(vizSketchRow);
 
+    // Position toggle
+    const vizPosRow = document.createElement("div");
+    vizPosRow.style.cssText = "display:flex;align-items:center;gap:0.5rem;";
+    const vizPosLabel = document.createElement("label");
+    vizPosLabel.textContent = "Position:";
+    vizPosLabel.style.cssText = "font-size:0.8rem;opacity:0.7;";
+    const mkVizPosBtn = (label, mode) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.dataset.vizMode = mode;
+      b.style.cssText =
+        "font-size:0.8rem;padding:0.25rem 0.6rem;border-radius:4px;cursor:pointer;background:#1a1a2e;border:1px solid #3a3a5a;color:#cfcff0;";
+      b.addEventListener("click", () => {
+        this._setVizMode(mode);
+        vizPosRow.querySelectorAll("[data-viz-mode]").forEach((btn) => {
+          btn.style.background = btn.dataset.vizMode === mode ? "#2a2060" : "#1a1a2e";
+          btn.style.borderColor = btn.dataset.vizMode === mode ? "#9b8dff" : "#3a3a5a";
+        });
+      });
+      return b;
+    };
+    const noneBtn = mkVizPosBtn("None", "none");
+    const bgBtn = mkVizPosBtn("Fullscreen", "background");
+    const cornerBtn = mkVizPosBtn("Corner", "corner");
+    noneBtn.style.background = "#2a2060";
+    noneBtn.style.borderColor = "#9b8dff";
+    vizPosRow.appendChild(vizPosLabel);
+    vizPosRow.appendChild(noneBtn);
+    vizPosRow.appendChild(bgBtn);
+    vizPosRow.appendChild(cornerBtn);
+    vizPanelEl.appendChild(vizPosRow);
+
+    this._drawer.addPanel("viz", vizPanelEl, "Visualizer");
+
+    // Visualizer element — fixed in the background, outside normal layout flow.
     this._vizEl = document.createElement("wam-visualizer");
-    this._vizEl.style.cssText =
-      "display:block;width:100%;height:300px;border:1px solid #333;border-radius:6px;overflow:hidden;margin-top:0.5rem;";
-    vizDetails.appendChild(this._vizEl);
-    vizRow.appendChild(vizDetails);
-    main.appendChild(vizRow);
+    this._vizEl.setAttribute("mode", "none");
+    document.body.appendChild(this._vizEl);
 
     for (const def of INSTRUMENT_TYPES) {
       const btn = document.createElement("button");
@@ -421,7 +632,7 @@ export default class PlaygroundApp extends HTMLElement {
       btn.addEventListener("click", () => this._addInstrument(def));
       palette.appendChild(btn);
     }
-    main.appendChild(palette);
+    this._drawer.addPanel("add", palette, "Add Instrument");
 
     // Instruments list
     this._instrumentList = document.createElement("div");
@@ -471,8 +682,15 @@ export default class PlaygroundApp extends HTMLElement {
       seq: this._seq,
       color: "#6366f1",
       showScales: true,
+      showRecorder: false,
     });
     this._transportEl.connect(this._ctx.destination);
+
+    // Move recorder controls into the shared side drawer instead of the transport strip area.
+    if (this._recordPanelEl && this._transportEl.recorder) {
+      this._recordPanelEl.innerHTML = "";
+      this._recordPanelEl.appendChild(this._transportEl.recorder);
+    }
 
     // Wire visualizer analysis bus
     this._analysisBus.setContext(this._ctx);
@@ -540,8 +758,8 @@ export default class PlaygroundApp extends HTMLElement {
         if (entry.def.step) {
           entry.def.step(entry.ctrl, step, time, dur);
         } else {
-          // Loop player
-          entry.ctrl.step(this._globalStep, this._transportEl.bpm, time);
+          // Loop player (and any other step-less instrument that implements step())
+          entry.ctrl.step?.(this._globalStep, this._transportEl.bpm, time);
         }
       }
       const uiDelay = Math.max(0, (time - this._ctx.currentTime) * 1000);
@@ -554,6 +772,22 @@ export default class PlaygroundApp extends HTMLElement {
     });
 
     this._transportEl.broadcastScale();
+  }
+
+  // ---- Instrument Bus ----
+
+  /** Read-only map of tappable instrument outputs: instanceId → { label, tapNode }. */
+  get instrumentBus() {
+    return this._instrumentBus;
+  }
+
+  _dispatchBusUpdate() {
+    this.dispatchEvent(
+      new CustomEvent("instrument-bus-update", {
+        bubbles: true,
+        detail: { bus: this._instrumentBus },
+      }),
+    );
   }
 
   // ---- Add / Remove ----
@@ -583,6 +817,20 @@ export default class PlaygroundApp extends HTMLElement {
     this._analysisBus.addInstrument(analysisKey, ctrl);
 
     const entry = { def, ctrl, instrument, instanceId, analysisKey };
+
+    // Tell this track's FX sidechain picker its own id so it can't sidechain off itself.
+    ctrl.setSidechainHostId?.(instanceId);
+
+    // Tap node for cross-instrument routing (vocoder carrier, sidechain key, etc.)
+    // Routing instruments (vocoder) produce no useful audio output, so skip them.
+    const isBusSource = def.id !== "vocoder";
+    if (isBusSource) {
+      const tapNode = this._ctx.createGain();
+      ctrl.preFaderOutput.connect(tapNode); // pre-fader tap: post-FX, bypasses mute/volume
+      entry.tapNode = tapNode;
+      this._instrumentBus.set(instanceId, { label: `${def.label} (${instanceId + 1})`, tapNode });
+      this._dispatchBusUpdate();
+    }
 
     // If the transport is running, hold until the next bar so the pattern starts in phase
     if (this._transportEl.playing) {
@@ -619,6 +867,11 @@ export default class PlaygroundApp extends HTMLElement {
     this._analysisBus.removeInstrument(entry.analysisKey);
     this._transportEl.unregisterInstrument(entry.ctrl);
     entry.ctrl.disconnect();
+    if (entry.tapNode) {
+      entry.tapNode.disconnect();
+      this._instrumentBus.delete(entry.instanceId);
+      this._dispatchBusUpdate();
+    }
     if (row && row.parentNode === this._instrumentList) {
       this._instrumentList.removeChild(row);
     }
@@ -637,6 +890,7 @@ export default class PlaygroundApp extends HTMLElement {
 
   _setCurrentSongName(name) {
     this._currentSongName = name || null;
+    window._store?.set(StoreKeys.SONG_NAME, this._currentSongName);
     if (this._currentSongLabel) {
       if (this._currentSongName) {
         this._currentSongLabel.textContent = `— Playing: ${this._currentSongName}`;
@@ -662,12 +916,15 @@ export default class PlaygroundApp extends HTMLElement {
       this._analysisBus.removeInstrument(entry.analysisKey);
       this._transportEl.unregisterInstrument(entry.ctrl);
       entry.ctrl.disconnect();
+      if (entry.tapNode) entry.tapNode.disconnect();
       if (entry.row && entry.row.parentNode === this._instrumentList) {
         this._instrumentList.removeChild(entry.row);
       }
     }
     this._instruments = [];
     this._pendingInstruments = [];
+    this._instrumentBus.clear();
+    this._dispatchBusUpdate();
 
     // 2. Load transport state
     if (state.transport) {
@@ -754,6 +1011,10 @@ export default class PlaygroundApp extends HTMLElement {
     }
     const mod = await loader();
     this._vizEl.loadSketchModule(mod.default);
+  }
+
+  _setVizMode(mode) {
+    this._vizEl?.setMode(mode);
   }
 
   _shareURL() {

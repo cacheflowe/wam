@@ -1,5 +1,8 @@
 import "./slider.js";
+import { bindingsEqual, formatBinding, migrateLegacyBinding } from "../input/input-bindings.js";
 import { injectControlsCSS, createChannelStrip, createSection, createCtrl } from "./slider.js";
+import { injectInputLearnCSS, InputLearnMixin, applyInputLearnMixin } from "./input-learn.js";
+import { meetsBarCondition } from "../global/sequencer-conditions.js";
 
 /**
  * WebAudioControlsBase — shared foundation for all instrument control panels.
@@ -22,6 +25,7 @@ import { injectControlsCSS, createChannelStrip, createSection, createCtrl } from
 export class WebAudioControlsBase extends HTMLElement {
   /** Shared registry of all live controls instances for solo coordination. */
   static _soloInstances = new Set();
+
   constructor() {
     super();
     this._instrument = null;
@@ -55,14 +59,18 @@ export class WebAudioControlsBase extends HTMLElement {
     this._fxSection = null;
     // Jam button and bound key
     this._jamBtn = null;
-    this._jamKey = null;
-    // Keyboard jam handlers — cleared and re-registered on each bind()
+    this._jamBinding = null; // single trigger binding from any source (keyboard, MIDI, …)
+    this._jamLearning = false;
+    this._stopJamLearn = null;
+    this._initInputLearnState();
+    // Keyboard jam handlers - cleared and re-registered on each bind()
     this._jamKeyHandlers = [];
   }
 
   disconnectedCallback() {
     for (const h of this._jamKeyHandlers) document.removeEventListener("keydown", h);
     this._jamKeyHandlers = [];
+    this._teardownInputLearn();
     WebAudioControlsBase._soloInstances.delete(this);
     WebAudioControlsBase._applySolo();
   }
@@ -114,6 +122,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._toggles = {};
     this.classList.add("wam-panel");
     injectControlsCSS();
+    injectInputLearnCSS();
     this.style.setProperty("--slider-accent", color);
     this.style.setProperty("--fx-accent", color);
 
@@ -142,6 +151,11 @@ export class WebAudioControlsBase extends HTMLElement {
     this._channelStripVolSlider = strip.volSlider;
     this._sliders["volume"] = strip.volSlider;
     this._panSlider = strip.panSlider;
+    this._wireInputLearn(strip.volSlider, "volume");
+    if (strip.panSlider) {
+      this._sliders["pan"] = strip.panSlider;
+      this._wireInputLearn(strip.panSlider, "pan");
+    }
 
     // Clear any jam key handlers registered by a previous bind() call
     for (const h of this._jamKeyHandlers) document.removeEventListener("keydown", h);
@@ -172,6 +186,16 @@ export class WebAudioControlsBase extends HTMLElement {
     strip.vizGroup.appendChild(waveform);
 
     this._buildStripActions(strip.jamGroup, options);
+    this._attachInputLearn();
+
+    // Clicking anywhere on the panel focuses this instrument (for hardware
+    // control: the 16 sequencer buttons follow the focused instrument).
+    if (!this._focusWired) {
+      this._focusWired = true;
+      this.addEventListener("pointerdown", () => {
+        this.dispatchEvent(new CustomEvent("wam-instrument-focus", { bubbles: true, detail: { controls: this } }));
+      });
+    }
 
     // Three independent sections
     this._ctrlSection = document.createElement("div");
@@ -227,6 +251,7 @@ export class WebAudioControlsBase extends HTMLElement {
       if (tooltip) s.setAttribute("data-tooltip", tooltip);
       s.value = instrument[def.param];
       this._sliders[def.param] = s;
+      this._wireInputLearn(s, def.param);
       return s;
     };
 
@@ -286,85 +311,83 @@ export class WebAudioControlsBase extends HTMLElement {
    * Key-learn: hold the jam button and press any key to bind it as the jam shortcut.
    */
   _buildStripActions(strip, options = {}) {
-    const key = options.jamKey ?? this._defaultJamKey();
     const btn = document.createElement("button");
     btn.className = "wam-jam-btn";
     btn.addEventListener("click", () => this._queueJam());
     strip.appendChild(btn);
     this._jamBtn = btn;
-    this._jamKey = key || null;
-    this._updateJamLabel();
-    if (key) this._bindJamKey(key, () => this._queueJam());
 
-    // Key-learn: pointerdown starts listening, keydown while held assigns the key
-    let learning = false;
-    let learnHandler = null;
-    btn.addEventListener("pointerdown", () => {
-      learning = true;
-      btn.classList.add("wam-jam-learning");
-      learnHandler = (e) => {
-        if (!learning) return;
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.key === "Escape") {
-          this._clearJamKey();
-        } else {
-          this._setJamKey(e.key);
-        }
-        learning = false;
-        btn.classList.remove("wam-jam-learning");
-      };
-      document.addEventListener("keydown", learnHandler, { once: true });
-    });
+    // Single jam binding from any source. Default: the instrument's jam key,
+    // expressed as a keyboard binding so it flows through the same input path.
+    const key = options.jamKey ?? this._defaultJamKey();
+    this._jamBinding = options.jamMidi ?? (key ? { source: "keyboard", key: String(key).toLowerCase() } : null);
+    this._updateJamLabel();
+
+    // Learn: hold the button, then press any key / move any control. The actual
+    // binding is captured in _handleControlInput (which sees every source);
+    // here we just toggle the learning flag + visual.
     const stopLearn = () => {
-      if (!learning) return;
-      learning = false;
+      if (!this._jamLearning) return;
+      this._jamLearning = false;
       btn.classList.remove("wam-jam-learning");
-      if (learnHandler) document.removeEventListener("keydown", learnHandler);
-      learnHandler = null;
     };
+    this._stopJamLearn = stopLearn;
+
+    btn.addEventListener("pointerdown", () => {
+      this._jamLearning = true;
+      btn.classList.add("wam-jam-learning");
+    });
     btn.addEventListener("pointerup", stopLearn);
     btn.addEventListener("pointercancel", stopLearn);
     btn.addEventListener("pointerleave", stopLearn);
   }
 
-  /** Rebind the jam keyboard shortcut to a new key. */
-  _setJamKey(key) {
-    // Remove old jam key handlers
-    for (const h of this._jamKeyHandlers) document.removeEventListener("keydown", h);
-    this._jamKeyHandlers = [];
-    // Bind the new key
-    this._jamKey = key;
-    this._bindJamKey(key, () => this._queueJam());
+  /** Set the jam trigger binding (any source). */
+  _setJamBinding(binding) {
+    this._jamBinding = binding;
     this._updateJamLabel();
     this._emitChange();
   }
 
-  /** Clear the jam keyboard shortcut (Escape while learning). */
-  _clearJamKey() {
-    for (const h of this._jamKeyHandlers) document.removeEventListener("keydown", h);
-    this._jamKeyHandlers = [];
-    this._jamKey = null;
+  /** Clear the jam binding (Escape while learning). */
+  _clearJamBinding() {
+    this._jamBinding = null;
     this._updateJamLabel();
     this._emitChange();
   }
 
-  /** Update jam button text and tooltip to reflect current bound key. */
+  /** Update jam button text and tooltip to reflect the current binding. */
   _updateJamLabel() {
     if (!this._jamBtn) return;
-    const key = this._jamKey;
-    if (key) {
-      this._jamBtn.textContent = `♩ ${key.toUpperCase()}`;
-      this._jamBtn.title = `Trigger on next beat [${key.toUpperCase()}] · Hold + press key to rebind`;
-    } else {
-      this._jamBtn.textContent = "♩";
-      this._jamBtn.title = "Trigger on next beat · Hold + press key to bind";
+    const label = formatBinding(this._jamBinding);
+    if (label) {
+      this._jamBtn.textContent = `Jam ${label}`;
+      this._jamBtn.title = `Trigger on next beat [${label}] - Hold + press a key or move a control to rebind`;
+      return;
     }
+    this._jamBtn.textContent = "Jam";
+    this._jamBtn.title = "Trigger on next beat - Hold + press a key or move a control to bind";
   }
 
   /** Default keyboard shortcut for the jam button. Override per instrument. */
   _defaultJamKey() {
     return null;
+  }
+
+  /** The instrument's step sequencer element, or null. */
+  get sequencer() {
+    return this._seq ?? null;
+  }
+
+  /**
+   * Guarantee a jam trigger exists when this instrument is activated for
+   * hardware control. Uses the instrument's default key, else a caller-supplied
+   * fallback (e.g. a digit based on slot). No-op if already bound.
+   */
+  ensureJamBinding(fallbackKey = null) {
+    if (this._jamBinding) return;
+    const key = this._defaultJamKey() || fallbackKey;
+    if (key) this._setJamBinding({ source: "keyboard", key: String(key).toLowerCase() });
   }
 
   /** Queue a jam trigger for the next sequencer step. */
@@ -421,6 +444,35 @@ export class WebAudioControlsBase extends HTMLElement {
     };
     document.addEventListener("keydown", handler);
     this._jamKeyHandlers.push(handler);
+  }
+
+  /**
+   * Intercept "jam learn" mode first, then fall back to the standard
+   * learn/apply path. Jam matching happens in _onInputExtra (post-apply).
+   */
+  _handleControlInput(detail) {
+    if (!detail?.binding) return;
+    if (this._jamLearning) {
+      if (detail.pressed === false) return; // ignore releases while learning
+      // Escape cancels rather than binding itself.
+      if (detail.binding.source === "keyboard" && detail.binding.key === "escape") {
+        this._clearJamBinding();
+      } else {
+        this._setJamBinding(detail.binding);
+      }
+      this._stopJamLearn?.();
+      return;
+    }
+    InputLearnMixin._handleControlInput.call(this, detail);
+  }
+
+  _onInputExtra(detail) {
+    if (detail.pressed === false) return;
+    if (bindingsEqual(this._jamBinding, detail.binding)) this._queueJam();
+  }
+
+  get _learnRegistry() {
+    return this._sliders;
   }
 
   /** Handle a non-pan slider value change. Default: set on instrument. */
@@ -494,16 +546,21 @@ export class WebAudioControlsBase extends HTMLElement {
 
   // ---- Audio routing ----
 
-  /** Wire instrument → FX → _out → _pan, plus waveform + meter analysers. */
+  /** Wire instrument → FX → _preFader → _out → _pan, plus waveform + meter analysers. */
   _setupRouting(instrument, ctx, strip, waveform, color) {
+    // _preFader: post-FX, pre-volume/mute — safe tap point for bus sends
+    this._preFader = ctx.createGain();
+
     this._out = ctx.createGain();
     this._out.gain.value = instrument.volume;
     if (this._fxUnit) {
       instrument.connect(this._fxUnit.input);
-      this._fxUnit.connect(this._out);
+      this._fxUnit.connect(this._preFader);
     } else {
-      instrument.connect(this._out);
+      instrument.connect(this._preFader);
     }
+    this._preFader.connect(this._out);
+
     this._pan = ctx.createStereoPanner();
     this._out.connect(this._pan);
     const analyser = ctx.createAnalyser();
@@ -515,6 +572,11 @@ export class WebAudioControlsBase extends HTMLElement {
     this._meterAnalyser = meterAnalyser;
     strip.meter.setAnalyser(meterAnalyser);
     waveform.init(analyser, color, { fixed: true });
+  }
+
+  /** Post-FX, pre-volume tap point. Connect bus sends here so muting doesn't kill the tap. */
+  get preFaderOutput() {
+    return this._preFader;
   }
 
   // ---- Shared UI builders ----
@@ -969,7 +1031,8 @@ export class WebAudioControlsBase extends HTMLElement {
       muted: this._muteHandle?.isMuted() ?? false,
       soloed: this._soloHandle?.isSoloed() ?? false,
       pan: this._pan?.pan.value ?? 0,
-      jamKey: this._jamKey ?? null,
+      jamBinding: this._jamBinding ?? null,
+      midiParamBindings: { ...this._paramBindings },
       speedMultiplier: this._speedMultiplier,
       patternParams: this._seq?.getPatternParams(),
       sections: {
@@ -1006,7 +1069,15 @@ export class WebAudioControlsBase extends HTMLElement {
       this._pan.pan.value = obj.pan;
       if (this._panSlider) this._panSlider.value = obj.pan;
     }
-    if (obj.jamKey) this._setJamKey(obj.jamKey);
+    // Jam: prefer the unified binding; fall back to legacy jamMidi / jamKey.
+    if (obj.jamBinding) this._setJamBinding(obj.jamBinding);
+    else if (obj.jamMidi) this._setJamBinding(migrateLegacyBinding(obj.jamMidi));
+    else if (obj.jamKey) this._setJamBinding({ source: "keyboard", key: String(obj.jamKey).toLowerCase() });
+    this._paramBindings = {};
+    for (const [param, binding] of Object.entries(obj.midiParamBindings ?? {})) {
+      this._paramBindings[param] = migrateLegacyBinding(binding);
+    }
+    this._updateBoundClasses();
     if (obj.speedMultiplier != null) {
       this._speedMultiplier = obj.speedMultiplier;
       if (this._speedSelect) this._speedSelect.value = obj.speedMultiplier;
@@ -1021,15 +1092,28 @@ export class WebAudioControlsBase extends HTMLElement {
         this._rotateIntervalInput.value = obj.patternParams.rotationIntervalBars;
     }
     if (obj.sections) {
-      const applySection = (section, btn, visible) => {
-        if (!section || !btn) return;
-        section.toggleAttribute("data-hidden", !visible);
-        btn.toggleAttribute("data-active", visible);
-      };
-      applySection(this._ctrlSection, this._ctrlBtn, obj.sections.ctrl ?? false);
-      applySection(this._seqSection, this._seqBtn, obj.sections.seq ?? true);
-      applySection(this._fxSection, this._fxBtn, obj.sections.fx ?? false);
+      this._applyPanel(this._ctrlSection, this._ctrlBtn, obj.sections.ctrl ?? false);
+      this._applyPanel(this._seqSection, this._seqBtn, obj.sections.seq ?? true);
+      this._applyPanel(this._fxSection, this._fxBtn, obj.sections.fx ?? false);
     }
+  }
+
+  /** Show/hide one section and sync its toggle button's active state. */
+  _applyPanel(section, btn, visible) {
+    if (!section || !btn) return;
+    section.toggleAttribute("data-hidden", !visible);
+    btn.toggleAttribute("data-active", visible);
+  }
+
+  /**
+   * Show or hide all three sections (Ctrl/Seq/FX) at once. Used to emphasize
+   * the focused instrument (expand all) and de-emphasize the rest (collapse
+   * all) so the active one stands out.
+   */
+  setAllPanels(visible) {
+    this._applyPanel(this._ctrlSection, this._ctrlBtn, visible);
+    this._applyPanel(this._seqSection, this._seqBtn, visible);
+    this._applyPanel(this._fxSection, this._fxBtn, visible);
   }
 
   /** Restore a single param. Override for special handling (e.g. oscType → wave buttons). */
@@ -1081,6 +1165,14 @@ export class WebAudioControlsBase extends HTMLElement {
   /** Restore extra top-level fields (e.g. steps, chordSize). */
   _restoreExtra(obj) {}
 
+  /**
+   * Whether a step's bar-cycle condition ("X:Y" trig condition) fires on the
+   * given global bar index. Shared by every instrument's step() loop.
+   */
+  _meetsCondition(condition, barIndex) {
+    return meetsBarCondition(condition, barIndex);
+  }
+
   // ---- Routing ----
 
   set bpm(v) {
@@ -1111,10 +1203,18 @@ export class WebAudioControlsBase extends HTMLElement {
     return this;
   }
 
+  /** Forward the host track's bus id to the FX sidechain picker so it can't sidechain off itself. */
+  setSidechainHostId(id) {
+    this._fxUnit?.setSidechainHostId?.(id);
+  }
+
   disconnect() {
+    this._fxUnit?.destroy?.();
     (this._pan ?? this._out)?.disconnect();
   }
 }
+
+applyInputLearnMixin(WebAudioControlsBase);
 
 // Re-export UI helpers for subclass use
 export { createSection, createCtrl };

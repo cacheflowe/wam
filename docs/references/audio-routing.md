@@ -47,17 +47,27 @@ The app then calls `controls.connect(masterGain)`.
 ## FxUnit Internal Graph
 
 ```
-input (GainNode)
-  │
-  ├──→ WebAudioFxReverb  ──┐
-  ├──→ WebAudioFxDelay   ──┤──→ preOut (GainNode)
-  ├──→ WebAudioFxChorus  ──┘         │
-  │                             WebAudioFxFilter
-  │                                   │
-  └──────────────────────────────→  out (GainNode)
+input → WebAudioFxFilter → WebAudioFxDelay → WebAudioFxChorus → WebAudioFxReverb → WebAudioFxCompressor → out
 ```
 
-Reverb, delay, and chorus run in parallel (all receive the input signal). The filter is always inline on the output. Each parallel effect has its own dry/wet control.
+The stages run **serially** — each effect feeds the next. Filter, delay, chorus, and reverb each handle their own dry/wet mix internally (0 wet = transparent). The compressor is the final stage.
+
+### Sidechain compressor
+
+`WebAudioFxCompressor` is a per-channel sidechain ducker. It wraps an `AudioWorkletNode` (`sidechain-compressor-processor`) with two inputs:
+
+- **input 0** — the channel signal (fed from reverb)
+- **input 1** — the sidechain *key*, set via `comp.setSidechainSource(tapNode)`
+
+The worklet runs an envelope follower (independent **attack**/**release**) on the key and reduces the channel gain by up to **amount** once the key passes **threshold** — the classic kick-driven pump.
+
+**Tempo-synced release:** with **Sync** on, the release time is derived from a beat division (`RELEASE_DIVISIONS` on `WebAudioFxUnit`: 1/1 … 1/16, incl. 1/8T) and the current BPM (`release = beats × 60/bpm`), recomputed whenever `fxUnit.bpm` changes. With Sync off, the free **Release** (ms) knob is used.
+
+**Gain-reduction meter:** the worklet posts its peak reduction (0..1) to the main thread roughly every 30 ms via `port.postMessage`; `WebAudioFxCompressor` exposes it as `comp.reduction` and an `onReduction` callback, which the FX UI renders as a live "Reduction" bar.
+
+The key source is chosen in the FX UI via `<wam-instrument-source-picker>`, which lists the playground's instrument bus (each track's pre-fader tap). **With no source selected the envelope stays at 0, so audio passes through untouched — the effect is off until a track is picked.** The worklet module loads asynchronously; until it is ready the compressor routes through a dry bypass gain so the chain is valid synchronously.
+
+> Note: a channel's own pre-fader tap appears in the picker, so self-sidechaining (compressing a track by its own level) is possible but creates a feedback path through the compressor — pick the kick (or another track) for the intended pump.
 
 ## Parallel Sends (Manual)
 

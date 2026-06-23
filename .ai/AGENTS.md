@@ -34,7 +34,7 @@ docs/              # all project documentation
 
 ## Architecture
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for system context, audio graph, and domain boundaries.
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for system context, audio graph, and domain boundaries.
 
 ## Docs Index
 
@@ -53,9 +53,10 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for system context, audio graph, and do
 | Feature specs | [docs/product-specs/index.md](docs/product-specs/index.md) |
 | Roadmap | [docs/exec-plans/roadmap.md](docs/exec-plans/roadmap.md) |
 | Active work | [docs/exec-plans/active/](docs/exec-plans/active/) |
-| Tech debt | [docs/exec-plans/tech-debt-tracker.md](docs/exec-plans/tech-debt-tracker.md) |
+| Tech debt | [docs/exec-plans/tech-debt-tracker.md](docs/exec-plans/tech-debt-tracker.md) | 
 | Web Audio API reference | [docs/references/web-audio-api.md](docs/references/web-audio-api.md) |
 | Audio routing patterns | [docs/references/audio-routing.md](docs/references/audio-routing.md) |
+| Launch Control XL MIDI map | [docs/references/launch-control-xl.md](docs/references/launch-control-xl.md) |
 
 ## Web Components Skill
 

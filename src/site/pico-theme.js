@@ -106,9 +106,16 @@ class PicoTheme {
    * @param {string} [opts.secondary] - Secondary seed color. Omit to keep Pico default.
    * @param {string} [opts.contrast]  - Contrast seed color. Omit to keep Pico default.
    * @param {Object<string, string>} [opts.extras] - Additional named color groups
+   * @param {string} [opts.accentColor] - Global brand accent color (applies to HTML accent-color elements)
+   * @param {string} [opts.borderRadius] - Overrides --pico-border-radius
+   * @param {string} [opts.fontFamily] - Overrides --pico-font-family
+   * @param {string} [opts.spacing] - Overrides --pico-spacing
+   * @param {string} [opts.transition] - Overrides --pico-transition
+   * @param {string} [opts.borderWidth] - Overrides --pico-border-width
+   * @param {string} [opts.outlineWidth] - Overrides --pico-outline-width
    * @returns {string} CSS text
    */
-  static css({ primary, secondary, contrast, extras = {} } = {}) {
+  static css({ primary, secondary, contrast, extras = {}, accentColor, ...rest } = {}) {
     // Skip groups that aren't provided — Pico's built-in defaults apply
     const groups = [];
     if (primary) groups.push(["primary", colorRecipes(primary, "primary")]);
@@ -122,8 +129,63 @@ class PicoTheme {
     const lightVars = buildSchemeBlock(groups, 0);
     const darkVars = buildSchemeBlock(groups, 1);
 
-    let css = /*css*/ `
-/* Pico theme — generated from seed colors */
+    const styleMap = {
+      fontFamily: "--pico-font-family",
+      fontFamilyEmoji: "--pico-font-family-emoji",
+      fontFamilySansSerif: "--pico-font-family-sans-serif",
+      fontFamilyMonospace: "--pico-font-family-monospace",
+      lineHeight: "--pico-line-height",
+      fontWeight: "--pico-font-weight",
+      fontSize: "--pico-font-size",
+      fontSizeScale: "--font-size-scale", // Used to relative-scale fonts adaptively instead of clobbering responsive media queries
+      borderRadius: "--pico-border-radius",
+      borderWidth: "--pico-border-width",
+      outlineWidth: "--pico-outline-width",
+      transition: "--pico-transition",
+      spacing: "--pico-spacing",
+      typographySpacingVertical: "--pico-typography-spacing-vertical",
+      blockSpacingVertical: "--pico-block-spacing-vertical",
+      blockSpacingHorizontal: "--pico-block-spacing-horizontal",
+      gridColumnGap: "--pico-grid-column-gap",
+      gridRowGap: "--pico-grid-row-gap",
+      formElementSpacingVertical: "--pico-form-element-spacing-vertical",
+      formElementSpacingHorizontal: "--pico-form-element-spacing-horizontal",
+    };
+
+    const rootVars = [];
+    let hasFontSizeScale = false;
+    for (const [key, val] of Object.entries(rest)) {
+      if (val !== undefined && val !== null) {
+        if (styleMap[key]) {
+          rootVars.push(`  ${styleMap[key]}: ${val};`);
+          if (key === "fontSizeScale") {
+            hasFontSizeScale = true;
+          }
+        } else if (key.startsWith("--")) {
+          rootVars.push(`  ${key}: ${val};`);
+        }
+      }
+    }
+
+    let css = "/* Pico theme — generated from seed colors */\n";
+
+    if (rootVars.length > 0) {
+      css += /*css*/ `:root, :host {
+${rootVars.join("\n")}
+}
+
+`;
+      if (hasFontSizeScale) {
+        // Redefine standard html/root font-size dynamically usingcalc on the default ratio percentage variable
+        css += /*css*/ `:root {
+  font-size: calc(var(--pico-font-size) * var(--font-size-scale));
+}
+
+`;
+      }
+    }
+
+    css += /*css*/ `
 ${LIGHT_SELECTOR} {
 ${lightVars}
 }
@@ -136,6 +198,17 @@ ${darkVars}
 ${DARK_FORCED_SELECTOR} {
 ${darkVars}
 }`;
+
+    if (accentColor) {
+      css += /*css*/ `
+
+progress,
+[type=checkbox],
+[type=radio],
+[type=range] {
+  accent-color: ${accentColor};
+}`;
+    }
 
     // Generate [data-color="name"] scoping rules for each extra group.
     // These remap --pico-primary-* (and form element vars) so that any

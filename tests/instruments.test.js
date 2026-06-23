@@ -8,6 +8,7 @@ import WebAudioSynth808 from "../src/web-audio/instruments/synth-808.js";
 import WebAudioSynthAcid from "../src/web-audio/instruments/synth-acid.js";
 import WebAudioSynthFM from "../src/web-audio/instruments/synth-fm.js";
 import WebAudioSynthBlipFX from "../src/web-audio/instruments/synth-blipfx.js";
+import WebAudioSynthPoly from "../src/web-audio/instruments/synth-poly.js";
 
 // ---- Instrument registry: [Class, defaultPreset, hasPresets] ----
 const INSTRUMENTS = [
@@ -19,6 +20,7 @@ const INSTRUMENTS = [
   [WebAudioSynthAcid,   "Default", true],
   [WebAudioSynthFM,     "Default", true],
   [WebAudioSynthBlipFX, "Default", true],
+  [WebAudioSynthPoly,   "Default", true],
 ];
 
 function makeCtx() {

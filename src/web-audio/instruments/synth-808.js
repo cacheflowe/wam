@@ -3,6 +3,7 @@ import "../ui/step-seq.js";
 import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/scales.js";
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
+import { makeSoftClipCurve } from "../global/dsp/distortion.js";
 
 /**
  * WebAudioSynth808 — pitched 808-style sub-bass synthesizer.
@@ -94,7 +95,7 @@ export default class WebAudioSynth808 extends WebAudioInstrumentBase {
     super(ctx, null); // creates ctx + _out, skips preset (extra nodes not ready yet)
 
     this._distortion = 0;
-    this._distortionCurve = this._makeDistortionCurve(0);
+    this._distortionCurve = makeSoftClipCurve(0);
 
     // Tone lowpass — shaping before output
     this._filter = ctx.createBiquadFilter();
@@ -123,7 +124,7 @@ export default class WebAudioSynth808 extends WebAudioInstrumentBase {
 
   set distortion(v) {
     this._distortion = v;
-    this._distortionCurve = this._makeDistortionCurve(v);
+    this._distortionCurve = makeSoftClipCurve(v);
   }
 
   get tone() {
@@ -131,19 +132,6 @@ export default class WebAudioSynth808 extends WebAudioInstrumentBase {
   }
   set tone(v) {
     this._filter.frequency.value = v;
-  }
-
-  // ---- Helpers ----
-
-  _makeDistortionCurve(amount) {
-    const n = 512;
-    const curve = new Float32Array(n);
-    const k = amount * 200;
-    for (let i = 0; i < n; i++) {
-      const x = (i * 2) / n - 1;
-      curve[i] = k > 0 ? ((Math.PI + k) * x) / (Math.PI + k * Math.abs(x)) : x;
-    }
-    return curve;
   }
 
   // ---- Playback ----
@@ -458,27 +446,6 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
     if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
     this._jamPending = false;
     this._globalStep++;
-  }
-
-  _meetsCondition(condition, barIndex) {
-    switch (condition) {
-      case "off":
-        return true;
-      case "1:2":
-        return barIndex % 2 === 0;
-      case "1:3":
-        return barIndex % 3 === 0;
-      case "1:4":
-        return barIndex % 4 === 0;
-      case "2:4":
-        return barIndex % 4 === 1;
-      case "3:4":
-        return barIndex % 4 === 2;
-      case "fill":
-        return barIndex % 4 === 3;
-      default:
-        return true;
-    }
   }
 
   setActiveStep() {

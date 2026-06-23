@@ -38,6 +38,7 @@ class WebAudioSynthAcid {
 | `WebAudioSynthFM` | `synth-fm.js` | Poly FM | 2-op FM, mod envelope, BPM-synced filter LFO, chord mode |
 | `WebAudioSynthMono` | `synth-mono.js` | Mono | Saw/square/tri, ADSR, filter envelope, sub osc |
 | `WebAudioSynthPad` | `synth-pad.js` | Poly pad | Chord voicing, constant-power voice scaling |
+| `WebAudioSynthPoly` | `synth-poly.js` | Poly subtractive | Dual osc + sub + noise, unison, per-voice filter ADSR + key track, dual tempo-syncable LFOs, voice stealing, chords. Built on the shared `dsp/` primitives. |
 | `WebAudioSynthBlipFX` | `synth-blipfx.js` | SFX | 6 waveforms, FM, bit-crush, randomization |
 | `WebAudioPercKick` | `perc-kick.js` | Percussion | Sine sweep, pitch envelope |
 | `WebAudioPercHihat` | `perc-hihat.js` | Percussion | Bandpass noise, open/closed character |
@@ -70,6 +71,23 @@ applyPreset(name) {
 
 The `!= null` guard allows partial presets; new parameters can be added without invalidating existing preset objects.
 
+### Shared DSP primitives (`global/dsp/`)
+
+Common per-voice DSP is factored into standalone functions that **schedule on existing AudioParams or create nodes at a caller-controlled point** — keeping the fire-and-forget model (no stateful classes, synths still own their node graph and creation order).
+
+| File | Export | Used by | Purpose |
+|---|---|---|---|
+| `dsp/envelope.js` | `applyADSR` | mono, pad, poly | Linear ADSR contour on a VCA gain param. |
+| `dsp/envelope.js` | `applyFilterEnv` | mono, poly | Octave-based ADSR filter sweep (`base·2^envAmt`). |
+| `dsp/oscillator.js` | `createUnisonOscBank` | mono, poly | Detuned unison oscillators with optional portamento glide. |
+| `dsp/distortion.js` | `makeSoftClipCurve` | acid, 808 | Soft-clip waveshaper curve. |
+
+`WebAudioSynthPoly` (the flagship subtractive synth) is built entirely on these primitives — it's the proof that the foundation supports new instruments.
+
+These are intentionally not forced onto every synth: acid's unison (per-voice gain + cleanup), pad's shared-filter envelope, and FM's exponential operator envelopes are genuinely distinct and stay bespoke. The primitives are also the foundation for future synths.
+
+**Regression guard:** [tests/synth-dsp-snapshot.test.js](tests/synth-dsp-snapshot.test.js) records each synth's exact `trigger()` automation (via [tests/helpers/recording-context.js](tests/helpers/recording-context.js)) so any change to the scheduled sound shows up as a snapshot diff. The refactor above is byte-identical against these snapshots.
+
 ## Effects Classes
 
 All effects expose the same `connect()` / `input` interface as instruments.
@@ -81,15 +99,30 @@ All effects expose the same `connect()` / `input` interface as instruments.
 | `WebAudioFxChorus` | `fx-chorus.js` | Yes | 1–6 voices, stereo spread, feedback |
 | `WebAudioFxFilter` | `fx-filter.js` | No (always inline) | Series HP → LP, shared Q |
 | `WebAudioFxDistortion` | `fx-distortion.js` | Yes | Soft-clip waveshaper |
+| `WebAudioFxCompressor` | `fx-compressor.js` | Bypass until source picked | Per-channel sidechain ducker. AudioWorklet envelope follower (attack/release/threshold) ducks the channel by a key tap chosen in the FX UI. Params: `amount`, `attack`, `release`, `threshold`. Release can tempo-sync to a beat division; worklet posts live gain reduction (`comp.reduction` / `onReduction`) for a meter. |
 | `WebAudioFxUnit` | `fx-unit.js` | Per-effect | Web Component composing all above |
+
+### Bus-based FX (instrument-tap inputs)
+
+Unlike the inline FX above, these take their input from one or more **instrument bus taps** (selected at runtime via `<wam-instrument-source-picker>`) rather than sitting in a single instrument's chain. Each ships a `*Controls` panel extending `WebAudioControlsBase`.
+
+| Class | File | Control element | Notes |
+|---|---|---|---|
+| `WebAudioVocoderFx` | `fx-vocoder.js` | `<wam-vocoder-fx-controls>` | Wraps `WebAudioVocoder` in `external` carrier mode. Two taps — modulator (analysis, e.g. vocals) and carrier (resynthesis, e.g. a pad). Internal osc/noise gains are 0; external sources only. |
+
+`WebAudioVocoder` (in `vocoder.js`) gained a `carrierType = "external"` mode exposing `carrierInput` and `modulatorInput` GainNodes so the bus-tap wrapper can feed it.
+
+> Sidechain ducking is now a per-channel FX-strip stage (`WebAudioFxCompressor`), not a bus-based master effect — see the FX table above. The old master-bus `WebAudioSidechainFx` was retired in favor of that pattern.
 
 ### FxUnit Internal Routing
 
+Stages run **serially**, each feeding the next:
+
 ```
-input → WebAudioFxReverb  (parallel) ─┐
-input → WebAudioFxDelay   (parallel) ─┤→ preOut → WebAudioFxFilter → out
-input → WebAudioFxChorus  (parallel) ─┘
+input → WebAudioFxFilter → WebAudioFxDelay → WebAudioFxChorus → WebAudioFxReverb → WebAudioFxCompressor → out
 ```
+
+The compressor is the final stage. Its sidechain key (input 1) comes from a track tap selected via `<wam-instrument-source-picker>` in the FX UI; with no source selected it passes audio through untouched. See [audio-routing.md](docs/references/audio-routing.md) for the sidechain detail.
 
 ## AudioWorklet Processors
 
@@ -97,6 +130,7 @@ input → WebAudioFxChorus  (parallel) ─┘
 |---|---|
 | `pitch-shift.worklet.js` | Granular overlap-add pitch shift (loaded by `WebAudioPitchShift`) |
 | `time-stretch.worklet.js` | Granular time-stretch with independent speed/pitch (loaded by `WebAudioTimeStretch`) |
+| `fx-compressor.worklet.js` | Sidechain ducking envelope follower (loaded by `WebAudioFxCompressor`) — 2 inputs (audio + key), attack/release/threshold/amount |
 
 Worklets must be registered before use:
 
@@ -123,6 +157,14 @@ seq.start();
 seq.bpm = 140; // live tempo change
 ```
 
+### Step trig conditions ("gate by bar cycle")
+
+Per-step `X:Y` conditions (Elektron-style) gate a step to fire only on pass X of every Y bars. `global/sequencer-conditions.js` is the single source of truth:
+
+- `CONDITION_GROUPS` — grouped dropdown options (Off, Every 2 / 3 / 4 / 8 bars), built into `<optgroup>`s by `<wam-step-seq>`.
+- `meetsBarCondition(condition, barIndex)` — the evaluator, called from `WebAudioControlsBase._meetsCondition()` so every instrument's `step()` loop shares one implementation (previously duplicated as an identical switch in all 11 control panels).
+- `normalizeCondition()` — upgrades the legacy `"fill"` value to its explicit `"4:4"` form on load.
+
 ## Music Theory Utilities
 
 `scales.js` exports:
@@ -139,3 +181,16 @@ seq.bpm = 140; // live tempo change
 ## Audio Routing Convention
 
 See [references/audio-routing.md](references/audio-routing.md) for the full `connect()` / `input` routing protocol and graph assembly patterns.
+
+## MIDI Hardware Control
+
+Hardware drivers live in [src/web-audio/midi/](../src/web-audio/midi/). They sit below the UI and consume the normalized input layer (see [docs/FRONTEND.md](FRONTEND.md#input-abstraction--learn)).
+
+| File | Export | Purpose |
+|---|---|---|
+| `launch-control-xl.js` | `CONTROLS`, `LED`, `setLedsMessage()`, `templateFromChannel()`, … | Full Novation Launch Control XL reference: control map, LED color palette, and sysex/channel-message builders. See [references/launch-control-xl.md](references/launch-control-xl.md). |
+| `midi-output.js` | `MidiOutput` | Safe, rate-limited LED/sysex output: queues changes and flushes at most once per `requestAnimationFrame` as a single multi-pair sysex, deduped on quantized color. |
+| `led-feedback.js` | `ledFeedback` singleton | Mirrors `wam-binding-feedback` (bound / unbound / value) to LCXL LEDs. |
+| `sequencer-hardware.js` | `sequencerHardware` singleton | Maps the LCXL's 16 buttons to sequencer steps; lights active steps + playhead and follows the focused instrument via `wam-instrument-focus-change`. |
+
+**Reliability is load-bearing here.** On Windows, flooding sysex (one message per incoming CC) or opening a second `MIDIAccess` wedges the device's input until it is physically replugged. Always batch LED output through `MidiOutput` and reuse the single `MIDIAccess` owned by `<wam-midi-input-picker>`. Full failure mode + mitigation: [docs/RELIABILITY.md](RELIABILITY.md) and [references/launch-control-xl.md](references/launch-control-xl.md#reliability--hard-won-lessons-windows-especially).

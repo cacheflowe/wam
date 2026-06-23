@@ -1,9 +1,35 @@
 import "./slider.js";
 import "./waveform.js";
 import "./recorder.js";
+import "./midi-input-picker.js";
 import "../fx/fx-unit.js";
 import { injectControlsCSS, createChannelStrip, createCtrl } from "./slider.js";
+import { injectInputLearnCSS, applyInputLearnMixin } from "./input-learn.js";
+import { migrateLegacyBinding } from "../input/input-bindings.js";
 import { NOTE_NAMES, SCALES } from "../global/scales.js";
+import { StoreKeys } from "../global/store-keys.js";
+
+let _transportCssInjected = false;
+function injectTransportCSS() {
+  if (_transportCssInjected || typeof document === "undefined") return;
+  _transportCssInjected = true;
+  const style = document.createElement("style");
+  style.textContent = `
+    .wam-transport-tools-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .wam-transport-tools-row > wam-recorder {
+      flex: 1 1 360px;
+    }
+    .wam-transport-midi-controls {
+      flex: 0 1 280px;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 /**
  * WebAudioTransportControls — master transport panel as a Web Component.
@@ -50,11 +76,12 @@ export class WebAudioTransportControls extends HTMLElement {
     this._playing = false;
     this._keyHandler = null;
     this._recorderEl = null;
+    this._midiControls = {};
+    this._initInputLearnState();
   }
 
   disconnectedCallback() {
-    if (this._keyHandler) document.removeEventListener("keydown", this._keyHandler);
-    this._keyHandler = null;
+    this._teardownInputLearn();
   }
 
   /**
@@ -65,6 +92,7 @@ export class WebAudioTransportControls extends HTMLElement {
    * @param {string}  [options.title]        Panel label (default "Transport")
    * @param {string}  [options.color]        Accent color (default "#fff")
    * @param {boolean} [options.showScales]   Show key/scale section (default true)
+   * @param {boolean} [options.showRecorder] Show inline recorder row below strip (default true)
    * @param {object}  [options.fx]           Passed to wam-fx-unit init
    */
   init(ctx, options = {}) {
@@ -74,12 +102,16 @@ export class WebAudioTransportControls extends HTMLElement {
     const color = options.color ?? "#fff";
     const title = options.title ?? "Transport";
     const showScales = options.showScales !== false;
+    const showRecorder = options.showRecorder !== false;
 
     this.innerHTML = "";
     this.classList.add("wam-panel");
     injectControlsCSS();
+    injectInputLearnCSS();
+    injectTransportCSS();
     this.style.setProperty("--slider-accent", color);
     this.style.setProperty("--fx-accent", color);
+    this._midiControls = {};
 
     // Master gain — instruments connect here
     this._masterGain = ctx.createGain();
@@ -91,6 +123,7 @@ export class WebAudioTransportControls extends HTMLElement {
       initialVol: 1,
       pan: false,
       noCollapse: true,
+      showMuteSolo: false,
     });
     this._muteHandle = {
       isMuted: strip.isMuted,
@@ -99,6 +132,8 @@ export class WebAudioTransportControls extends HTMLElement {
       getVolume: strip.getVolume,
     };
     this._volSlider = strip.volSlider;
+    this._midiControls.volume = this._volSlider;
+    this._wireInputLearn(this._volSlider, "volume");
     this._meter = strip.meter;
 
     const handleVolInput = (e) => {
@@ -123,9 +158,18 @@ export class WebAudioTransportControls extends HTMLElement {
     this._playBtn.addEventListener("click", () => (this._playing ? this._stop() : this._play()));
     strip.jamGroup.appendChild(this._playBtn);
 
-    // ---- Recorder → own row below the strip ----
     this._recorderEl = document.createElement("wam-recorder");
-    this.appendChild(this._recorderEl);
+    // ---- Recorder → optional row below the strip ----
+    if (showRecorder) {
+      const toolsRow = document.createElement("div");
+      toolsRow.className = "wam-transport-tools-row";
+      toolsRow.appendChild(this._recorderEl);
+      this.appendChild(toolsRow);
+    }
+
+    // MIDI input device selection is owned by the app (e.g. the playground's
+    // MIDI drawer), not the transport. The transport keeps only its own
+    // BPM/volume param-learn, which works off the global input adapter.
 
     // ---- BPM → dedicated strip group (inserted before mix group) ----
     const bpmGroup = document.createElement("div");
@@ -144,6 +188,8 @@ export class WebAudioTransportControls extends HTMLElement {
     });
     bpmGroup.appendChild(this._bpmSlider);
     strip.strip.insertBefore(bpmGroup, strip.mixGroup);
+    this._midiControls.bpm = this._bpmSlider;
+    this._wireInputLearn(this._bpmSlider, "bpm");
 
     // ---- Key/Scale → dedicated strip group (inserted before mix group) ----
     if (showScales) {
@@ -220,16 +266,9 @@ export class WebAudioTransportControls extends HTMLElement {
     this._fxUnit = document.createElement("wam-fx-unit");
     this._fxSection.appendChild(this._fxUnit);
 
-    // Spacebar play/stop
-    if (this._keyHandler) document.removeEventListener("keydown", this._keyHandler);
-    this._keyHandler = (e) => {
-      if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
-      if (e.key !== " ") return;
-      e.preventDefault();
-      if (this._ctx?.state === "suspended") this._ctx.resume();
-      this._playing ? this._stop() : this._play();
-    };
-    document.addEventListener("keydown", this._keyHandler);
+    // Spacebar play/stop is handled by the global input/command layer
+    // (keyboard " " → "play-stop" command); the playground owns that binding.
+    this._attachInputLearn();
 
     // Audio routing
     this._setupRouting(ctx, waveform, color, bpm, options.fx ?? {});
@@ -309,6 +348,7 @@ export class WebAudioTransportControls extends HTMLElement {
     if (this._seq) this._seq.bpm = v;
     if (this._fxUnit) this._fxUnit.bpm = v;
     for (const c of this._instruments) if (c.bpm !== undefined) c.bpm = v;
+    window._store?.set(StoreKeys.TRANSPORT_BPM, this.bpm);
   }
 
   // ---- Key / Scale ----
@@ -330,6 +370,10 @@ export class WebAudioTransportControls extends HTMLElement {
         detail: { root, scale },
       }),
     );
+  }
+
+  get _learnRegistry() {
+    return this._midiControls;
   }
 
   // ---- Play / Stop ----
@@ -355,6 +399,7 @@ export class WebAudioTransportControls extends HTMLElement {
       this._playBtn.classList.add("wam-playing");
     }
     if (this._seq) this._seq.start();
+    window._store?.set(StoreKeys.TRANSPORT_PLAYING, true);
     this.dispatchEvent(new CustomEvent("transport-play", { bubbles: true }));
   }
 
@@ -365,6 +410,7 @@ export class WebAudioTransportControls extends HTMLElement {
       this._playBtn.classList.remove("wam-playing");
     }
     if (this._seq) this._seq.stop();
+    window._store?.set(StoreKeys.TRANSPORT_PLAYING, false);
     this.dispatchEvent(new CustomEvent("transport-stop", { bubbles: true }));
   }
 
@@ -381,6 +427,7 @@ export class WebAudioTransportControls extends HTMLElement {
       muted: this._muteHandle?.isMuted() ?? false,
       root: this._rootSelect ? parseInt(this._rootSelect.value) : null,
       scale: this._scaleSelect?.value ?? null,
+      midiParamBindings: { ...this._paramBindings },
       fx: this._fxUnit?.toJSON(),
       fxVisible: !this._fxSection?.hasAttribute("data-hidden"),
     };
@@ -396,6 +443,11 @@ export class WebAudioTransportControls extends HTMLElement {
     if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
     if (obj.root != null && this._rootSelect) this._rootSelect.value = obj.root;
     if (obj.scale != null && this._scaleSelect) this._scaleSelect.value = obj.scale;
+    this._paramBindings = {};
+    for (const [param, binding] of Object.entries(obj.midiParamBindings ?? {})) {
+      this._paramBindings[param] = migrateLegacyBinding(binding);
+    }
+    this._updateBoundClasses();
     if (obj.root != null || obj.scale != null) this._broadcastScale();
     if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
     if (obj.fxVisible != null && this._fxSection && this._fxBtn) {
@@ -404,5 +456,7 @@ export class WebAudioTransportControls extends HTMLElement {
     }
   }
 }
+
+applyInputLearnMixin(WebAudioTransportControls);
 
 customElements.define("wam-transport", WebAudioTransportControls);

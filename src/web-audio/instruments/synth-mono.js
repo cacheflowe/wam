@@ -2,6 +2,8 @@ import WebAudioInstrumentBase from "../global/instrument-base.js";
 import "../ui/step-seq.js";
 import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/scales.js";
 import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
+import { applyADSR, applyFilterEnv } from "../global/dsp/envelope.js";
+import { createUnisonOscBank } from "../global/dsp/oscillator.js";
 
 export default class WebAudioSynthMono extends WebAudioInstrumentBase {
   static PRESETS = {
@@ -280,6 +282,7 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
       filterType: "highpass",
       lfoShape: "triangle",
       lfoDest: "filter",
+      volume: 0.8,
     },
   };
 
@@ -335,23 +338,19 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
     const amp = ctx.createGain();
 
     // Unison oscillators spread evenly across [-unisonDetune/2, +unisonDetune/2]
-    const allOscs = [];
-    for (let i = 0; i < voices; i++) {
-      const spread = voices > 1 ? (i / (voices - 1) - 0.5) * this.unisonDetune : 0;
-      const osc = ctx.createOscillator();
-      osc.type = this.oscType;
-      osc.detune.value = this.detune + spread;
-      if (this.portamento > 0 && this._lastFreq > 0) {
-        osc.frequency.setValueAtTime(this._lastFreq, t);
-        osc.frequency.linearRampToValueAtTime(freq, t + this.portamento);
-      } else {
-        osc.frequency.value = freq;
-      }
-      osc.connect(mixer);
-      osc.start(t);
-      osc.stop(stopTime);
-      allOscs.push(osc);
-    }
+    const allOscs = createUnisonOscBank(ctx, {
+      voices,
+      type: this.oscType,
+      detune: this.detune,
+      spread: this.unisonDetune,
+      freq,
+      glideFrom: this._lastFreq,
+      glideTime: this.portamento,
+      glideCurve: "linear",
+      start: t,
+      stop: stopTime,
+      dest: mixer,
+    });
     this._lastFreq = freq;
 
     // Sub oscillator — sine one octave below, bypasses the filter
@@ -371,17 +370,16 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
     filter.type = this.filterType;
     filter.Q.value = this.filterQ;
 
-    const baseFreq = this.filterFreq;
-    const peakFreq = Math.max(20, Math.min(20000, baseFreq * Math.pow(2, this.filterEnvAmt)));
-    const susFreq = baseFreq + (peakFreq - baseFreq) * this.filterSustain;
-    const fAtk = Math.max(0.001, this.filterAttack);
-
     // Amplitude ADSR (linearRamp — preserves original envelope character)
-    amp.gain.setValueAtTime(0, t);
-    amp.gain.linearRampToValueAtTime(velocity, t + this.attack);
-    amp.gain.linearRampToValueAtTime(velocity * this.sustain, t + this.attack + this.decay);
-    amp.gain.setValueAtTime(velocity * this.sustain, t + durationSec);
-    amp.gain.linearRampToValueAtTime(0, t + durationSec + this.release);
+    applyADSR(amp.gain, {
+      start: t,
+      peak: velocity,
+      attack: this.attack,
+      decay: this.decay,
+      sustain: this.sustain,
+      release: this.release,
+      releaseAt: t + durationSec,
+    });
 
     mixer.connect(filter);
     filter.connect(amp);
@@ -396,11 +394,16 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
     const lfoTargetsFilter = this.lfoDepth > 0 && this.lfoDest === "filter";
 
     // Filter envelope — always uses scheduled automation on filter.frequency
-    filter.frequency.setValueAtTime(baseFreq, t);
-    filter.frequency.linearRampToValueAtTime(peakFreq, t + fAtk);
-    filter.frequency.linearRampToValueAtTime(susFreq, t + fAtk + this.filterDecay);
-    filter.frequency.setValueAtTime(susFreq, t + durationSec);
-    filter.frequency.linearRampToValueAtTime(baseFreq, t + durationSec + this.filterRelease);
+    applyFilterEnv(filter.frequency, {
+      base: this.filterFreq,
+      envAmtOctaves: this.filterEnvAmt,
+      sustain: this.filterSustain,
+      attack: this.filterAttack,
+      decay: this.filterDecay,
+      release: this.filterRelease,
+      start: t,
+      releaseAt: t + durationSec,
+    });
 
     if (lfoTargetsFilter) {
       // Modulate filter.detune (cents) via a smoothed LFO signal.
@@ -704,27 +707,6 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
     this._jamPending = false;
     this._globalStep++;
-  }
-
-  _meetsCondition(condition, barIndex) {
-    switch (condition) {
-      case "off":
-        return true;
-      case "1:2":
-        return barIndex % 2 === 0;
-      case "1:3":
-        return barIndex % 3 === 0;
-      case "1:4":
-        return barIndex % 4 === 0;
-      case "2:4":
-        return barIndex % 4 === 1;
-      case "3:4":
-        return barIndex % 4 === 2;
-      case "fill":
-        return barIndex % 4 === 3;
-      default:
-        return true;
-    }
   }
 
   setActiveStep() {

@@ -59,35 +59,78 @@
 
 ## Domain Boundaries and Directory Map
 
+Each instrument/effect file co-locates its audio class and `*Controls` Web Component (see [design-docs/instrument-architecture.md](design-docs/instrument-architecture.md)).
+
 ```
 src/web-audio/
-  web-audio-synth-acid.js        TB-303-style mono bass (instrument + controls)
-  web-audio-synth-808.js         808 sub-bass (instrument + controls)
-  web-audio-synth-fm.js          2-op FM poly synth (instrument + controls)
-  web-audio-synth-mono.js        General mono synth (instrument + controls)
-  web-audio-synth-pad.js         Poly chord pad (instrument + controls)
-  web-audio-synth-blipfx.js      Procedural SFX (instrument + controls)
-  web-audio-perc-kick.js         808-style kick (instrument + controls)
-  web-audio-perc-hihat.js        Noise hihat (instrument + controls)
-      web-audio-sample-looper.js     Sample loop player (instrument + controls)
-  web-audio-fx-reverb.js         Convolution reverb
-  web-audio-fx-delay.js          Dub delay (BPM-synced)
-  web-audio-fx-chorus.js         Multi-voice chorus
-  web-audio-fx-filter.js         HP + LP filter (always inline)
-  web-audio-fx-distortion.js     Soft-clip waveshaper
-  web-audio-fx-unit.js           Composed FX Web Component (reverb+delay+chorus+filter)
-  web-audio-pitch-shift.js       Granular pitch-shift
-  web-audio-pitch-shift.worklet.js   AudioWorklet processor
-  web-audio-time-stretch.js      Granular time-stretch
-  web-audio-time-stretch.worklet.js  AudioWorklet processor
-  web-audio-slider.js            Range input Web Component + shared CSS helpers
-  web-audio-step-seq.js          16-step sequencer grid Web Component
-  web-audio-waveform.js          Visualizer Web Component (scope/spectrogram/FFT)
-  web-audio-sequencer.js         Lookahead step sequencer (no UI)
-  web-audio-scales.js            Music theory: scales, chords, MIDI helpers
+  instruments/                   Audio class + Controls component per file
+    synth-acid.js                TB-303-style mono bass
+    synth-808.js                 808 sub-bass
+    synth-fm.js                  2-op FM poly synth
+    synth-mono.js                General mono synth (uses global/dsp/ primitives)
+    synth-pad.js                 Poly chord pad
+    synth-poly.js                Flagship poly subtractive synth (unison, per-voice
+                                 filter ADSR, dual LFOs, voice stealing; built on global/dsp/)
+    synth-blipfx.js              Procedural SFX
+    perc-kick.js                 808-style kick
+    perc-hihat.js                Noise hihat
+    perc-snare.js                Noise/tone snare
+    sample-player.js             One-shot sample player
+    sample-looper.js             Sample loop player
+    vocoder.js                   Vocoder vocal processor
 
+  fx/                            Effects (shared connect() / input interface)
+    fx-reverb.js                 Convolution reverb
+    fx-delay.js                  Dub delay (BPM-synced)
+    fx-chorus.js                 Multi-voice chorus
+    fx-filter.js                 HP + LP filter (always inline)
+    fx-distortion.js             Soft-clip waveshaper
+    fx-compressor.js (+ .worklet.js)   Sidechain compressor
+    fx-vocoder.js                Vocoder effect
+    fx-unit.js                   Composed FX Web Component (reverb+delay+chorus+filter)
+    pitch-shift.js (+ .worklet.js)     Granular pitch-shift
+    time-stretch.js (+ .worklet.js)    Granular time-stretch
+
+  global/                        Headless engine + shared utilities (no DOM)
+    instrument-base.js           Base audio class shared by instruments
+    sequencer.js                 Lookahead step sequencer (no UI)
+    sequencer-conditions.js      Trig-condition (X:Y bar-cycle) source of truth
+    scales.js                    Music theory: scales, chords, MIDI helpers
+    sample-utils.js              Sample load/decode helpers
+    store-keys.js                Persistence key constants
+    dsp/                         Shared fire-and-forget DSP primitives
+      envelope.js                applyADSR / applyFilterEnv
+      oscillator.js              createUnisonOscBank
+      distortion.js              makeSoftClipCurve
+
+  ui/                            Web Components and panel infrastructure
+    controls-base.js             WebAudioControlsBase (slider factory, step loop,
+                                 _meetsCondition, input-learn mixin host)
+    slider.js / knob.js          Range / knob input components
+    step-seq.js                  16-step sequencer grid component
+    transport.js                 Transport (play/stop/BPM) controls
+    visualizer.js / waveform.js  Scope / spectrogram / FFT visualizers
+    level-meter.js / param-display.js   Metering & readouts
+    drawer.js / arrangement-library.js  App-shell chrome & preset/arrangement UI
+    midi-input-picker.js / midi-monitor.js   MIDI device UI
+    focus-manager.js / input-learn.js   Panel focus + learn (see FRONTEND.md)
+    sketches/                    Canvas visual sketches
+
+  midi/                          Device drivers (see references/launch-control-xl.md)
+    launch-control-xl.js         Launch Control XL map
+    auto-map.js                  Sequencer auto-mapping on focus
+    led-feedback.js              Hardware LED feedback
+    midi-output.js               Rate-limited/batched sysex output
+    sequencer-hardware.js        Hardware sequencer bridge
+
+  input/                         Source-agnostic input abstraction (see FRONTEND.md)
+    input-bindings.js            Binding contract + registry
+    keyboard-source.js           Computer-keyboard adapter
+    midi-source.js               MIDI adapter
+
+src/app/                         Standalone demo apps (playground, generative, vocoder)
 src/site/
-  app.js                         Entry point (to be built)
+  app.js                         Entry point
   pico-theme.js                  PicoCSS theme customization
 
 src/css/
@@ -95,8 +138,9 @@ src/css/
   styles.css                     Global site overrides
 
 public/
-  audio/breaks/                  Drum loop WAV samples
+  audio/                         Drum loop / sample WAVs
   images/                        Icons and images
+  manifest.json / sw.js          PWA manifest + service worker
 ```
 
 ## Key Architecture Decisions
