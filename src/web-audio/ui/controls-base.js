@@ -270,12 +270,19 @@ export class WebAudioControlsBase extends HTMLElement {
       });
     }
 
-    // Three independent sections
-    this._ctrlSection = document.createElement("div");
-    this._ctrlSection.className = "wam-section-ctrl";
-    this._ctrlSection.setAttribute("data-hidden", ""); // default: hidden
-    this.appendChild(this._ctrlSection);
+    // Combined Ctrl+FX section: a single grid where instrument knobs and FX
+    // sections flow in columns side by side. Hidden together by the Ctrl toggle.
+    this._topSection = document.createElement("div");
+    this._topSection.className = "wam-section-top";
+    this._topSection.setAttribute("data-hidden", ""); // default: hidden
+    this.appendChild(this._topSection);
 
+    // Single grid container — Ctrl sections and FX sections flow in columns.
+    this._topControls = document.createElement("div");
+    this._topControls.className = "wam-controls";
+    this._topSection.appendChild(this._topControls);
+
+    // Sequencer — independent toggle, sits below the Ctrl+FX row.
     this._seqSection = document.createElement("div");
     this._seqSection.className = "wam-section-seq";
     this._seqSection.setAttribute("data-hidden", ""); // default: hidden
@@ -286,12 +293,9 @@ export class WebAudioControlsBase extends HTMLElement {
     this._seqControls.className = "wam-controls";
     this._seqSection.appendChild(this._seqControls);
 
-    this._fxSection = document.createElement("div");
-    this._fxSection.className = "wam-section-fx";
-    this._fxSection.setAttribute("data-hidden", ""); // default: hidden
-    this.appendChild(this._fxSection);
-
-    // Wire toggle buttons to show/hide their section
+    // Wire toggle buttons.
+    // Ctrl toggles the combined Ctrl+FX row. FX always travels with Ctrl.
+    // Seq toggles the sequencer independently.
     const wireToggle = (btn, section) => {
       btn.addEventListener("click", () => {
         const nowHidden = section.hasAttribute("data-hidden");
@@ -300,14 +304,18 @@ export class WebAudioControlsBase extends HTMLElement {
         this._emitChange();
       });
     };
-    wireToggle(this._ctrlBtn, this._ctrlSection);
+    wireToggle(this._ctrlBtn, this._topSection);
     wireToggle(this._seqBtn, this._seqSection);
-    wireToggle(this._fxBtn, this._fxSection);
-
-    // Controls wrapper inside ctrl section
-    const controls = document.createElement("div");
-    controls.className = "wam-controls";
-    this._ctrlSection.appendChild(controls);
+    // FX button is kept for the nav group but is decorative — it just mirrors
+    // the Ctrl toggle state since FX always travels with controls.
+    this._fxBtn.addEventListener("click", () => {
+      // Delegate to Ctrl toggle (same section)
+      const nowHidden = this._topSection.hasAttribute("data-hidden");
+      this._topSection.toggleAttribute("data-hidden", !nowHidden);
+      this._ctrlBtn.toggleAttribute("data-active", nowHidden);
+      this._fxBtn.toggleAttribute("data-active", nowHidden);
+      this._emitChange();
+    });
 
     // Slider factory — creates a wam-slider or wam-knob, registers in _sliders, returns element
     const mkSlider = (def) => {
@@ -328,10 +336,10 @@ export class WebAudioControlsBase extends HTMLElement {
       return s;
     };
 
-    // Subclass hook — controls goes into ctrl section, seqControls is passed as `expanded`
-    // so subclasses' expanded.appendChild(this._seq) targets the padded seq content area
-    this._buildPresetSection(controls, instrument);
-    this._buildControls(controls, this._seqControls, mkSlider, ctx, options);
+    // Subclass hook — _topControls is the shared grid for Ctrl + FX sections,
+    // seqControls is passed as `expanded` for the step sequencer.
+    this._buildPresetSection(this._topControls, instrument);
+    this._buildControls(this._topControls, this._seqControls, mkSlider, ctx, options);
 
     // Delegated slider-input / knob-input listener
     const handleInput = (e) => {
@@ -355,8 +363,9 @@ export class WebAudioControlsBase extends HTMLElement {
     this.addEventListener("knob-input", handleInput);
     this.addEventListener("slider-input", handleInput);
 
-    // FX unit (inside fx section, overridable — 808 returns null)
-    this._fxUnit = this._createFxUnit(this._fxSection, ctx, options);
+    // FX unit — appended to the same grid as Ctrl sections. display:contents
+    // lets its child .wam-section elements flow in columns alongside controls.
+    this._fxUnit = this._createFxUnit(this._topControls, ctx, options);
 
     // Audio routing
     this._setupRouting(instrument, ctx, strip, waveform, color);
@@ -606,9 +615,9 @@ export class WebAudioControlsBase extends HTMLElement {
   // ---- FX unit ----
 
   /** Create and return the FX unit element. Override to return null (808). */
-  _createFxUnit(expanded, ctx, options) {
+  _createFxUnit(fxSection, ctx, options) {
     const fxUnit = document.createElement("wam-fx-unit");
-    expanded.appendChild(fxUnit);
+    fxSection.appendChild(fxUnit);
     fxUnit.init(ctx, {
       title: this._fxTitle(),
       bpm: options.fx?.bpm ?? 120,
@@ -1109,9 +1118,8 @@ export class WebAudioControlsBase extends HTMLElement {
       speedMultiplier: this._speedMultiplier,
       patternParams: this._seq?.getPatternParams(),
       sections: {
-        ctrl: !this._ctrlSection?.hasAttribute("data-hidden"),
+        ctrl: !this._topSection?.hasAttribute("data-hidden"),
         seq: !this._seqSection?.hasAttribute("data-hidden"),
-        fx: !this._fxSection?.hasAttribute("data-hidden"),
       },
     };
     this._extendJSON(obj);
@@ -1165,9 +1173,12 @@ export class WebAudioControlsBase extends HTMLElement {
         this._rotateIntervalInput.value = obj.patternParams.rotationIntervalBars;
     }
     if (obj.sections) {
-      this._applyPanel(this._ctrlSection, this._ctrlBtn, obj.sections.ctrl ?? false);
+      // FX always travels with Ctrl. Backward compat: if old save had 'fx' but not
+      // 'ctrl', use fx visibility as the combined row state.
+      const ctrlVisible = obj.sections.ctrl ?? obj.sections.fx ?? false;
+      this._applyPanel(this._topSection, this._ctrlBtn, ctrlVisible);
+      this._applyPanel(this._topSection, this._fxBtn, ctrlVisible);
       this._applyPanel(this._seqSection, this._seqBtn, obj.sections.seq ?? true);
-      this._applyPanel(this._fxSection, this._fxBtn, obj.sections.fx ?? false);
     }
   }
 
@@ -1179,14 +1190,14 @@ export class WebAudioControlsBase extends HTMLElement {
   }
 
   /**
-   * Show or hide all three sections (Ctrl/Seq/FX) at once. Used to emphasize
+   * Show or hide all sections (Ctrl+FX row, Seq) at once. Used to emphasize
    * the focused instrument (expand all) and de-emphasize the rest (collapse
    * all) so the active one stands out.
    */
   setAllPanels(visible) {
-    this._applyPanel(this._ctrlSection, this._ctrlBtn, visible);
+    this._applyPanel(this._topSection, this._ctrlBtn, visible);
+    this._applyPanel(this._topSection, this._fxBtn, visible);
     this._applyPanel(this._seqSection, this._seqBtn, visible);
-    this._applyPanel(this._fxSection, this._fxBtn, visible);
   }
 
   /**

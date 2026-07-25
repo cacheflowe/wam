@@ -51,11 +51,21 @@ export function injectControlsCSS() {
       gap: 0;
       padding: 6px 14px 10px;
     }
-    .wam-section-ctrl > .wam-controls {
+
+    /* ---- Combined Ctrl+FX row ---- */
+    .wam-section-top {
+      padding: 4px 0;
+    }
+    .wam-section-top > .wam-controls {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
       gap: 8px;
-      padding: 8px 14px 10px;
+      padding: 6px 14px 10px;
+    }
+    /* FX sections get a slightly darker background to differentiate from Ctrl */
+    .wam-controls .wam-section[data-fx-section] {
+      background: rgba(15, 20, 35, 0.3);
+      border-color: #2a2a3a;
     }
     .wam-section {
       display: flex;
@@ -248,8 +258,8 @@ export function injectControlsCSS() {
     /* ---- Section visibility ---- */
     [data-hidden] { display: none !important; }
     .wam-section-seq { border-top: 1px solid #1d1d1d; }
-    .wam-section-fx  { border-top: 1px solid #1d1d1d; }
-    .wam-section-ctrl[data-hidden] + .wam-section-seq { border-top: none; }
+    .wam-section-top[data-hidden] + .wam-section-seq { border-top: none; }
+    .wam-section-top[data-hidden] + .wam-section-seq { border-top: none; }
     /* ---- Channel strip ---- */
     .wam-channel-strip {
       display: flex;

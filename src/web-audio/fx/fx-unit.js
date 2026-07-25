@@ -320,8 +320,13 @@ export default class WebAudioFxUnit extends HTMLElement {
     this.innerHTML = "";
     injectControlsCSS();
 
+    const mkFxSection = (label) => {
+      const { el, controls } = createSection(label);
+      el.setAttribute("data-fx-section", "");
+      return { el, controls };
+    };
     // ---- Filter ----
-    const { el: filtEl, controls: filtCtrl } = createSection("Filter");
+    const { el: filtEl, controls: filtCtrl } = mkFxSection("Filter");
     const sweep = document.createElement("wam-filter-sweep");
     sweep.setAttribute("param", "filterSweep");
     sweep.setAttribute("label", "Sweep");
@@ -339,7 +344,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     this.appendChild(filtEl);
 
     // ---- Delay ----
-    const { el: delEl, controls: delCtrl } = createSection("Delay");
+    const { el: delEl, controls: delCtrl } = mkFxSection("Delay");
     delCtrl.appendChild(
       this._addSlider("delayMix", "Mix", 0, 1, 0.01, options.delayMix ?? 0, {
         tooltip: "Delay wet/dry mix. 0 = dry only, 1 = delay only.",
@@ -372,7 +377,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     this.appendChild(delEl);
 
     // ---- Chorus ----
-    const { el: chorEl, controls: chorCtrl } = createSection("Chorus");
+    const { el: chorEl, controls: chorCtrl } = mkFxSection("Chorus");
     chorCtrl.appendChild(
       this._addSlider("chorusWet", "Wet", 0, 1, 0.01, options.chorusWet ?? 0, {
         tooltip: "Chorus wet/dry mix. 0 = dry, 1 = full chorus effect.",
@@ -419,7 +424,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     this.appendChild(chorEl);
 
     // ---- Reverb ----
-    const { el: revEl, controls: revCtrl } = createSection("Reverb");
+    const { el: revEl, controls: revCtrl } = mkFxSection("Reverb");
     revCtrl.appendChild(
       this._addSlider("reverbWet", "Wet", 0, 1, 0.01, options.reverbWet ?? 0, {
         tooltip: "Reverb wet/dry mix. 0 = dry, 1 = reverb only.",
@@ -460,7 +465,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     this.appendChild(revEl);
 
     // ---- Sidechain compressor ----
-    const { el: scEl, controls: scCtrl } = createSection("Sidechain");
+    const { el: scEl, controls: scCtrl } = mkFxSection("Sidechain");
     const srcWrap = createCtrl("Source", {
       wide: true,
       tooltip: "Track whose level ducks this channel. Off until a source is selected — pick a kick for a classic pump.",
@@ -643,12 +648,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     const style = document.createElement("style");
     style.textContent = `
       wam-fx-unit {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 8px;
-        padding: 8px 14px 10px;
-        background: #0d0d0d;
-        font-family: monospace;
+        display: contents; /* let child .wam-sections flow into the parent grid */
         --slider-accent: var(--fx-accent, #0f0);
       }
       /* FX sections are narrow (~3 inner columns), so the shared "span 4" wide
