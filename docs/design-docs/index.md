@@ -9,6 +9,7 @@
 | [fire-and-forget-voices.md](fire-and-forget-voices.md) | Active | Justin Gitlin | 2026-04-27 |
 | [bpm-synced-timing.md](bpm-synced-timing.md) | Active | Justin Gitlin | 2026-04-27 |
 | [event-driven-control.md](event-driven-control.md) | Active | Justin Gitlin | 2026-05-11 |
+| [event-migration-plan.md](event-migration-plan.md) | Draft | Justin Gitlin | 2026-06-19 |
 
 ## Purpose
 

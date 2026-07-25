@@ -265,12 +265,12 @@ export function injectControlsCSS() {
       display: flex;
       align-items: center;
       gap: 5px;
-      flex: 0 1 88px;
-      min-width: 56px;
+      flex: 0 1 160px;
+      min-width: 80px;
       overflow: hidden;
     }
     .wam-strip-name {
-      font-size: 0.7em;
+      font-size: 1rem;
       color: var(--slider-accent, #0f0);
       text-transform: uppercase;
       letter-spacing: 0.1em;
@@ -333,7 +333,8 @@ export function injectControlsCSS() {
       .wam-strip-nav-group  { margin-left: 0; }
     }
     /* ---- Expanded / collapsed ---- */
-    [data-collapsed] > .wam-expanded { display: none; }
+    /* Sections are hidden via data-hidden (setAllPanels). data-collapsed only
+     drives the chevron rotation above — keeping the two concerns separate */
     [data-no-sequencer] wam-step-seq,
     [data-no-sequencer] .wam-action-row { display: none; }
     /* ---- PicoCSS tooltip overrides for slider label ---- */
@@ -434,7 +435,15 @@ export function createChannelStrip(
     chevron.textContent = "▾";
     nameGroup.appendChild(chevron);
     nameGroup.style.cssText += "cursor:pointer;user-select:none;";
-    nameGroup.addEventListener("click", () => parentEl.toggleAttribute("data-collapsed"));
+    nameGroup.addEventListener("click", (e) => {
+      e.stopPropagation();
+      parentEl.dispatchEvent(
+        new CustomEvent("strip-collapse-toggle", {
+          bubbles: true,
+          detail: { onWaveform: false, fromTitle: true },
+        }),
+      );
+    });
   }
   strip.appendChild(nameGroup);
 

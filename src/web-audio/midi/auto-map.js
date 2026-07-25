@@ -58,7 +58,7 @@ export class AutoMap {
   /**
    * Map the instrument's learnable params (in registry order) to the available
    * knobs/faders, skipping params already manually bound and controls already
-   * used by a manual binding. Uses the live template so channels match.
+   * used by a manual binding. Prioritizes 'preset' for the first control.
    * @returns {Object<string, object>} param → LCXL binding
    */
   computeMap(controls) {
@@ -72,13 +72,28 @@ export class AutoMap {
       if (control) usedControlIds.add(control.id);
     }
     const available = MAP_CONTROL_IDS.filter((id) => !usedControlIds.has(id));
-    const params = Object.keys(registry).filter((param) => !manual[param]);
 
+    // Get all parameters that aren't already manually bound.
+    let params = Object.keys(registry).filter((param) => !manual[param]);
+    
     const map = {};
-    const count = Math.min(params.length, available.length);
-    for (let i = 0; i < count; i++) {
-      map[params[i]] = bindingFor(available[i], template);
+    let availableIdx = 0;
+
+    // Prioritize mapping 'preset' to the first available control if it exists.
+    // This ensures the preset selector is easily accessible on the hardware.
+    const presetParamIdx = params.indexOf("preset");
+    if (presetParamIdx !== -1 && availableIdx < available.length) {
+      const presetParam = params.splice(presetParamIdx, 1)[0];
+      map[presetParam] = bindingFor(available[availableIdx++], template);
     }
+
+    // Map the remaining available parameters to the remaining available controls.
+    for (const param of params) {
+      if (availableIdx < available.length) {
+        map[param] = bindingFor(available[availableIdx++], template);
+      }
+    }
+
     return map;
   }
 }

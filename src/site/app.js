@@ -1,11 +1,29 @@
 import PicoTheme from "./pico-theme.js";
 import AppStore from "oversite/src/app-store/app-store-.mjs";
+import AppStoreDistributed from "oversite/src/app-store/app-store-distributed.mjs";
 
-// Global shared-state store. The constructor sets window._store and fires an
-// "appstore-ready" event. Created before any app/component mounts so every
-// component can read/write window._store. Swap for AppStoreDistributed later to
-// get remote-control / multi-machine sync for free.
-new AppStore();
+// Global shared-state store. Both classes set window._store and fire an
+// "appstore-ready" event; created before any app/component mounts so every
+// component can read/write window._store.
+//
+// Default: local-only AppStore. Opt into multi-client sync by adding a ?sync=
+// WebSocket URL, e.g.
+//   #playground-app?sync=ws://localhost:3003/ws&channel=wam&role=control
+// In sync mode, broadcast set()s go through the Oversite server and echo to all
+// clients. See docs/design-docs/event-migration-plan.md.
+(function initStore() {
+  const params = new URLSearchParams(location.search);
+  const syncUrl = params.get("sync");
+  if (syncUrl) {
+    const channel = params.get("channel") || "wam";
+    const role = params.get("role") || "host";
+    const senderId = `wam_${role}_${Math.random().toString(36).slice(2, 8)}`;
+    window._syncRole = role; // read later for role-aware bridging (bucket D)
+    new AppStoreDistributed(syncUrl, senderId, channel);
+  } else {
+    new AppStore();
+  }
+})();
 
 // import apps
 import "../app/playground.js";

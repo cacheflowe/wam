@@ -36,7 +36,12 @@ import { focusManager } from "../web-audio/ui/focus-manager.js";
 import { sequencerHardware } from "../web-audio/midi/sequencer-hardware.js";
 import { ledFeedback } from "../web-audio/midi/led-feedback.js";
 import { autoMap } from "../web-audio/midi/auto-map.js";
-import { bindingFor, COMMANDS, DEFAULT_COMMAND_CONTROLS, DEFAULT_TEMPLATE } from "../web-audio/midi/launch-control-xl.js";
+import {
+  bindingFor,
+  COMMANDS,
+  DEFAULT_COMMAND_CONTROLS,
+  DEFAULT_TEMPLATE,
+} from "../web-audio/midi/launch-control-xl.js";
 import { registerCommandBinding } from "../web-audio/input/input-bindings.js";
 import { ensureMidiInputSource } from "../web-audio/input/midi-source.js";
 import { ensureKeyboardInputSource } from "../web-audio/input/keyboard-source.js";
@@ -332,6 +337,7 @@ export default class PlaygroundApp extends HTMLElement {
     this._isLoadingState = false;
     this._analysisBus = new WamAnalysisBus();
 
+    this._addCSS();
     this._buildUI();
     this._loadInitialState();
 
@@ -364,8 +370,13 @@ export default class PlaygroundApp extends HTMLElement {
 
       // Highlight the focused instrument: expand all three of its panels and
       // collapse every other instrument's, then scroll it near the top.
+      // Drive BOTH layers together — section visibility (setAllPanels) and the
+      // channel-strip collapse (collapsed) — so they never drift out of sync
+      // and the strip-click toggle stays predictable.
       for (const entry of this._instruments) {
-        entry.ctrl.setAllPanels?.(entry.ctrl === ctrl);
+        const isFocused = entry.ctrl === ctrl;
+        entry.ctrl.setAllPanels?.(isFocused);
+        if (entry.ctrl) entry.ctrl.collapsed = !isFocused;
       }
       if (idx >= 0) this._scrollInstrumentIntoView(this._instruments[idx].row);
 
@@ -404,17 +415,18 @@ export default class PlaygroundApp extends HTMLElement {
     const nextInst = this._instruments[nextIdx];
     // Focus it
     const ctrl = nextInst.ctrl;
-    ctrl.dispatchEvent(new CustomEvent("wam-instrument-focus", {
-      bubbles: true,
-      detail: { controls: ctrl }
-    }));
+    ctrl.dispatchEvent(
+      new CustomEvent("wam-instrument-focus", {
+        bubbles: true,
+        detail: { controls: ctrl },
+      }),
+    );
   }
 
-  /** Scroll an instrument row to just below the sticky transport bar. */
+  /** Scroll an instrument row into view. */
   _scrollInstrumentIntoView(row) {
     if (!row) return;
-    const topBarH = this._topBar?.offsetHeight ?? 0;
-    const y = row.getBoundingClientRect().top + window.scrollY - topBarH - 12;
+    const y = row.getBoundingClientRect().top + window.scrollY - 12;
     window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
   }
 
@@ -429,10 +441,32 @@ export default class PlaygroundApp extends HTMLElement {
 
   // ---- UI ----
 
+  _addCSS() {
+    const style = document.createElement("style");
+    style.textContent = /* css */ `
+      body {
+        background: #0d0d14;
+        color: #cfcff0;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.9rem;
+        line-height: 1.4rem;
+      }
+      main {
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      @media (max-width: 600px) {
+        main {
+          padding: 1rem;
+        }
+      }
+    `;
+    this.appendChild(style);
+  }
+
   _buildUI() {
     const main = document.createElement("main");
-    main.className = "container";
-    main.style.cssText = "padding-bottom:4rem;";
     this.appendChild(main);
 
     // Shared tool drawer (panels registered below).
@@ -443,7 +477,7 @@ export default class PlaygroundApp extends HTMLElement {
     const topBar = document.createElement("section");
     this._topBar = topBar;
     topBar.style.cssText =
-      "position:sticky;top:0;z-index:50;background:#0d0d14;padding:0.5rem 0 0.6rem;margin-bottom:1.25rem;border-bottom:1px solid #24243a;";
+      "position:relative;z-index:50;background:#0d0d14;padding:0.5rem 0 0.6rem;margin-bottom:1.25rem;border-bottom:1px solid #24243a;";
 
     this._transportEl = document.createElement("wam-transport");
     topBar.appendChild(this._transportEl);
@@ -841,7 +875,7 @@ export default class PlaygroundApp extends HTMLElement {
 
     // Wrapper row
     const row = document.createElement("div");
-    row.style.cssText = "position:relative;border:1px solid #ffffff18;border-radius:6px;padding:0 0 .5rem;";
+    row.style.cssText = "position:relative;border:1px solid #ffffff18;border-radius:6px;";
 
     const removeBtn = document.createElement("button");
     removeBtn.textContent = "✕ Remove";

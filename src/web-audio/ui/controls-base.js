@@ -138,9 +138,67 @@ export class WebAudioControlsBase extends HTMLElement {
       getOutGain: () => this._out,
       initialVol: instrument.volume,
       initialPan: 0,
-      noCollapse: true,
+      noCollapse: false,
     });
     this._stripEl = strip.strip;
+
+    // Collapse is the panel's concern, not the strip's. Apply the default state
+    // and toggle it when the strip requests it (click on title → strip-collapse-toggle).
+    // The listener lives on `this` (persistent across re-binds), so guard it.
+    // Interaction flow (title click on strip):
+    //   pointerdown: excluded (name group is in the ignore list) — no focus dispatch
+    //   click: strip-collapse-toggle dispatched by the factory
+    //     → if collapsed: dispatch wam-instrument-focus (closes others, sets wam-focused),
+    //       then expand all sections. Playground scrolls. _wasFocusedOnPress guard below
+    //       prevents the subsequent body-click path from toggling shut.
+    //     → if expanded: collapse all sections. No focus change.
+    if (CHANNEL_STRIP_COLLAPSED_DEFAULT) {
+      this.setAttribute("data-collapsed", "");
+    }
+    if (!this._collapseWired) {
+      this._collapseWired = true;
+      this.addEventListener("strip-collapse-toggle", (e) => {
+        // While expanded, a click on the live waveform cycles its display mode
+        // rather than collapsing. When collapsed, any click expands.
+        if (!this.hasAttribute("data-collapsed") && e.detail?.onWaveform) return;
+
+        if (this.hasAttribute("data-collapsed")) {
+          // Expanding — capture focus state, then dispatch focus so the app
+          // collapses all other instruments and scrolls this one into view.
+          this._wasFocusedOnPress = this.classList.contains("wam-focused");
+          this.dispatchEvent(
+            new CustomEvent("wam-instrument-focus", { bubbles: true, detail: { controls: this } }),
+          );
+          // Expand our sections. (Playground's synchronous focus handler already
+          // called setAllPanels(true), but calling again is idempotent.)
+          this.removeAttribute("data-collapsed");
+          this.setAllPanels(true);
+          // Scroll only if no focus manager is present (standalone use without wam-focused).
+          if (!this.classList.contains("wam-focused")) {
+            this.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        } else {
+          // Title-click path: pointerdown is excluded for name group, so
+          // _wasFocusedOnPress may be stale. Capture it here — title click is
+          // an explicit collapse intent regardless of prior focus state.
+          // Body-click path: _wasFocusedOnPress was set by pointerdown.
+          // If this gesture just moved focus here (wasn't focused before), an
+          // app-level focus handler is already expanding. Force it open rather
+          // than toggling shut. Without a focus manager (`wam-focused` never
+          // set), this branch never triggers and collapse runs as normal.
+          const wasFocusedBeforeThisGesture = e.detail?.fromTitle
+            ? this.classList.contains("wam-focused")
+            : this._wasFocusedOnPress;
+          if (this.classList.contains("wam-focused") && !wasFocusedBeforeThisGesture) {
+            return;
+          }
+          // Collapsing — hide all three sections.
+          this.setAttribute("data-collapsed", "");
+          this.setAllPanels(false);
+        }
+      });
+    }
+
     this._muteHandle = {
       isMuted: strip.isMuted,
       setMuted: strip.setMuted,
@@ -198,7 +256,16 @@ export class WebAudioControlsBase extends HTMLElement {
     // control: the 16 sequencer buttons follow the focused instrument).
     if (!this._focusWired) {
       this._focusWired = true;
-      this.addEventListener("pointerdown", () => {
+      this.addEventListener("pointerdown", (e) => {
+        // Mixing controls (mute/solo/vol/pan) and jam triggers act on the
+        // channel in place — they must not change which instrument is
+        // focused/expanded. The Ctrl/Seq/FX nav toggles still focus, since
+        // they rely on focus to reveal their section.
+        if (e.target.closest(".wam-strip-name-group, .wam-strip-mix-group, .wam-strip-jam-group")) return;
+        // Capture focus state before dispatching, so the collapse toggle (which
+        // fires later on `click`) can tell whether this gesture is what focused
+        // the instrument — and avoid toggling shut what focus just expanded.
+        this._wasFocusedOnPress = this.classList.contains("wam-focused");
         this.dispatchEvent(new CustomEvent("wam-instrument-focus", { bubbles: true, detail: { controls: this } }));
       });
     }
@@ -1120,6 +1187,19 @@ export class WebAudioControlsBase extends HTMLElement {
     this._applyPanel(this._ctrlSection, this._ctrlBtn, visible);
     this._applyPanel(this._seqSection, this._seqBtn, visible);
     this._applyPanel(this._fxSection, this._fxBtn, visible);
+  }
+
+  /**
+   * Channel-strip collapse state. Setting it keeps the collapse layer
+   * (`data-collapsed`) in sync with focus-driven expansion, so the strip click
+   * and the app's focus handler never disagree about whether a panel is open.
+   */
+  get collapsed() {
+    return this.hasAttribute("data-collapsed");
+  }
+
+  set collapsed(v) {
+    this.toggleAttribute("data-collapsed", !!v);
   }
 
   /** Restore a single param. Override for special handling (e.g. oscType → wave buttons). */

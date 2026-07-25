@@ -1,3 +1,5 @@
+// Register the sibling control elements as a side effect so a bare
+// `import "./slider.js"` still pulls in the full basic-control family.
 import "./level-meter.js";
 import "./knob.js";
 import "./param-display.js";
