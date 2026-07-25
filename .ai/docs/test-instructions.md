@@ -161,8 +161,9 @@ answering) tells you which link is broken.
 ## 4. Testing MCP servers
 
 MCP config source is `.ai/mcp-servers.json`, synced to `.mcp.json` (Claude
-Code/Copilot), `.codex/config.toml` (Codex), and `.agents/mcp_config.json`
-(Antigravity CLI). When `mcpServers` is empty the sync skips all three
+Code/Copilot), `.pi/mcp.json` (`.pi` agent harness), `.codex/config.toml`
+(Codex), and `.agents/mcp_config.json` (Antigravity CLI). When `mcpServers`
+is empty the sync skips all four
 destinations — see [.ai/docs/harness-support.md](.ai/docs/harness-support.md)
 for config formats.
 

@@ -2,6 +2,8 @@
 
 This folder is the **source of truth** for AI agent context across Claude Code, OpenAI Codex, VS Code Copilot, Antigravity CLI, Cursor, and others. A zero-dependency Node.js sync script in [.ai/scripts/sync.js](.ai/scripts/sync.js) fans these source files out to every harness's expected paths so you author once and every tool sees the same instructions.
 
+`sync.js` is module-mode safe: it runs in projects with or without `"type": "module"` in `package.json`.
+
 If you've just dropped `.ai/` into a new project, start with the [Quickstart](#quickstart) below. If you're trying to add a skill, prompt, or MCP server, jump to [Adding things](#adding-things).
 
 You can find the latest version of this project at https://github.com/Hovercraft-Studio/agents-config-sync
@@ -17,7 +19,6 @@ The harness only works if you stay on the right side of this line.
 | Path | Purpose |
 |---|---|
 | `.ai/AGENTS.md` | Project-specific agent instructions (what *this* repo is, key dirs, project doc links) |
-| `.ai/_base.md` | Portable instructions reusable across repos |
 | `.ai/mcp-servers.json` | MCP server definitions (ships pre-wired to `@modelcontextprotocol/server-everything` for smoke-testing — delete or replace once you add real servers) |
 | `.ai/skills/<name>.md` | Domain knowledge agents load when relevant |
 | `.ai/prompts/<name>.md` | Slash commands you invoke explicitly |
@@ -31,6 +32,7 @@ These ship with the harness and are maintained by the agents-config-sync project
 | `.ai/scripts/sync.js` | Sync engine — only modify if extending sync behavior |
 | `.ai/.sync-manifest.json` | Generated state; regenerated on every sync |
 | `.ai/docs/*.md` | Harness reference docs (per-harness support, test instructions, setup notes) |
+| `.ai/_base.md` | Instructions regarding how the harness sync works |
 | `.ai/README.md` | This file — documents the harness itself |
 
 ### Never edit these (generated harness targets)
@@ -49,6 +51,7 @@ These are produced from `.ai/` sources on every sync. They are **gitignored** an
 | `.github/skills/<name>/SKILL.md` | Copilot skills |
 | `.github/prompts/<name>.prompt.md` | Copilot prompts |
 | `.mcp.json` | Claude Code + Copilot MCP config (symlink to `.ai/mcp-servers.json`) |
+| `.pi/mcp.json` | `.pi` agent harness MCP config (symlink to `.ai/mcp-servers.json`) |
 | `.codex/config.toml` | Codex MCP config (generated TOML) |
 
 Whenever you change a source, run `node .ai/scripts/sync.js` (or let one of the [automatic triggers](#when-the-sync-runs-automatic-triggers) handle it).
@@ -237,10 +240,11 @@ The sync fans this out to every harness:
 | Target | Harness | How |
 |---|---|---|
 | `.mcp.json` (repo root) | Claude Code + VS Code Copilot | Symlink — both read this format natively |
+| `.pi/mcp.json` | `.pi` agent harness | Symlink — same source JSON, placed where `.pi` expects it |
 | `.codex/config.toml` | Codex | Generated TOML (`[mcp_servers.*]` tables). User-owned files (missing the `# ai-sync-generated` marker) are never overwritten |
 | `.agents/mcp_config.json` | Antigravity CLI | Generated JSON with `_ai_sync_generated: true` flag. Legacy `url`/`httpUrl` keys are auto-renamed to Antigravity's `serverUrl`. Hand-edited files (without the flag) are preserved |
 
-> **Empty source = no generation.** When `mcpServers` is empty (or the source file is missing), the sync **skips all three destinations** and cleans up any previously-generated stubs it still owns. User-owned files at those paths are preserved. This keeps fresh repos free of empty MCP config files until you actually have servers to wire up.
+> **Empty source = no generation.** When `mcpServers` is empty (or the source file is missing), the sync **skips all four destinations** and cleans up any previously-generated stubs it still owns. User-owned files at those paths are preserved. This keeps fresh repos free of empty MCP config files until you actually have servers to wire up.
 
 See [.ai/docs/harness-support.md](.ai/docs/harness-support.md) for per-harness config details and [.ai/docs/test-instructions.md](.ai/docs/test-instructions.md) for how to verify each harness sees the servers.
 
@@ -255,7 +259,7 @@ The sync engine ([.ai/scripts/sync.js](.ai/scripts/sync.js)) is a zero-dependenc
 3. **Composes agent instructions** — concatenates `.ai/AGENTS.md` + the generated index + `.ai/_base.md` and writes the result to `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, and `.agents/context/AGENTS.md`
 4. **Links skills** — for each `.ai/skills/<name>.md`, creates a symlink at `.claude/skills/<name>/SKILL.md` and `.github/skills/<name>/SKILL.md`, and a real file copy at `.agents/skills/<name>/SKILL.md` (Codex / Antigravity skill selectors don't follow symlinks reliably)
 5. **Links prompts** — for each `.ai/prompts/<name>.md`, creates entries at `.claude/skills/<name>/SKILL.md`, `.agents/skills/<name>/SKILL.md`, `.github/prompts/<name>.prompt.md`, and `.claude/commands/<name>.md` (deprecated, kept for CLI compatibility)
-6. **Syncs MCP config** — symlinks `.ai/mcp-servers.json` → `.mcp.json`, generates `.codex/config.toml`, and generates `.agents/mcp_config.json` (renaming legacy `url`/`httpUrl` keys to Antigravity's `serverUrl`)
+6. **Syncs MCP config** — symlinks `.ai/mcp-servers.json` → `.mcp.json` and `.pi/mcp.json`, generates `.codex/config.toml`, and generates `.agents/mcp_config.json` (renaming legacy `url`/`httpUrl` keys to Antigravity's `serverUrl`)
 7. **Cleans stale links** — removes symlinks for skills/prompts you've deleted from `.ai/`
 
 ### Symlink vs. copy

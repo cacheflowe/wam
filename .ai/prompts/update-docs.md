@@ -21,6 +21,8 @@ For every change, check whether these locations reference the old behavior or sh
 5. **`docs/`** (if present) — your project's own architecture, guides, references
 6. **`README.md`** (root) — thin stub pointing into `.ai/docs/`; update only if top-level orientation changes
 
+**Cross-Reference Check**: If a skill is modified, ensure its corresponding prompt and command definitions are also checked for consistency. If a prompt is modified, ensure its skill is also checked.
+
 Search for stale references (old names, removed flags, outdated paths) rather than only adding new text.
 
 ## 3. Make the edits
@@ -33,4 +35,5 @@ Search for stale references (old names, removed flags, outdated paths) rather th
 ## 4. Sync and report
 
 - Run `node .ai/scripts/sync.js` to regenerate all harness targets.
+- **Verify Sync**: Inspect the output of the sync script. Ensure no errors were reported and that all expected files were linked or copied.
 - Report: which files were updated and why, and which locations were checked but needed no changes.

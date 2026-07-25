@@ -90,6 +90,13 @@ Docs: https://docs.anthropic.com/en/docs/claude-code/mcp
 
 Docs: https://docs.github.com/en/copilot/how-tos/provide-context/use-mcp-in-your-ide/extend-copilot-chat-with-mcp
 
+### `.pi` agent harness
+
+- `.pi/mcp.json`
+
+The sync script symlinks `.ai/mcp-servers.json` to `.pi/mcp.json` so `.pi`
+can reuse the same project-scoped MCP server list as Claude Code and Copilot.
+
 ### Codex
 
 Project-scoped MCP config via TOML (trusted projects only):
@@ -179,3 +186,11 @@ Three of the four CLIs use `@` for inline file references, letting you attach a 
 
 > Commands evolve quickly. When a row above says "see docs" or you hit unexpected behavior, the live `/` list inside the session and the linked references are the ground truth — this table is a starting point, not a spec.
 
+### Related projects
+
+Upon building this tool, we found similar open source projects for AI harness syncing and authoring. Check them out for alternative approaches:
+
+- https://github.com/dallay/agentsync
+- https://github.com/yelmuratoff/agent_sync
+- https://github.com/GowayLee/agent-sync
+- https://github.com/ZacheryGlass/agent-sync
