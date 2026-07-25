@@ -3,7 +3,7 @@ import "./waveform.js";
 import "./recorder.js";
 import "./midi-input-picker.js";
 import "../fx/fx-unit.js";
-import { injectControlsCSS, createChannelStrip, createCtrl } from "./slider.js";
+import { injectControlsCSS, createChannelStrip, createCtrl } from "../ui/controls-factory.js";
 import { injectInputLearnCSS, applyInputLearnMixin } from "./input-learn.js";
 import { migrateLegacyBinding } from "../input/input-bindings.js";
 import { NOTE_NAMES, SCALES } from "../global/scales.js";

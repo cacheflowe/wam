@@ -1,4 +1,4 @@
-import { createCtrl, createSection } from "./slider.js";
+import { createCtrl, createSection } from "../ui/controls-factory.js";
 
 /**
  * <wam-recorder> — Web Component for recording master audio (WAV) and

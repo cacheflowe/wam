@@ -29,7 +29,7 @@ import WebAudioFxCompressor from "./fx-compressor.js";
 import "../ui/slider.js";
 import "../ui/filter-sweep.js";
 import "../ui/instrument-source-picker.js";
-import { injectControlsCSS, createSection, createCtrl } from "../ui/slider.js";
+import { injectControlsCSS, createSection, createCtrl } from "../ui/controls-factory.js";
 
 export default class WebAudioFxUnit extends HTMLElement {
   static #cssInjected = false;

@@ -18,7 +18,7 @@
  */
 
 import "../ui/slider.js";
-import { injectControlsCSS, createSection, createCtrl } from "../ui/slider.js";
+import { injectControlsCSS, createSection, createCtrl } from "../ui/controls-factory.js";
 
 export default class WebAudioTimeStretch {
   /**

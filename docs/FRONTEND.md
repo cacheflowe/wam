@@ -44,7 +44,8 @@ Every Controls component includes a permanent channel strip (always visible, not
 - **Mute** — toggles `_out.gain` to 0 / restores pre-mute volume
 - **VU meter** — peak level via a dedicated `AnalyserNode`
 
-The strip is created by `createChannelStrip()` (exported from `slider.js`).
+The strip is created by `createChannelStrip()` (exported from `controls-factory.js`). The strip never mutates its host panel: clicking it dispatches a bubbling `strip-collapse-toggle` event, and the owning panel (`WebAudioControlsBase`) decides whether to toggle `data-collapsed` on itself. Collapse policy (`CHANNEL_STRIP_COLLAPSED_DEFAULT`) lives with the panel, not the strip.
+
 
 ### Volume node vs. instrument volume
 
@@ -69,7 +70,8 @@ static _injectCSS() {
 }
 ```
 
-`injectControlsCSS()` (exported from `slider.js`) injects shared `.wam-*` class styles used by all controls components.
+`injectControlsCSS()` (exported from `controls-factory.js`) injects shared `.wam-*` class styles used by all controls components.
+
 
 ### Theming
 
@@ -160,7 +162,7 @@ sec.appendChild(mkSlider({ param: "cutoff", label: "Cutoff", tooltip: "Low-pass 
 
 ### Selects and Buttons: `createCtrl()`
 
-Any non-slider control (a `<select>`, a `<button>`, a number input) must be wrapped with `createCtrl()` from `slider.js`. This creates a `div.wam-ctrl` containing a `<label>` (with optional PicoCSS tooltip) and appends the control as a child:
+Any non-slider control (a `<select>`, a `<button>`, a number input) must be wrapped with `createCtrl()` from `controls-factory.js` (also re-exported from `controls-base.js` for subclasses). This creates a `div.wam-ctrl` containing a `<label>` (with optional PicoCSS tooltip) and appends the control as a child:
 
 ```js
 import { createCtrl } from "../ui/slider.js";
@@ -212,7 +214,7 @@ static SLIDER_DEFS = [
 
 ## Controls Layout: `createSection()`
 
-All instrument-specific parameter groups use `createSection(label)` from `slider.js`:
+All instrument-specific parameter groups use `createSection(label)` from `controls-factory.js`:
 
 ```js
 const { el, controls } = createSection("Envelope");

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(head -30)",
+      "Bash(npx vite *)",
+      "Bash(npx vitest *)",
+      "Bash(git stash *)"
+    ]
+  }
+}

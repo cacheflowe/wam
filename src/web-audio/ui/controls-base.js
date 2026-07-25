@@ -1,6 +1,12 @@
 import "./slider.js";
 import { bindingsEqual, formatBinding, migrateLegacyBinding } from "../input/input-bindings.js";
-import { injectControlsCSS, createChannelStrip, createSection, createCtrl } from "./slider.js";
+import {
+  injectControlsCSS,
+  createChannelStrip,
+  createSection,
+  createCtrl,
+  CHANNEL_STRIP_COLLAPSED_DEFAULT,
+} from "./controls-factory.js";
 import { injectInputLearnCSS, InputLearnMixin, applyInputLearnMixin } from "./input-learn.js";
 import { meetsBarCondition } from "../global/sequencer-conditions.js";
 

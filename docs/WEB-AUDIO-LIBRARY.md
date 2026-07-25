@@ -77,10 +77,11 @@ Each instrument file also exports a `*Controls` companion class (e.g., `WebAudio
 | `step-seq.js` | `WebAudioStepSeq` | `<wam-step-seq>` | 16-step sequencer grid with note select, accent toggles |
 | `waveform.js` | `WebAudioWaveform` | `<wam-waveform>` | Visualizer: oscilloscope, spectrogram waterfall, FFT bars (click to cycle) |
 
-`slider.js` also exports two helper functions used by all controls components:
+`controls-factory.js` provides the shared DOM factories and CSS that surround sliders in every controls panel:
 
-- `injectControlsCSS()` -- shared CSS for the `.wam-*` class system
-- `createTitleWithMute(parentEl, title, getOutGain)` -- title bar with mute toggle
+ - `injectControlsCSS()` -- shared CSS for the `.wam-*` class system
+ - `createCtrl()` / `createSection()` -- labeled control and section wrappers
+ - `createChannelStrip()` -- the per-instrument channel strip (name, meter, vol/pan, mute/solo); emits `strip-collapse-toggle` rather than mutating its host panel
 
 ### Utilities
 

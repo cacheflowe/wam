@@ -3,7 +3,7 @@ import "../ui/step-seq.js";
 import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/scales.js";
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
-import { createCtrl } from "../ui/slider.js";
+import { createCtrl } from "../ui/controls-factory.js";
 import { makeSoftClipCurve } from "../global/dsp/distortion.js";
 
 /**
