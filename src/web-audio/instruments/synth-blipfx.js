@@ -179,6 +179,28 @@ export default class WebAudioSynthBlipFX extends WebAudioInstrumentBase {
       bitCrush: 0,
       volume: 0.55,
     },
+    Juicy: {
+      frequency: 124.70154822363835,
+      attack: 0.059000000000000004,
+      decay: 0.077724224914775,
+      sustain: 0.07447109783986923,
+      sustainVolume: 0.5598423774290937,
+      release: 1,
+      slide: -34.5,
+      deltaSlide: 5,
+      pitchJump: -10,
+      pitchJumpTime: 0.3,
+      repeatTime: 0,
+      noise: 0.4081171781476367,
+      modulation: 0.028895490572358684,
+      shapeCurve: 0.7547553825945901,
+      tremolo: 0.37644796098291305,
+      bitCrush: 0.6411628542023641,
+      lpfFreq: 1200,
+      hpfFreq: 80,
+      lpfResonance: 1,
+      shape: 4,
+    },
   };
 
   static SHAPES = ["Sine", "Triangle", "Saw", "Square", "Noise", "Tan"];
@@ -1024,6 +1046,16 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
           this._syncSliders();
           this._syncExtraControls();
           this._instrument.trigger(subTime);
+        } else {
+          // Clear step if it was active (erase trail as we pass)
+          if (s && s.active) {
+            s.active = false;
+            const btn = this._seq._onBtns?.[stepIndex];
+            if (btn) {
+              btn.className = "wass-on";
+              btn.textContent = "○";
+            }
+          }
         }
       }
 
