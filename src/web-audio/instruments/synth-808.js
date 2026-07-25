@@ -322,10 +322,8 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
     return "808 Bass";
   }
 
-  // ---- No FX unit ----
-
-  _createFxUnit() {
-    return null;
+  _fxTitle() {
+    return "Bass FX";
   }
 
   _triggerJam(time, stepDurationSec) {
