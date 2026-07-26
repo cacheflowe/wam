@@ -564,7 +564,15 @@ export class WebAudioControlsBase extends HTMLElement {
     const patternRow = document.createElement("div");
     patternRow.className = "wam-pattern-row";
 
-    // Pattern tabs
+    // --- Row 1: Pattern tabs + ops ---
+    const tabRow = document.createElement("div");
+    tabRow.className = "wam-pattern-tab-row";
+
+    const tabLabel = document.createElement("span");
+    tabLabel.className = "wam-pattern-label";
+    tabLabel.textContent = "Patterns";
+    tabRow.appendChild(tabLabel);
+
     const tabs = document.createElement("div");
     tabs.className = "wam-pattern-tabs";
 
@@ -575,30 +583,75 @@ export class WebAudioControlsBase extends HTMLElement {
       const tab = document.createElement("button");
       tab.className = "wam-pattern-tab";
       tab.textContent = name;
-      this._stylePatternTab(tab, name === 'A', color);
+      tab.title = name + ' — click to edit';
+      this._stylePatternTab(tab, name === 'A', false, color);
       tab.addEventListener("click", () => this._selectPattern(name));
       tabs.appendChild(tab);
       this._patternTabs[name] = tab;
     });
 
-    patternRow.appendChild(tabs);
+    tabRow.appendChild(tabs);
 
-    // Chain bar
+    // Pattern ops
+    const tabOps = document.createElement("div");
+    tabOps.className = "wam-pattern-ops";
+
+    const copyBtn = this._makeSmallBtn(color, "\u25c9", "Copy to others");
+    copyBtn.addEventListener("click", () => this._copyActivePattern());
+    tabOps.appendChild(copyBtn);
+
+    const clearBtn = this._makeSmallBtn(color, "\u2715", "Clear pattern");
+    clearBtn.addEventListener("click", () => this._clearActivePattern());
+    tabOps.appendChild(clearBtn);
+
+    tabRow.appendChild(tabOps);
+    patternRow.appendChild(tabRow);
+
+    // --- Row 2: Chain bar ---
+    const chainRow = document.createElement("div");
+    chainRow.className = "wam-pattern-chain-row";
+
+    const chainLabel = document.createElement("span");
+    chainLabel.className = "wam-pattern-label";
+    chainLabel.textContent = "Chain";
+    chainRow.appendChild(chainLabel);
+
     const chainBar = document.createElement("div");
     chainBar.className = "wam-chain-bar";
 
     this._chainPills = [];
     this._updateChainBar(color);
+    chainRow.appendChild(chainBar);
 
-    patternRow.appendChild(chainBar);
+    // Chain ops
+    const chainOps = document.createElement("div");
+    chainOps.className = "wam-pattern-ops";
+
+    const dupChainBtn = this._makeSmallBtn(color, "\u21e7", "Duplicate chain");
+    dupChainBtn.addEventListener("click", () => this._duplicateChain());
+    chainOps.appendChild(dupChainBtn);
+
+    chainRow.appendChild(chainOps);
+    patternRow.appendChild(chainRow);
 
     // Insert before the sequencer grid
     container.insertBefore(patternRow, this._seq);
   }
 
+  /** Create a small pattern op button. */
+  _makeSmallBtn(color, text, title) {
+    const btn = document.createElement("button");
+    btn.textContent = text;
+    btn.title = title;
+    btn.className = "wam-pattern-op-btn";
+    btn.style.borderColor = color + '44';
+    btn.style.color = color + '99';
+    return btn;
+  }
+
   /** Style a pattern tab. */
-  _stylePatternTab(tab, active, color) {
-    if (active) {
+  _stylePatternTab(tab, isActive, isPlaying, color) {
+    if (isActive) {
       tab.style.background = color + '33';
       tab.style.color = color;
       tab.style.borderColor = color;
@@ -608,6 +661,11 @@ export class WebAudioControlsBase extends HTMLElement {
       tab.style.color = color + '99';
       tab.style.borderColor = color + '44';
       tab.removeAttribute("data-active");
+    }
+    if (isPlaying) {
+      tab.setAttribute("data-playing", "");
+    } else {
+      tab.removeAttribute("data-playing");
     }
   }
 
@@ -625,11 +683,17 @@ export class WebAudioControlsBase extends HTMLElement {
       const pill = document.createElement("button");
       pill.className = "wam-chain-pill";
       pill.textContent = patternNames[idx];
+      pill.title = pos + 1 + '. click to cycle, right-click to remove';
       pill.style.borderColor = color + '33';
-      pill.style.color = pos === this._chainPosition ? color : color + '88';
-      pill.style.background = pos === this._chainPosition ? color + '44' : 'transparent';
+
       if (pos === this._chainPosition) {
-        pill.setAttribute("data-active", "");
+        pill.style.background = color + '44';
+        pill.style.color = color;
+        pill.setAttribute("data-playing", "");
+      } else {
+        pill.style.background = 'transparent';
+        pill.style.color = color + '88';
+        pill.removeAttribute("data-playing");
       }
 
       pill.addEventListener("click", (e) => {
@@ -657,16 +721,10 @@ export class WebAudioControlsBase extends HTMLElement {
     // Add button
     const addBtn = document.createElement("button");
     addBtn.textContent = "+";
-    addBtn.style.cssText = `
-      padding: 2px 6px;
-      border: 1px dashed ${color}44;
-      background: transparent;
-      color: ${color}88;
-      border-radius: 3px;
-      cursor: pointer;
-      font-size: 10px;
-      margin-left: 4px;
-    `;
+    addBtn.title = "Add chain entry";
+    addBtn.className = "wam-chain-add-btn";
+    addBtn.style.borderColor = color + '44';
+    addBtn.style.color = color + '88';
     addBtn.addEventListener("click", () => {
       if (this._chain.length < 16) {
         this._chain.push(0);
@@ -681,9 +739,10 @@ export class WebAudioControlsBase extends HTMLElement {
   _selectPattern(name) {
     const color = this._defaultColor?.() || '#0f0';
 
-    // Update tab styles
+    // Update tab styles with playing indicator
     Object.entries(this._patternTabs).forEach(([n, tab]) => {
-      this._stylePatternTab(tab, n === name, color);
+      const tabIsPlaying = this._playingPattern === n;
+      this._stylePatternTab(tab, n === name, tabIsPlaying, color);
     });
 
     // Sync sequencer to selected pattern
@@ -710,6 +769,52 @@ export class WebAudioControlsBase extends HTMLElement {
     this._chain[pos] = (this._chain[pos] + 1) % 4;
     this._updateChainBar(this._defaultColor?.() || '#0f0');
     this._emitChange();
+  }
+
+  /** Copy active pattern's steps to all other patterns. */
+  _copyActivePattern() {
+    const activeName = Object.entries(this._patternTabs)
+      .find(([, tab]) => tab.hasAttribute("data-active"))?.[0];
+    if (!activeName || !this._patterns) return;
+
+    const sourceSteps = this._patterns[activeName].steps.slice();
+    ['A', 'B', 'C', 'D'].forEach(name => {
+      if (name !== activeName) {
+        this._patterns[name].steps = sourceSteps.map(s => ({ ...s }));
+      }
+    });
+    if (this._seq) this._seq.steps = sourceSteps;
+    this._emitChange();
+  }
+
+  /** Clear active pattern (set all steps inactive). */
+  _clearActivePattern() {
+    const activeName = Object.entries(this._patternTabs)
+      .find(([, tab]) => tab.hasAttribute("data-active"))?.[0];
+    if (!activeName || !this._patterns) return;
+
+    this._patterns[activeName].steps = this._patterns[activeName].steps.map(s => ({
+      ...s, active: false
+    }));
+    if (this._seq) this._seq.steps = this._patterns[activeName].steps;
+    this._emitChange();
+  }
+
+  /** Duplicate the entire chain (append a copy). */
+  _duplicateChain() {
+    if (this._chain.length + this._chain.length > 16) return;
+    this._chain = this._chain.concat([...this._chain]);
+    this._updateChainBar(this._defaultColor?.() || '#0f0');
+    this._emitChange();
+  }
+
+  /** Update playing indicator on pattern tabs. */
+  _updateTabPlayingIndicators(color) {
+    Object.entries(this._patternTabs).forEach(([n, tab]) => {
+      const tabIsPlaying = this._playingPattern === n;
+      const isActive = tab.hasAttribute("data-active");
+      this._stylePatternTab(tab, isActive, tabIsPlaying, color);
+    });
   }
 
   /**
@@ -805,8 +910,10 @@ export class WebAudioControlsBase extends HTMLElement {
         if (this._chainPosition !== prevPos) {
           const patternName = ['A', 'B', 'C', 'D'][this._chain[this._chainPosition]];
           this._playingPattern = patternName;
-          // Update chain bar UI
-          this._updateChainBar(this._defaultColor?.() || '#0f0');
+          const color = this._defaultColor?.() || '#0f0';
+          // Update chain bar and tab indicators
+          this._updateChainBar(color);
+          this._updateTabPlayingIndicators(color);
         }
       }
     }
