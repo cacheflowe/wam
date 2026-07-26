@@ -71,6 +71,15 @@ export class WebAudioControlsBase extends HTMLElement {
     this._initInputLearnState();
     // Keyboard jam handlers - cleared and re-registered on each bind()
     this._jamKeyHandlers = [];
+    // Sequencer (shared across all sequenced instruments)
+    this._seq = null;
+    this._seqPosition = 0;
+    this._globalStep = 0;
+    // Multi-pattern system
+    this._patterns = null;   // { A: {steps}, B: {steps}, C: {steps}, D: {steps} }
+    this._chain = [0];       // indices into pattern names [A,B,C,D]
+    this._chainPosition = 0; // current position within the chain
+    this._playingPattern = 'A'; // currently playing pattern (for UI indicator)
   }
 
   disconnectedCallback() {
@@ -507,6 +516,140 @@ export class WebAudioControlsBase extends HTMLElement {
         };
       }
     }
+  }
+
+  // ---- Sequencer (base class wiring) ----
+
+  /**
+   * Create and wire the step sequencer UI. Called from _buildControls() by
+   * subclasses that have a sequencer. Appends the step grid to `expanded`.
+   * Override _seqInitOptions() to customize.
+   * @param {HTMLElement} expanded  The .wam-controls div for the sequencer section
+   * @param {string} color  Instrument accent color
+   * @param {function|null} [onRandomize]  Callback for the randomize button
+   */
+  _createSequencer(expanded, color, onRandomize = null) {
+    this._seq = document.createElement("wam-step-seq");
+    const initOpts = this._seqInitOptions(color);
+    initOpts.onRandomize = onRandomize;
+    this._seq.init(initOpts);
+    expanded.appendChild(this._seq);
+    this._seq.addEventListener("step-change", () => this._emitChange());
+    this._seq.addEventListener("pattern-change", () => this._emitChange());
+  }
+
+  /**
+   * Override to return step-seq init options. Called by _createSequencer().
+   * Return null to skip sequencer creation (e.g. loop player, vocoder).
+   * @param {string} color
+   * @returns {object|null}
+   */
+  _seqInitOptions(color) {
+    return null;
+  }
+
+  /**
+   * Called by the base step() for each active step. Override to implement
+   * instrument-specific triggering.
+   * @param {object} s  Step data { active, note, accent, probability, ratchet, conditions }
+   * @param {number} subTime  AudioContext timestamp
+   * @param {number} subStepDur  Duration of this sub-step in seconds
+   */
+  _seqTrigger(s, subTime, subStepDur) {
+    // Default: no-op. Subclasses override.
+  }
+
+  /**
+   * Handle a single step's audio. Called by base step() for each active step.
+   * Default implementation handles ratchet. Override for custom behavior (chords, etc.).
+   */
+  _seqTriggerStep(s, subTime, subStepDur) {
+    const ratchet = s.ratchet ?? 1;
+    if (ratchet > 1) {
+      const ratchetDuration = subStepDur / ratchet;
+      for (let i = 0; i < ratchet; i++) {
+        this._seqTrigger(s, subTime + i * ratchetDuration, ratchetDuration);
+      }
+    } else {
+      this._seqTrigger(s, subTime, subStepDur);
+    }
+  }
+
+  /**
+   * Called by the base step() when the pattern completes a full cycle and
+   * rotation is active.
+   * @param {number} offset  Rotation offset from pattern params
+   */
+  _seqRotate(offset) {
+    this._seq?.rotate(offset);
+  }
+
+  /**
+   * Base sequencer step handler. Called on each global tick.
+   * Handles: speed multiplier, bar density, rotation, probability, ratchet, conditions.
+   * Calls _seqTrigger() for active steps, _triggerJam() if pending.
+   * Subclasses that need custom timing logic can override, but most should not.
+   */
+  step(index, time, stepDurationSec) {
+    if (!this._instrument || !this._seq) return;
+
+    // Hook for instrument-specific per-tick processing (e.g. acid LFO position)
+    this._onStepTick?.(index, time, stepDurationSec);
+
+    // Speed multiplier: 0.5x skips odd ticks
+    const multiplier = this.speedMultiplier ?? 1;
+    if (multiplier === 0.5 && index % 2 !== 0) return;
+
+    // Pattern parameters
+    const patternParams = this._seq?.getPatternParams() ?? {};
+    const playEvery = patternParams.playEvery ?? 1;
+    const rotationOffset = patternParams.rotationOffset ?? 0;
+    const rotationIntervalBars = patternParams.rotationIntervalBars ?? 1;
+
+    // Apply rotation physically when local sequencer completes a full cycle
+    if (this._seqPosition > 0 && this._seqPosition % 16 === 0 && rotationOffset > 0) {
+      const localBar = this._seqPosition / 16;
+      if (localBar % rotationIntervalBars === 0) {
+        this._seqRotate(rotationOffset);
+      }
+    }
+
+    // Bar density
+    const currentBar = Math.floor(this._globalStep / 16);
+    if (currentBar % playEvery !== 0) {
+      this._globalStep++;
+      return;
+    }
+
+    // Advance sequencer position (2x = 2 steps per tick, offset in time)
+    const stepsToAdvance = multiplier === 2 ? 2 : 1;
+    const subStepDur = stepDurationSec / stepsToAdvance;
+    let stepFired = false;
+    for (let si = 0; si < stepsToAdvance; si++) {
+      const subTime = time + si * subStepDur;
+      const stepIndex = this._seqPosition % 16;
+      const s = this._seq.steps[stepIndex];
+
+      if (s?.active) {
+        if (Math.random() < (s.probability ?? 1)) {
+          if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
+            stepFired = true;
+            this._seqTriggerStep(s, subTime, subStepDur);
+          }
+        }
+      }
+
+      this._seqPosition++;
+    }
+
+    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
+    this._jamPending = false;
+    this._globalStep++;
+  }
+
+  /** Highlight the currently playing step in the UI. */
+  setActiveStep() {
+    this._seq?.setActiveStep((this._seqPosition - 1 + 16) % 16);
   }
 
   /**
@@ -1122,6 +1265,7 @@ export class WebAudioControlsBase extends HTMLElement {
         seq: !this._seqSection?.hasAttribute("data-hidden"),
       },
     };
+    this._serializeSequencer(obj);
     this._extendJSON(obj);
     return obj;
   }
@@ -1129,8 +1273,42 @@ export class WebAudioControlsBase extends HTMLElement {
   /** Add extra params to the params dict (e.g. oscType, lfoShape). */
   _extraToJSON(params) {}
 
-  /** Add extra top-level fields to the JSON (e.g. steps, chordSize). */
+  /** Add extra top-level fields to the JSON (e.g. chordSize). Override in subclass. */
   _extendJSON(obj) {}
+
+  /**
+   * Serialize sequencer state (patterns + chain). Override _seqExtendJSON to add
+   * extra fields (e.g. chordSize). Base implementation handles patterns/chain.
+   */
+  _serializeSequencer(obj) {
+    if (!this._seq) return;
+    // If multi-pattern system is active, serialize patterns + chain
+    if (this._patterns) {
+      obj.patterns = this._patterns;
+      obj.chain = this._chain;
+    } else {
+      // Single pattern (legacy / instruments without multi-pattern)
+      obj.steps = this._seq?.steps ?? [];
+    }
+    this._seqExtendJSON?.(obj);
+  }
+
+  /** Restore sequencer state. Override _seqRestoreExtra for extra fields. */
+  _restoreSequencer(obj) {
+    if (!this._seq) return;
+    if (obj.patterns) {
+      // Multi-pattern system
+      this._patterns = obj.patterns;
+      this._chain = obj.chain ?? [0];
+      // Sync active pattern to the grid
+      const activeName = ['A', 'B', 'C', 'D'][this._chain[this._chainPosition] ?? 0];
+      this._seq.steps = this._patterns[activeName]?.steps ?? this._seq.steps;
+    } else if (obj.steps) {
+      // Legacy single-pattern
+      this._seq.steps = obj.steps;
+    }
+    this._seqRestoreExtra?.(obj);
+  }
 
   fromJSON(obj) {
     if (!obj || !this._instrument) return;
@@ -1140,6 +1318,7 @@ export class WebAudioControlsBase extends HTMLElement {
       }
     }
     this._restoreExtra(obj);
+    this._restoreSequencer(obj);
     if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
     if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
     if (obj.soloed != null) {

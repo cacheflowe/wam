@@ -602,14 +602,9 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     this._chordSizeSelect = null;
     this._lfoShapeSelect = null;
     this._lfoIntervalSelect = null;
-    this._seq = null;
     this._rootMidi = 29;
     this._scaleName = "Minor";
     this._chordSize = 3;
-
-    // Sequencer position tracking
-    this._globalStep = 0;
-    this._seqPosition = 0;
   }
 
   // ---- Identity overrides ----
@@ -752,19 +747,34 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     seqCtrl.appendChild(chordWrap);
 
     // Step sequencer
-    this._seq = document.createElement("wam-step-seq");
-    const noteOpts = scaleNoteOptions(this._rootMidi, this._scaleName, 24, 48);
-    this._seq.init({
+    this._createSequencer(expanded, color);
+  }
+
+  // ---- Subclass hooks ----
+
+  _seqInitOptions(color) {
+    return {
       steps: WebAudioSynthFMControls.DEFAULT_PATTERN(),
-      noteOptions: noteOpts,
+      noteOptions: scaleNoteOptions(this._rootMidi, this._scaleName, 24, 48),
       probability: true,
       ratchet: true,
       conditions: true,
       color,
-    });
-    expanded.appendChild(this._seq);
-    this._seq.addEventListener("step-change", () => this._emitChange());
-    this._seq.addEventListener("pattern-change", () => this._emitChange());
+    };
+  }
+
+  _seqTriggerStep(s, subTime, subStepDur) {
+    const chord =
+      this._chordSize === 1 ? s.note + 24 : buildChordFromScale(s.note + 24, this._scaleName, this._chordSize);
+    const ratchet = s.ratchet ?? 1;
+    if (ratchet > 1) {
+      const ratchetDuration = subStepDur / ratchet;
+      for (let i = 0; i < ratchet; i++) {
+        this._instrument.trigger(chord, ratchetDuration * 0.9, subTime + i * ratchetDuration);
+      }
+    } else {
+      this._instrument.trigger(chord, subStepDur, subTime);
+    }
   }
 
   // ---- Slider input override (emit change after set) ----
@@ -784,7 +794,6 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
   }
 
   _extendJSON(obj) {
-    obj.steps = this._seq?.steps ?? [];
     obj.chordSize = this._chordSize;
   }
 
@@ -793,76 +802,6 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
       this._chordSize = obj.chordSize;
       if (this._chordSizeSelect) this._chordSizeSelect.value = obj.chordSize;
     }
-    if (obj.steps && this._seq) this._seq.steps = obj.steps;
-  }
-
-  // ---- Sequencer integration ----
-
-  step(index, time, stepDurationSec) {
-    if (!this._instrument || !this._seq) return;
-
-    const multiplier = this.speedMultiplier ?? 1;
-    if (multiplier === 0.5 && index % 2 !== 0) return;
-
-    // Pattern parameters
-    const patternParams = this._seq?.getPatternParams() ?? {};
-    const playEvery = patternParams.playEvery ?? 1;
-    const rotationOffset = patternParams.rotationOffset ?? 0;
-    const rotationIntervalBars = patternParams.rotationIntervalBars ?? 1;
-
-    // Apply rotation physically when local sequencer completes a full cycle
-    if (this._seqPosition > 0 && this._seqPosition % 16 === 0 && rotationOffset > 0) {
-      const localBar = this._seqPosition / 16;
-      if (localBar % rotationIntervalBars === 0) {
-        this._seq.rotate(rotationOffset);
-      }
-    }
-
-    // Bar density
-    const currentBar = Math.floor(this._globalStep / 16);
-    if (currentBar % playEvery !== 0) {
-      this._globalStep++;
-      return;
-    }
-
-    // Advance sequencer position (2x = 2 steps per tick, offset in time)
-    const stepsToAdvance = multiplier === 2 ? 2 : 1;
-    const subStepDur = stepDurationSec / stepsToAdvance;
-    let stepFired = false;
-    for (let si = 0; si < stepsToAdvance; si++) {
-      const subTime = time + si * subStepDur;
-      const stepIndex = this._seqPosition % 16;
-      const s = this._seq.steps[stepIndex];
-
-      if (s?.active) {
-        if (Math.random() < (s.probability ?? 1)) {
-          if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
-            stepFired = true;
-            const chord =
-              this._chordSize === 1 ? s.note + 24 : buildChordFromScale(s.note + 24, this._scaleName, this._chordSize);
-            const ratchet = s.ratchet ?? 1;
-            if (ratchet > 1) {
-              const ratchetDuration = subStepDur / ratchet;
-              for (let i = 0; i < ratchet; i++) {
-                this._instrument.trigger(chord, ratchetDuration * 0.9, subTime + i * ratchetDuration);
-              }
-            } else {
-              this._instrument.trigger(chord, subStepDur, subTime);
-            }
-          }
-        }
-      }
-
-      this._seqPosition++;
-    }
-
-    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
-    this._jamPending = false;
-    this._globalStep++;
-  }
-
-  setActiveStep() {
-    this._seq?.setActiveStep((this._seqPosition - 1 + 16) % 16);
   }
 
   setScale(rootMidi, scaleName) {

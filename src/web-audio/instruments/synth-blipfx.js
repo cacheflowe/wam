@@ -772,10 +772,6 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     this._lockBtn = null;
     this._lastStep = -1;
     this._seq = null;
-
-    // Sequencer position tracking
-    this._globalStep = 0;
-    this._seqPosition = 0;
   }
 
   // ---- Identity overrides ----
@@ -897,19 +893,19 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
     // ---- Sequencer ----
     const color = options.color || this._defaultColor();
     this._buildSequencerSection();
+    this._createSequencer(expanded, color);
+  }
 
-    // Step sequencer (no note selection — probability controls when blips fire)
-    this._seq = document.createElement("wam-step-seq");
-    this._seq.init({
+  // ---- Subclass hooks ----
+
+  _seqInitOptions(color) {
+    return {
       steps: WebAudioSynthBlipFXControls.DEFAULT_PATTERN(),
       probability: true,
       ratchet: true,
       conditions: true,
       color,
-    });
-    expanded.appendChild(this._seq);
-    this._seq.addEventListener("step-change", () => this._emitChange());
-    this._seq.addEventListener("pattern-change", () => this._emitChange());
+    };
   }
 
   // ---- Preset override (chance lives on controls, not instrument) ----
@@ -1113,12 +1109,9 @@ export class WebAudioSynthBlipFXControls extends WebAudioControlsBase {
       this._lockBtn.textContent = this._locked ? "🎲 Rand/Trig: OFF" : "🎲 Rand/Trig: ON";
       this._lockBtn.style.opacity = this._locked ? "0.6" : "1";
     }
-    if (obj.steps && this._seq) this._seq.steps = obj.steps;
   }
 
-  _extendJSON(obj) {
-    obj.steps = this._seq?.steps ?? [];
-  }
+  _extendJSON(obj) {}
 }
 
 customElements.define("wam-synth-blipfx-controls", WebAudioSynthBlipFXControls);

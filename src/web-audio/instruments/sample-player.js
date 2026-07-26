@@ -356,9 +356,6 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
 
   constructor() {
     super();
-    this._seq = null;
-    this._globalStep = 0;
-    this._seqPosition = 0;
     this._fileSelect = null;
     this._melodicMode = false;
     this._chordSize = 1;
@@ -508,7 +505,18 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     });
 
     // ---- Step sequencer ----
-    this._seq = document.createElement("wam-step-seq");
+    this._createSequencer(expanded, color);
+
+    // Load samples
+    if (options.files) {
+      this._basePath = options.basePath ?? "";
+      this._instrument.loadAll(this._basePath, options.files);
+    }
+  }
+
+  // ---- Subclass hooks ----
+
+  _seqInitOptions(color) {
     const seqOpts = {
       steps: WebAudioSamplePlayerControls.DEFAULT_PATTERN(),
       probability: true,
@@ -517,19 +525,31 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
       patternControls: true,
       color,
     };
-    // Melodic mode gets note options
     if (this._melodicMode) {
       seqOpts.noteOptions = scaleNoteOptions(this._rootMidi ?? 48, this._scaleName ?? "Chromatic", 36, 72);
     }
-    this._seq.init(seqOpts);
-    expanded.appendChild(this._seq);
-    this._seq.addEventListener("step-change", () => this._emitChange());
-    this._seq.addEventListener("pattern-change", () => this._emitChange());
+    return seqOpts;
+  }
 
-    // Load samples
-    if (options.files) {
-      this._basePath = options.basePath ?? "";
-      this._instrument.loadAll(this._basePath, options.files);
+  _seqTriggerStep(s, subTime, subStepDur) {
+    let midi;
+    if (this._melodicMode) {
+      const rootNote = (s.note ?? 60) + 24;
+      midi =
+        this._chordSize === 1
+          ? rootNote
+          : buildChordFromScale(rootNote, this._scaleName ?? "Chromatic", this._chordSize);
+    } else {
+      midi = null;
+    }
+    const ratchet = s.ratchet ?? 1;
+    if (ratchet > 1) {
+      const ratchetDur = subStepDur / ratchet;
+      for (let i = 0; i < ratchet; i++) {
+        this._instrument.trigger(midi, ratchetDur, 0.8, subTime + i * ratchetDur);
+      }
+    } else {
+      this._instrument.trigger(midi, subStepDur, 0.8, subTime);
     }
   }
 
@@ -555,82 +575,11 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     this._seqPosition = 0;
   }
 
-  step(index, time, stepDurationSec) {
-    if (!this._instrument || !this._seq) return;
-
-    const multiplier = this.speedMultiplier ?? 1;
-    if (multiplier === 0.5 && index % 2 !== 0) return;
-
-    // Pattern parameters
-    const patternParams = this._seq?.getPatternParams() ?? {};
-    const playEvery = patternParams.playEvery ?? 1;
-    const rotationOffset = patternParams.rotationOffset ?? 0;
-    const rotationIntervalBars = patternParams.rotationIntervalBars ?? 1;
-
-    // Apply rotation
-    if (this._seqPosition > 0 && this._seqPosition % 16 === 0 && rotationOffset > 0) {
-      const localBar = this._seqPosition / 16;
-      if (localBar % rotationIntervalBars === 0) {
-        this._seq.rotate(rotationOffset);
-      }
-    }
-
-    // Bar density
-    const currentBar = Math.floor(this._globalStep / 16);
-    if (currentBar % playEvery !== 0) {
-      this._globalStep++;
-      return;
-    }
-
-    // Advance
-    const stepsToAdvance = multiplier === 2 ? 2 : 1;
-    const subStepDur = stepDurationSec / stepsToAdvance;
-    let stepFired = false;
-    for (let si = 0; si < stepsToAdvance; si++) {
-      const subTime = time + si * subStepDur;
-      const stepIndex = this._seqPosition % 16;
-      const s = this._seq.steps[stepIndex];
-
-      if (s?.active) {
-        if (Math.random() < (s.probability ?? 1)) {
-          if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
-            stepFired = true;
-            const ratchet = s.ratchet ?? 1;
-            let midi;
-            if (this._melodicMode) {
-              const rootNote = (s.note ?? 60) + 24;
-              midi =
-                this._chordSize === 1
-                  ? rootNote
-                  : buildChordFromScale(rootNote, this._scaleName ?? "Chromatic", this._chordSize);
-            } else {
-              midi = null;
-            }
-            if (ratchet > 1) {
-              const ratchetDur = subStepDur / ratchet;
-              for (let i = 0; i < ratchet; i++) {
-                this._instrument.trigger(midi, ratchetDur, 0.8, subTime + i * ratchetDur);
-              }
-            } else {
-              this._instrument.trigger(midi, subStepDur, 0.8, subTime);
-            }
-          }
-        }
-      }
-
-      this._seqPosition++;
-    }
-
-    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
-    this._jamPending = false;
-    this._globalStep++;
-  }
-
   setActiveStep(step) {
     if (step < 0) {
       this._seq?.setActiveStep(-1);
     } else {
-      this._seq?.setActiveStep((this._seqPosition - 1 + 16) % 16);
+      super.setActiveStep();
     }
   }
 
@@ -658,14 +607,12 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
   }
 
   _extendJSON(obj) {
-    obj.steps = this._seq?.steps ?? [];
     obj.file = this._fileSelect?.value || "";
     obj.melodicMode = this._melodicMode;
     obj.chordSize = this._chordSize;
   }
 
   _restoreExtra(obj) {
-    if (obj.steps && this._seq) this._seq.steps = obj.steps;
     if (obj.file && this._fileSelect) {
       this._fileSelect.value = obj.file;
       this._instrument?.selectSample(obj.file);

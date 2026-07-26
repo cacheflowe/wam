@@ -548,13 +548,8 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
 
   constructor() {
     super();
-    this._seq = null;
     this._rootMidi = 41;
     this._scaleName = "Minor";
-
-    // Sequencer position tracking
-    this._globalStep = 0;
-    this._seqPosition = 0;
   }
 
   _defaultColor() {
@@ -629,88 +624,32 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
 
     // ---- Sequencer ----
     this._buildSequencerSection({ onRandomize: () => this.randomize() });
+    this._createSequencer(expanded, color);
+  }
 
-    // Step sequencer
-    this._seq = document.createElement("wam-step-seq");
-    const noteOpts = scaleNoteOptions(this._rootMidi, this._scaleName, 24, 72);
-    this._seq.init({
+  // ---- Subclass hooks ----
+
+  _seqInitOptions(color) {
+    return {
       steps: WebAudioSynthMonoControls.DEFAULT_PATTERN(),
-      noteOptions: noteOpts,
+      noteOptions: scaleNoteOptions(this._rootMidi, this._scaleName, 24, 72),
       probability: true,
       ratchet: true,
       conditions: true,
       color,
-    });
-    expanded.appendChild(this._seq);
-    this._seq.addEventListener("step-change", () => this._emitChange());
-    this._seq.addEventListener("pattern-change", () => this._emitChange());
+    };
   }
 
-  // ---- Sequencer integration ----
-
-  step(index, time, stepDurationSec) {
-    if (!this._instrument || !this._seq) return;
-
-    const multiplier = this.speedMultiplier ?? 1;
-    if (multiplier === 0.5 && index % 2 !== 0) return;
-
-    // Pattern parameters
-    const patternParams = this._seq?.getPatternParams() ?? {};
-    const playEvery = patternParams.playEvery ?? 1;
-    const rotationOffset = patternParams.rotationOffset ?? 0;
-    const rotationIntervalBars = patternParams.rotationIntervalBars ?? 1;
-
-    // Apply rotation physically when local sequencer completes a full cycle
-    if (this._seqPosition > 0 && this._seqPosition % 16 === 0 && rotationOffset > 0) {
-      const localBar = this._seqPosition / 16;
-      if (localBar % rotationIntervalBars === 0) {
-        this._seq.rotate(rotationOffset);
+  _seqTriggerStep(s, subTime, subStepDur) {
+    const ratchet = s.ratchet ?? 1;
+    if (ratchet > 1) {
+      const ratchetDuration = subStepDur / ratchet;
+      for (let i = 0; i < ratchet; i++) {
+        this._instrument.trigger(s.note, ratchetDuration * 0.9, 0.8, subTime + i * ratchetDuration);
       }
+    } else {
+      this._instrument.trigger(s.note, subStepDur, 0.8, subTime);
     }
-
-    // Bar density
-    const currentBar = Math.floor(this._globalStep / 16);
-    if (currentBar % playEvery !== 0) {
-      this._globalStep++;
-      return;
-    }
-
-    // Advance sequencer position (2x = 2 steps per tick, offset in time)
-    const stepsToAdvance = multiplier === 2 ? 2 : 1;
-    const subStepDur = stepDurationSec / stepsToAdvance;
-    let stepFired = false;
-    for (let si = 0; si < stepsToAdvance; si++) {
-      const subTime = time + si * subStepDur;
-      const stepIndex = this._seqPosition % 16;
-      const s = this._seq.steps[stepIndex];
-
-      if (s?.active) {
-        if (Math.random() < (s.probability ?? 1)) {
-          if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
-            stepFired = true;
-            const ratchet = s.ratchet ?? 1;
-            if (ratchet > 1) {
-              const ratchetDuration = subStepDur / ratchet;
-              for (let i = 0; i < ratchet; i++) {
-                this._instrument.trigger(s.note, ratchetDuration * 0.9, 0.8, subTime + i * ratchetDuration);
-              }
-            } else {
-              this._instrument.trigger(s.note, subStepDur, 0.8, subTime);
-            }
-          }
-        }
-      }
-
-      this._seqPosition++;
-    }
-
-    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
-    this._jamPending = false;
-    this._globalStep++;
-  }
-
-  setActiveStep() {
-    this._seq?.setActiveStep((this._seqPosition - 1 + 16) % 16);
   }
 
   setScale(rootMidi, scaleName) {
@@ -733,6 +672,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     this._emitChange();
   }
 
+  // Serialization
   _makeFilterTypeSelect() {
     const wrap = createCtrl("Type");
     this._filterTypeSelect = document.createElement("select");

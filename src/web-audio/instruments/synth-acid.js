@@ -406,14 +406,9 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
 
   constructor() {
     super();
-    this._seq = null;
     this._rootMidi = 29;
     this._scaleName = "Minor";
     this._lfoAnimId = null;
-
-    // Sequencer position tracking
-    this._globalStep = 0;
-    this._seqPosition = 0;
   }
 
   // ---- Base class overrides ----
@@ -545,22 +540,37 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
 
     // ---- Sequencer ----
     this._buildSequencerSection({ onRandomize: () => this.randomize() });
+    this._createSequencer(expanded, color);
+  }
 
-    // Step sequencer
-    this._seq = document.createElement("wam-step-seq");
-    const noteOpts = scaleNoteOptions(this._rootMidi, this._scaleName, 24, 60);
-    this._seq.init({
+  // ---- Subclass hooks ----
+
+  _seqInitOptions(color) {
+    return {
       steps: WebAudioSynthAcidControls.DEFAULT_PATTERN(),
-      noteOptions: noteOpts,
+      noteOptions: scaleNoteOptions(this._rootMidi, this._scaleName, 24, 60),
       accent: true,
       probability: true,
       ratchet: true,
       conditions: true,
       color,
-    });
-    expanded.appendChild(this._seq);
-    this._seq.addEventListener("step-change", () => this._emitChange());
-    this._seq.addEventListener("pattern-change", () => this._emitChange());
+    };
+  }
+
+  _seqTriggerStep(s, subTime, subStepDur) {
+    const ratchet = s.ratchet ?? 1;
+    if (ratchet > 1) {
+      const ratchetDuration = subStepDur / ratchet;
+      for (let i = 0; i < ratchet; i++) {
+        this._instrument.trigger(s.note, ratchetDuration * 0.9, s.accent && i === 0, subTime + i * ratchetDuration);
+      }
+    } else {
+      this._instrument.trigger(s.note, subStepDur, s.accent, subTime);
+    }
+  }
+
+  _onStepTick(index) {
+    this._instrument._lfoStepPosition = index;
   }
 
   // ---- Serialization hooks ----
@@ -589,12 +599,10 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
   }
 
   _extendJSON(obj) {
-    obj.steps = this._seq?.steps ?? [];
     if (this._presetSelect) obj.preset = this._presetSelect.value;
   }
 
   _restoreExtra(obj) {
-    if (obj.steps && this._seq) this._seq.steps = obj.steps;
     if (obj.preset && this._presetSelect) this._presetSelect.value = obj.preset;
   }
 
@@ -651,85 +659,7 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     this._stopLfoAnim();
   }
 
-  // ---- Sequencer integration ----
-
-  /** Called by the host on each sequencer tick. */
-  step(index, time, stepDurationSec) {
-    if (!this._instrument || !this._seq) return;
-
-    // Update LFO step position (resets with transport loop at index 0)
-    this._instrument._lfoStepPosition = index;
-
-    // Speed multiplier: 0.5x skips odd ticks
-    const multiplier = this.speedMultiplier ?? 1;
-    if (multiplier === 0.5 && index % 2 !== 0) return;
-
-    // Pattern parameters
-    const patternParams = this._seq?.getPatternParams() ?? {};
-    const playEvery = patternParams.playEvery ?? 1;
-    const rotationOffset = patternParams.rotationOffset ?? 0;
-    const rotationIntervalBars = patternParams.rotationIntervalBars ?? 1;
-
-    // Apply rotation physically when local sequencer completes a full cycle
-    if (this._seqPosition > 0 && this._seqPosition % 16 === 0 && rotationOffset > 0) {
-      const localBar = this._seqPosition / 16;
-      if (localBar % rotationIntervalBars === 0) {
-        this._seq.rotate(rotationOffset);
-      }
-    }
-
-    // Bar density: skip if not a play cycle
-    const currentBar = Math.floor(this._globalStep / 16);
-    if (currentBar % playEvery !== 0) {
-      this._globalStep++;
-      return;
-    }
-
-    // Advance sequencer position (2x = 2 steps per tick, offset in time)
-    const stepsToAdvance = multiplier === 2 ? 2 : 1;
-    const subStepDur = stepDurationSec / stepsToAdvance;
-    let stepFired = false;
-    for (let si = 0; si < stepsToAdvance; si++) {
-      const subTime = time + si * subStepDur;
-      const stepIndex = this._seqPosition % 16;
-      const s = this._seq.steps[stepIndex];
-
-      if (s?.active) {
-        const probability = s.probability ?? 1;
-        if (Math.random() < probability) {
-          if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
-            stepFired = true;
-            const ratchet = s.ratchet ?? 1;
-            if (ratchet > 1) {
-              const ratchetDuration = subStepDur / ratchet;
-              for (let i = 0; i < ratchet; i++) {
-                this._instrument.trigger(
-                  s.note,
-                  ratchetDuration * 0.9,
-                  s.accent && i === 0,
-                  subTime + i * ratchetDuration,
-                );
-              }
-            } else {
-              this._instrument.trigger(s.note, subStepDur, s.accent, subTime);
-            }
-          }
-        }
-      }
-
-      this._seqPosition++;
-    }
-
-    if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
-    this._jamPending = false;
-    this._globalStep++;
-  }
-
   /** Check if a step meets its condition (e.g., "1:2" = every other bar). */
-  /** Highlight the currently playing step. */
-  setActiveStep() {
-    this._seq?.setActiveStep((this._seqPosition - 1 + 16) % 16);
-  }
 
   /** Update note options when global scale changes. */
   setScale(rootMidi, scaleName) {
