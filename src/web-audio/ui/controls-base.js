@@ -546,10 +546,11 @@ export class WebAudioControlsBase extends HTMLElement {
     this._chainPosition = 0;
     this._playingPattern = 'A';
 
-    // Build pattern tabs and chain bar
+    expanded.appendChild(this._seq);
+
+    // Build pattern tabs and chain bar (must be after appendChild so insertBefore works)
     this._buildPatternSelector(expanded, color);
 
-    expanded.appendChild(this._seq);
     this._seq.addEventListener("step-change", () => {
       this._syncPatternEdit();
       this._emitChange();
