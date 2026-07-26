@@ -533,9 +533,182 @@ export class WebAudioControlsBase extends HTMLElement {
     const initOpts = this._seqInitOptions(color);
     initOpts.onRandomize = onRandomize;
     this._seq.init(initOpts);
+
+    // Initialize multi-pattern system
+    const defaultSteps = this._seq.steps.slice();
+    this._patterns = {
+      A: { steps: defaultSteps },
+      B: { steps: defaultSteps.map(s => ({ ...s, active: false })) },
+      C: { steps: defaultSteps.map(s => ({ ...s, active: false })) },
+      D: { steps: defaultSteps.map(s => ({ ...s, active: false })) },
+    };
+    this._chain = [0];
+    this._chainPosition = 0;
+    this._playingPattern = 'A';
+
+    // Build pattern tabs and chain bar
+    this._buildPatternSelector(expanded, color);
+
     expanded.appendChild(this._seq);
-    this._seq.addEventListener("step-change", () => this._emitChange());
+    this._seq.addEventListener("step-change", () => {
+      this._syncPatternEdit();
+      this._emitChange();
+    });
     this._seq.addEventListener("pattern-change", () => this._emitChange());
+  }
+
+  /** Build pattern tab bar and chain bar UI. */
+  _buildPatternSelector(container, color) {
+    // Pattern tabs container
+    const patternRow = document.createElement("div");
+    patternRow.className = "wam-pattern-row";
+
+    // Pattern tabs
+    const tabs = document.createElement("div");
+    tabs.className = "wam-pattern-tabs";
+
+    const patternNames = ['A', 'B', 'C', 'D'];
+    this._patternTabs = {};
+
+    patternNames.forEach(name => {
+      const tab = document.createElement("button");
+      tab.className = "wam-pattern-tab";
+      tab.textContent = name;
+      this._stylePatternTab(tab, name === 'A', color);
+      tab.addEventListener("click", () => this._selectPattern(name));
+      tabs.appendChild(tab);
+      this._patternTabs[name] = tab;
+    });
+
+    patternRow.appendChild(tabs);
+
+    // Chain bar
+    const chainBar = document.createElement("div");
+    chainBar.className = "wam-chain-bar";
+
+    this._chainPills = [];
+    this._updateChainBar(color);
+
+    patternRow.appendChild(chainBar);
+
+    // Insert before the sequencer grid
+    container.insertBefore(patternRow, this._seq);
+  }
+
+  /** Style a pattern tab. */
+  _stylePatternTab(tab, active, color) {
+    if (active) {
+      tab.style.background = color + '33';
+      tab.style.color = color;
+      tab.style.borderColor = color;
+      tab.setAttribute("data-active", "");
+    } else {
+      tab.style.background = 'transparent';
+      tab.style.color = color + '99';
+      tab.style.borderColor = color + '44';
+      tab.removeAttribute("data-active");
+    }
+  }
+
+  /** Update chain bar UI. */
+  _updateChainBar(color) {
+    const chainBar = this._chainPills[0]?.parentElement;
+    if (!chainBar) return;
+
+    chainBar.innerHTML = '';
+    this._chainPills = [];
+
+    const patternNames = ['A', 'B', 'C', 'D'];
+
+    this._chain.forEach((idx, pos) => {
+      const pill = document.createElement("button");
+      pill.className = "wam-chain-pill";
+      pill.textContent = patternNames[idx];
+      pill.style.borderColor = color + '33';
+      pill.style.color = pos === this._chainPosition ? color : color + '88';
+      pill.style.background = pos === this._chainPosition ? color + '44' : 'transparent';
+      if (pos === this._chainPosition) {
+        pill.setAttribute("data-active", "");
+      }
+
+      pill.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._cycleChainEntry(pos);
+      });
+
+      // Right-click to remove (minimum 1 entry)
+      pill.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        if (this._chain.length > 1) {
+          this._chain.splice(pos, 1);
+          if (this._chainPosition >= this._chain.length) {
+            this._chainPosition = this._chain.length - 1;
+          }
+          this._updateChainBar(color);
+          this._emitChange();
+        }
+      });
+
+      chainBar.appendChild(pill);
+      this._chainPills.push(pill);
+    });
+
+    // Add button
+    const addBtn = document.createElement("button");
+    addBtn.textContent = "+";
+    addBtn.style.cssText = `
+      padding: 2px 6px;
+      border: 1px dashed ${color}44;
+      background: transparent;
+      color: ${color}88;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 10px;
+      margin-left: 4px;
+    `;
+    addBtn.addEventListener("click", () => {
+      if (this._chain.length < 16) {
+        this._chain.push(0);
+        this._updateChainBar(color);
+        this._emitChange();
+      }
+    });
+    chainBar.appendChild(addBtn);
+  }
+
+  /** Select which pattern to edit. */
+  _selectPattern(name) {
+    const color = this._defaultColor?.() || '#0f0';
+
+    // Update tab styles
+    Object.entries(this._patternTabs).forEach(([n, tab]) => {
+      this._stylePatternTab(tab, n === name, color);
+    });
+
+    // Sync sequencer to selected pattern
+    if (this._seq && this._patterns[name]) {
+      this._seq.steps = this._patterns[name].steps;
+    }
+  }
+
+  /** Sync current sequencer steps back to active pattern. Called on step-change. */
+  _syncPatternEdit() {
+    // Find which tab is currently active
+    for (const [name, tab] of Object.entries(this._patternTabs)) {
+      if (tab.hasAttribute("data-active")) {
+        if (this._seq && this._patterns[name]) {
+          this._patterns[name].steps = this._seq.steps;
+        }
+        break;
+      }
+    }
+  }
+
+  /** Cycle chain entry to next pattern. */
+  _cycleChainEntry(pos) {
+    this._chain[pos] = (this._chain[pos] + 1) % 4;
+    this._updateChainBar(this._defaultColor?.() || '#0f0');
+    this._emitChange();
   }
 
   /**
@@ -621,6 +794,27 @@ export class WebAudioControlsBase extends HTMLElement {
       return;
     }
 
+    // Chain: advance pattern position at bar boundaries
+    if (this._seqPosition > 0 && this._seqPosition % 16 === 0) {
+      const localBar = this._seqPosition / 16;
+      const chainEntryEvery = playEvery; // chain advances every playEvery bars
+      if (localBar % chainEntryEvery === 0 && this._chain.length > 0) {
+        const prevPos = this._chainPosition;
+        this._chainPosition = (this._chainPosition + 1) % this._chain.length;
+        if (this._chainPosition !== prevPos) {
+          const patternName = ['A', 'B', 'C', 'D'][this._chain[this._chainPosition]];
+          this._playingPattern = patternName;
+          // Update chain bar UI
+          this._updateChainBar(this._defaultColor?.() || '#0f0');
+        }
+      }
+    }
+
+    // Get active pattern's steps
+    const activePatternName = ['A', 'B', 'C', 'D'][this._chain[this._chainPosition] ?? 0];
+    const activePattern = this._patterns?.[activePatternName];
+    const steps = activePattern?.steps ?? this._seq.steps;
+
     // Advance sequencer position (2x = 2 steps per tick, offset in time)
     const stepsToAdvance = multiplier === 2 ? 2 : 1;
     const subStepDur = stepDurationSec / stepsToAdvance;
@@ -628,7 +822,7 @@ export class WebAudioControlsBase extends HTMLElement {
     for (let si = 0; si < stepsToAdvance; si++) {
       const subTime = time + si * subStepDur;
       const stepIndex = this._seqPosition % 16;
-      const s = this._seq.steps[stepIndex];
+      const s = steps[stepIndex];
 
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
@@ -1304,8 +1498,14 @@ export class WebAudioControlsBase extends HTMLElement {
       const activeName = ['A', 'B', 'C', 'D'][this._chain[this._chainPosition] ?? 0];
       this._seq.steps = this._patterns[activeName]?.steps ?? this._seq.steps;
     } else if (obj.steps) {
-      // Legacy single-pattern
-      this._seq.steps = obj.steps;
+      // Legacy single-pattern: migrate to pattern A
+      if (this._patterns) {
+        this._patterns.A.steps = obj.steps;
+        this._chain = [0];
+        this._seq.steps = obj.steps;
+      } else {
+        this._seq.steps = obj.steps;
+      }
     }
     this._seqRestoreExtra?.(obj);
   }

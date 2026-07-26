@@ -81,3 +81,58 @@ small {
 .flash {
   animation: flash-anim 2s 1;
 }
+
+/* Pattern tabs and chain bar */
+.wam-pattern-row {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.wam-pattern-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.wam-pattern-tab {
+  padding: 2px 10px;
+  border: 1px solid;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.wam-pattern-tab[data-active] {
+  transform: scale(1.05);
+}
+
+.wam-chain-bar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 4px 0;
+}
+
+.wam-chain-pill {
+  padding: 2px 8px;
+  border: 1px solid;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 18px;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.wam-chain-pill:hover {
+  opacity: 0.8;
+}
+
+.wam-chain-pill[data-active] {
+  transform: scale(1.1);
+}
