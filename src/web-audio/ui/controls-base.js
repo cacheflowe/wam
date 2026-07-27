@@ -560,11 +560,14 @@ export class WebAudioControlsBase extends HTMLElement {
 
   /** Build pattern tab bar and chain bar UI. */
   _buildPatternSelector(container, color) {
-    // Pattern tabs container
+    // Pattern row: left (tabs + chain) | right (ops column)
     const patternRow = document.createElement("div");
     patternRow.className = "wam-pattern-row";
 
-    // --- Row 1: Pattern tabs + ops ---
+    // Left side: tabs + chain
+    const mainCol = document.createElement("div");
+    mainCol.className = "wam-pattern-main";
+
     const tabRow = document.createElement("div");
     tabRow.className = "wam-pattern-tab-row";
 
@@ -590,112 +593,7 @@ export class WebAudioControlsBase extends HTMLElement {
     });
 
     tabRow.appendChild(tabs);
-
-    // Pattern ops
-    const tabOps = document.createElement("div");
-    tabOps.className = "wam-pattern-ops";
-
-    const copyBtn = this._makeSeqBtn(color, "\u25c9", "Copy to others");
-    copyBtn.addEventListener("click", () => this._copyActivePattern());
-    tabOps.appendChild(copyBtn);
-
-    const clearBtn = this._makeSeqBtn(color, "\u2715", "Clear pattern");
-    clearBtn.addEventListener("click", () => this._clearActivePattern());
-    tabOps.appendChild(clearBtn);
-
-    tabRow.appendChild(tabOps);
-    patternRow.appendChild(tabRow);
-
-    // --- Row 2: Seq controls (playEvery, rotation, randomize) ---
-    const ctrlRow = document.createElement("div");
-    ctrlRow.className = "wam-pattern-ctrl-row";
-
-    const ctrlLabel = document.createElement("span");
-    ctrlLabel.className = "wam-pattern-label";
-    ctrlLabel.textContent = "Controls";
-    ctrlRow.appendChild(ctrlLabel);
-
-    // Play every N bars
-    const playEveryGroup = document.createElement("div");
-    playEveryGroup.className = "wam-ctrl-group";
-    const peLabel = document.createElement("span");
-    peLabel.textContent = "Play";
-    peLabel.className = "wam-ctrl-label";
-    const peInput = document.createElement("input");
-    peInput.type = "number";
-    peInput.min = "1";
-    peInput.max = "16";
-    peInput.value = this._seq._patternParams?.playEvery ?? 1;
-    peInput.className = "wam-ctrl-input";
-    peInput.addEventListener("change", () => {
-      const val = parseInt(peInput.value) || 1;
-      if (this._seq._patternParams) this._seq._patternParams.playEvery = val;
-      this._seq._dispatchPatternChange();
-    });
-    const peOf = document.createElement("span");
-    peOf.textContent = "of N bars";
-    peOf.className = "wam-ctrl-unit";
-    playEveryGroup.appendChild(peLabel);
-    playEveryGroup.appendChild(peInput);
-    playEveryGroup.appendChild(peOf);
-    ctrlRow.appendChild(playEveryGroup);
-
-    // Rotation
-    const rotGroup = document.createElement("div");
-    rotGroup.className = "wam-ctrl-group";
-    const rotLabel = document.createElement("span");
-    rotLabel.textContent = "Rotate";
-    rotLabel.className = "wam-ctrl-label";
-    const rotInput = document.createElement("number");
-    rotInput.type = "number";
-    rotInput.min = "0";
-    rotInput.max = "15";
-    rotInput.value = this._seq._patternParams?.rotationOffset ?? 0;
-    rotInput.className = "wam-ctrl-input";
-    rotInput.addEventListener("change", () => {
-      const val = parseInt(rotInput.value) || 0;
-      if (this._seq._patternParams) this._seq._patternParams.rotationOffset = val;
-      this._seq._dispatchPatternChange();
-    });
-    const rotSteps = document.createElement("span");
-    rotSteps.textContent = "steps every";
-    rotSteps.className = "wam-ctrl-unit";
-    const rotIntervalInput = document.createElement("input");
-    rotIntervalInput.type = "number";
-    rotIntervalInput.min = "1";
-    rotIntervalInput.max = "16";
-    rotIntervalInput.value = this._seq._patternParams?.rotationIntervalBars ?? 1;
-    rotIntervalInput.className = "wam-ctrl-input";
-    rotIntervalInput.addEventListener("change", () => {
-      const val = parseInt(rotIntervalInput.value) || 1;
-      if (this._seq._patternParams) this._seq._patternParams.rotationIntervalBars = val;
-      this._seq._dispatchPatternChange();
-    });
-    const rotBars = document.createElement("span");
-    rotBars.textContent = "bars";
-    rotBars.className = "wam-ctrl-unit";
-    rotGroup.appendChild(rotLabel);
-    rotGroup.appendChild(rotInput);
-    rotGroup.appendChild(rotSteps);
-    rotGroup.appendChild(rotIntervalInput);
-    rotGroup.appendChild(rotBars);
-    ctrlRow.appendChild(rotGroup);
-
-    // Randomize button
-    const randBtn = this._makeSeqBtn(color, "\u26d4", "Randomize pattern");
-    randBtn.addEventListener("click", () => this._seq._onRandomize?.());
-    ctrlRow.appendChild(randBtn);
-
-    patternRow.appendChild(ctrlRow);
-
-    // --- Row 3: Chain bar ---
-    const chainRow = document.createElement("div");
-    chainRow.className = "wam-pattern-chain-row";
-
-    const chainLabel = document.createElement("span");
-    chainLabel.className = "wam-pattern-label";
-    chainLabel.textContent = "Chain";
-    chainRow.appendChild(chainLabel);
+    mainCol.appendChild(tabRow);
 
     const chainBar = document.createElement("div");
     chainBar.className = "wam-chain-bar";
@@ -703,22 +601,30 @@ export class WebAudioControlsBase extends HTMLElement {
 
     this._chainPills = [];
     this._updateChainBar(color);
-    chainRow.appendChild(chainBar);
+    mainCol.appendChild(chainBar);
+    patternRow.appendChild(mainCol);
 
-    // Chain ops
-    const chainOps = document.createElement("div");
-    chainOps.className = "wam-pattern-ops";
+    // Right side: ops column
+    const opsCol = document.createElement("div");
+    opsCol.className = "wam-pattern-ops";
+
+    const copyBtn = this._makeSeqBtn(color, "\u25c9", "Copy to others");
+    copyBtn.addEventListener("click", () => this._copyActivePattern());
+    opsCol.appendChild(copyBtn);
+
+    const clearBtn = this._makeSeqBtn(color, "\u2715", "Clear pattern");
+    clearBtn.addEventListener("click", () => this._clearActivePattern());
+    opsCol.appendChild(clearBtn);
 
     const dupChainBtn = this._makeSeqBtn(color, "\u21e7", "Duplicate chain");
     dupChainBtn.addEventListener("click", () => this._duplicateChain());
-    chainOps.appendChild(dupChainBtn);
+    opsCol.appendChild(dupChainBtn);
 
     const resetBtn = this._makeSeqBtn(color, "↺", "Reset to single pattern");
     resetBtn.addEventListener("click", () => this._resetChain());
-    chainOps.appendChild(resetBtn);
+    opsCol.appendChild(resetBtn);
 
-    chainRow.appendChild(chainOps);
-    patternRow.appendChild(chainRow);
+    patternRow.appendChild(opsCol);
 
     // Insert before the sequencer grid
     container.insertBefore(patternRow, this._seq);
