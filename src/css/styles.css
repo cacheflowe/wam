@@ -82,7 +82,7 @@ small {
   animation: flash-anim 2s 1;
 }
 
-/* Pattern tabs and chain bar */
+/* Sequencer pattern system */
 .wam-pattern-row {
   display: flex;
   flex-direction: column;
@@ -90,11 +90,12 @@ small {
 }
 
 .wam-pattern-tab-row,
+.wam-pattern-ctrl-row,
 .wam-pattern-chain-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .wam-pattern-label {
@@ -111,15 +112,26 @@ small {
   gap: 4px;
 }
 
-.wam-pattern-tab {
-  padding: 2px 10px;
+/* Unified sequencer button — all seq buttons share this */
+.wam-seq-btn {
+  padding: 3px 8px;
   border: 1px solid;
   border-radius: 4px;
+  background: transparent;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
+  font-family: inherit;
+  line-height: 1;
   transition: all 0.15s;
   position: relative;
+  min-height: 18px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.wam-seq-btn:hover {
+  opacity: 0.8;
 }
 
 .wam-pattern-tab[data-active] {
@@ -143,18 +155,32 @@ small {
   margin-left: auto;
 }
 
-.wam-pattern-op-btn {
-  padding: 1px 5px;
-  border: 1px solid;
-  border-radius: 3px;
-  background: transparent;
-  cursor: pointer;
-  font-size: 10px;
-  transition: all 0.15s;
+/* Sequence controls row */
+.wam-ctrl-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
 }
 
-.wam-pattern-op-btn:hover {
-  opacity: 0.7;
+.wam-ctrl-label {
+  font-size: 9px;
+  color: #888;
+}
+
+.wam-ctrl-input {
+  width: 32px;
+  padding: 2px 3px;
+  border: 1px solid #444;
+  border-radius: 3px;
+  background: #1a1a1a;
+  color: #ccc;
+  font-size: 10px;
+  text-align: center;
+}
+
+.wam-ctrl-unit {
+  font-size: 9px;
+  color: #666;
 }
 
 .wam-chain-bar {
@@ -177,37 +203,11 @@ small {
   line-height: 1;
 }
 
-.wam-chain-pill {
-  padding: 2px 8px;
-  border: 1px solid;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 10px;
-  font-weight: 600;
-  min-width: 18px;
-  text-align: center;
-  transition: all 0.15s;
-}
-
-.wam-chain-pill:hover {
-  opacity: 0.8;
-}
-
 .wam-chain-pill[data-playing] {
   box-shadow: 0 0 4px currentColor;
 }
 
 .wam-chain-add-btn {
-  padding: 2px 6px;
-  border: 1px dashed;
-  border-radius: 3px;
-  background: transparent;
-  cursor: pointer;
-  font-size: 10px;
+  border-style: dashed;
   margin-left: 4px;
-  transition: all 0.15s;
-}
-
-.wam-chain-add-btn:hover {
-  opacity: 0.7;
 }

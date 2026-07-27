@@ -522,7 +522,6 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
       probability: true,
       ratchet: true,
       conditions: true,
-      patternControls: true,
       color,
     };
     if (this._melodicMode) {
