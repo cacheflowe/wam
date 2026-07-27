@@ -618,6 +618,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
     const chainBar = document.createElement("div");
     chainBar.className = "wam-chain-bar";
+    this._chainBarEl = chainBar;
 
     this._chainPills = [];
     this._updateChainBar(color);
@@ -675,7 +676,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
   /** Update chain bar UI. */
   _updateChainBar(color) {
-    const chainBar = this._chainPills[0]?.parentElement;
+    const chainBar = this._chainBarEl;
     if (!chainBar) return;
 
     chainBar.innerHTML = '';
