@@ -82,27 +82,10 @@ small {
   animation: flash-anim 2s 1;
 }
 
-/* Sequencer pattern system: tabs | chain | ops, wraps if needed */
+/* Sequencer pattern row: uses wam-action-row + wam-ctrl from controls-factory */
 .wam-pattern-row {
-  display: flex;
-  flex-wrap: wrap;
+  padding: 4px 0;
   gap: 8px;
-  align-items: flex-end;
-  padding: 4px 0 6px;
-}
-
-/* Labeled group: label on top, controls below */
-.wam-seq-group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.wam-seq-label {
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #666;
 }
 
 .wam-pattern-tabs {
@@ -126,32 +109,7 @@ small {
   flex-shrink: 0;
 }
 
-/* Unified sequencer button — all seq buttons share this */
-.wam-seq-btn {
-  padding: 3px 8px;
-  border: 1px solid;
-  border-radius: 4px;
-  background: transparent;
-  cursor: pointer;
-  font-size: 10px;
-  font-weight: 600;
-  font-family: inherit;
-  line-height: 1;
-  transition: all 0.15s;
-  position: relative;
-  min-height: 18px;
-  min-width: 18px;
-  text-align: center;
-}
-
-.wam-seq-btn:hover {
-  opacity: 0.8;
-}
-
-.wam-pattern-tab[data-active] {
-  transform: scale(1.05);
-}
-
+/* Playing indicator on active pattern tab */
 .wam-pattern-tab[data-playing]::after {
   content: '';
   position: absolute;
@@ -163,6 +121,12 @@ small {
   background: currentColor;
 }
 
+/* Chain pill playing glow */
+.wam-chain-pill[data-playing] {
+  box-shadow: 0 0 4px currentColor;
+}
+
+/* Chain slot: bar number above pill */
 .wam-chain-slot {
   display: flex;
   flex-direction: column;
@@ -176,10 +140,7 @@ small {
   line-height: 1;
 }
 
-.wam-chain-pill[data-playing] {
-  box-shadow: 0 0 4px currentColor;
-}
-
+/* Chain add button: dashed border */
 .wam-chain-add-btn {
   border-style: dashed;
   margin-left: 4px;
