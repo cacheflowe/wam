@@ -82,52 +82,31 @@ small {
   animation: flash-anim 2s 1;
 }
 
-/* Sequencer pattern system */
+/* Sequencer pattern system: tabs | chain | ops, wraps if needed */
 .wam-pattern-row {
   display: flex;
-  gap: 8px;
-  padding: 4px 0;
-  align-items: flex-start;
-}
-
-.wam-pattern-main {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-}
-
-.wam-pattern-tab-row {
-  display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
-}
-
-.wam-pattern-label {
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #666;
-  min-width: 44px;
-  flex-shrink: 0;
+  align-items: center;
+  padding: 4px 0;
 }
 
 .wam-pattern-tabs {
   display: flex;
   gap: 4px;
+  flex-shrink: 0;
 }
 
 .wam-chain-bar {
   display: flex;
   gap: 3px;
-  align-items: flex-end;
+  align-items: center;
   flex: 1;
+  min-width: 0;
 }
 
-/* Right column of ops buttons */
 .wam-pattern-ops {
   display: flex;
-  flex-direction: column;
   gap: 3px;
   flex-shrink: 0;
 }

@@ -560,22 +560,11 @@ export class WebAudioControlsBase extends HTMLElement {
 
   /** Build pattern tab bar and chain bar UI. */
   _buildPatternSelector(container, color) {
-    // Pattern row: left (tabs + chain) | right (ops column)
+    // Single flex row: tabs | chain | ops (wraps if needed)
     const patternRow = document.createElement("div");
     patternRow.className = "wam-pattern-row";
 
-    // Left side: tabs + chain
-    const mainCol = document.createElement("div");
-    mainCol.className = "wam-pattern-main";
-
-    const tabRow = document.createElement("div");
-    tabRow.className = "wam-pattern-tab-row";
-
-    const tabLabel = document.createElement("span");
-    tabLabel.className = "wam-pattern-label";
-    tabLabel.textContent = "Patterns";
-    tabRow.appendChild(tabLabel);
-
+    // Pattern tabs
     const tabs = document.createElement("div");
     tabs.className = "wam-pattern-tabs";
 
@@ -592,19 +581,18 @@ export class WebAudioControlsBase extends HTMLElement {
       this._patternTabs[name] = tab;
     });
 
-    tabRow.appendChild(tabs);
-    mainCol.appendChild(tabRow);
+    patternRow.appendChild(tabs);
 
+    // Chain bar
     const chainBar = document.createElement("div");
     chainBar.className = "wam-chain-bar";
     this._chainBarEl = chainBar;
 
     this._chainPills = [];
     this._updateChainBar(color);
-    mainCol.appendChild(chainBar);
-    patternRow.appendChild(mainCol);
+    patternRow.appendChild(chainBar);
 
-    // Right side: ops column
+    // Ops
     const opsCol = document.createElement("div");
     opsCol.className = "wam-pattern-ops";
 
