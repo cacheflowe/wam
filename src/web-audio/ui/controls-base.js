@@ -631,6 +631,10 @@ export class WebAudioControlsBase extends HTMLElement {
     dupChainBtn.addEventListener("click", () => this._duplicateChain());
     chainOps.appendChild(dupChainBtn);
 
+    const resetBtn = this._makeSmallBtn(color, "↺", "Reset to single pattern");
+    resetBtn.addEventListener("click", () => this._resetChain());
+    chainOps.appendChild(resetBtn);
+
     chainRow.appendChild(chainOps);
     patternRow.appendChild(chainRow);
 
@@ -680,10 +684,18 @@ export class WebAudioControlsBase extends HTMLElement {
     const patternNames = ['A', 'B', 'C', 'D'];
 
     this._chain.forEach((idx, pos) => {
+      // Pill container with bar number
+      const pillContainer = document.createElement("div");
+      pillContainer.className = "wam-chain-slot";
+
+      const pillNum = document.createElement("span");
+      pillNum.className = "wam-chain-num";
+      pillNum.textContent = pos + 1;
+
       const pill = document.createElement("button");
       pill.className = "wam-chain-pill";
       pill.textContent = patternNames[idx];
-      pill.title = pos + 1 + '. click to cycle, right-click to remove';
+      pill.title = 'Bar ' + (pos + 1) + ': ' + patternNames[idx] + ' (click to cycle, right-click to remove)';
       pill.style.borderColor = color + '33';
 
       if (pos === this._chainPosition) {
@@ -714,7 +726,9 @@ export class WebAudioControlsBase extends HTMLElement {
         }
       });
 
-      chainBar.appendChild(pill);
+      pillContainer.appendChild(pillNum);
+      pillContainer.appendChild(pill);
+      chainBar.appendChild(pillContainer);
       this._chainPills.push(pill);
     });
 
@@ -805,6 +819,18 @@ export class WebAudioControlsBase extends HTMLElement {
     if (this._chain.length + this._chain.length > 16) return;
     this._chain = this._chain.concat([...this._chain]);
     this._updateChainBar(this._defaultColor?.() || '#0f0');
+    this._emitChange();
+  }
+
+  /** Reset chain to single pattern A. */
+  _resetChain() {
+    this._chain = [0];
+    this._chainPosition = 0;
+    this._playingPattern = 'A';
+    this._updateChainBar(this._defaultColor?.() || '#0f0');
+    this._updateTabPlayingIndicators(this._defaultColor?.() || '#0f0');
+    // Select A tab
+    this._selectPattern('A');
     this._emitChange();
   }
 

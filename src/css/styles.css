@@ -159,9 +159,22 @@ small {
 
 .wam-chain-bar {
   display: flex;
-  gap: 4px;
-  align-items: center;
+  gap: 3px;
+  align-items: flex-end;
   flex: 1;
+}
+
+.wam-chain-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.wam-chain-num {
+  font-size: 8px;
+  color: #666;
+  line-height: 1;
 }
 
 .wam-chain-pill {
