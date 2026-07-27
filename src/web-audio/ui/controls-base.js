@@ -564,7 +564,15 @@ export class WebAudioControlsBase extends HTMLElement {
     const patternRow = document.createElement("div");
     patternRow.className = "wam-pattern-row";
 
-    // Pattern tabs
+    // --- Pattern tabs group ---
+    const tabsGroup = document.createElement("div");
+    tabsGroup.className = "wam-seq-group";
+
+    const tabsLabel = document.createElement("span");
+    tabsLabel.className = "wam-seq-label";
+    tabsLabel.textContent = "Patterns";
+    tabsGroup.appendChild(tabsLabel);
+
     const tabs = document.createElement("div");
     tabs.className = "wam-pattern-tabs";
 
@@ -581,18 +589,36 @@ export class WebAudioControlsBase extends HTMLElement {
       this._patternTabs[name] = tab;
     });
 
-    patternRow.appendChild(tabs);
+    tabsGroup.appendChild(tabs);
+    patternRow.appendChild(tabsGroup);
 
-    // Chain bar
+    // --- Chain bar group ---
+    const chainGroup = document.createElement("div");
+    chainGroup.className = "wam-seq-group";
+
+    const chainLabel = document.createElement("span");
+    chainLabel.className = "wam-seq-label";
+    chainLabel.textContent = "Chain";
+    chainGroup.appendChild(chainLabel);
+
     const chainBar = document.createElement("div");
     chainBar.className = "wam-chain-bar";
     this._chainBarEl = chainBar;
 
     this._chainPills = [];
     this._updateChainBar(color);
-    patternRow.appendChild(chainBar);
+    chainGroup.appendChild(chainBar);
+    patternRow.appendChild(chainGroup);
 
-    // Ops
+    // --- Ops group ---
+    const opsGroup = document.createElement("div");
+    opsGroup.className = "wam-seq-group";
+
+    const opsLabel = document.createElement("span");
+    opsLabel.className = "wam-seq-label";
+    opsLabel.textContent = "Actions";
+    opsGroup.appendChild(opsLabel);
+
     const opsCol = document.createElement("div");
     opsCol.className = "wam-pattern-ops";
 
@@ -612,7 +638,8 @@ export class WebAudioControlsBase extends HTMLElement {
     resetBtn.addEventListener("click", () => this._resetChain());
     opsCol.appendChild(resetBtn);
 
-    patternRow.appendChild(opsCol);
+    opsGroup.appendChild(opsCol);
+    patternRow.appendChild(opsGroup);
 
     // Insert before the sequencer grid
     container.insertBefore(patternRow, this._seq);

@@ -86,9 +86,23 @@ small {
 .wam-pattern-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  padding: 4px 0;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 4px 0 6px;
+}
+
+/* Labeled group: label on top, controls below */
+.wam-seq-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wam-seq-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
 }
 
 .wam-pattern-tabs {
@@ -100,9 +114,10 @@ small {
 .wam-chain-bar {
   display: flex;
   gap: 3px;
-  align-items: center;
+  align-items: flex-end;
   flex: 1;
   min-width: 0;
+  padding-top: 10px;
 }
 
 .wam-pattern-ops {
