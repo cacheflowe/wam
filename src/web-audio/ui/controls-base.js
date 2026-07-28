@@ -570,6 +570,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
     const tabsLabel = document.createElement("label");
     tabsLabel.textContent = "Patterns";
+    tabsLabel.setAttribute("data-tooltip", "A/B/C/D — click to switch editing context");
     tabsGroup.appendChild(tabsLabel);
 
     const tabs = document.createElement("div");
@@ -597,6 +598,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
     const chainLabel = document.createElement("label");
     chainLabel.textContent = "Chain";
+    chainLabel.setAttribute("data-tooltip", "Playback order — click pill to cycle, right-click to remove");
     chainGroup.appendChild(chainLabel);
 
     const chainBar = document.createElement("div");
@@ -614,6 +616,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
     const opsLabel = document.createElement("label");
     opsLabel.textContent = "Actions";
+    opsLabel.setAttribute("data-tooltip", "⧉ copy to others  ✕ clear  ⇧ dup chain  ↺ reset");
     opsGroup.appendChild(opsLabel);
 
     const opsCol = document.createElement("div");
@@ -691,7 +694,7 @@ export class WebAudioControlsBase extends HTMLElement {
     const patternNames = ['A', 'B', 'C', 'D'];
 
     this._chain.forEach((idx, pos) => {
-      // Pill container with bar number
+      // Pill container with bar number (absolute positioned, doesn't affect layout)
       const pillContainer = document.createElement("div");
       pillContainer.className = "wam-chain-slot";
 
@@ -703,7 +706,6 @@ export class WebAudioControlsBase extends HTMLElement {
       pill.className += " wam-chain-pill";
       pill.textContent = patternNames[idx];
       pill.title = 'Bar ' + (pos + 1) + ': ' + patternNames[idx] + ' (click to cycle, right-click to remove)';
-      pill.style.borderColor = color + '33';
 
       if (pos === this._chainPosition) {
         pill.style.background = color + '44';

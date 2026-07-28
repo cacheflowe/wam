@@ -100,7 +100,6 @@ small {
   align-items: flex-end;
   flex: 1;
   min-width: 0;
-  padding-top: 10px;
 }
 
 .wam-pattern-ops {
@@ -126,18 +125,21 @@ small {
   box-shadow: 0 0 4px currentColor;
 }
 
-/* Chain slot: bar number above pill */
+/* Chain slot: bar number absolutely positioned above pill */
 .wam-chain-slot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
+  position: relative;
 }
 
 .wam-chain-num {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 8px;
   color: #666;
   line-height: 1;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Chain add button: dashed border */
