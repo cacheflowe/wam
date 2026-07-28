@@ -657,23 +657,14 @@ export class WebAudioControlsBase extends HTMLElement {
   _makeActionBtn() {
     const btn = document.createElement("button");
     btn.className = "wam-action-btn";
-    btn.style.padding = "0 8px";
-    btn.style.fontSize = "0.7em";
-    btn.style.minHeight = "20px";
     return btn;
   }
 
   /** Style a pattern tab. */
   _stylePatternTab(tab, isActive, isPlaying, color) {
     if (isActive) {
-      tab.style.background = 'var(--slider-accent, #0f0)';
-      tab.style.color = '#000';
-      tab.style.borderColor = 'var(--slider-accent, #0f0)';
       tab.setAttribute("data-active", "");
     } else {
-      tab.style.background = '';
-      tab.style.color = '';
-      tab.style.borderColor = '';
       tab.removeAttribute("data-active");
     }
     if (isPlaying) {
@@ -708,12 +699,8 @@ export class WebAudioControlsBase extends HTMLElement {
       pill.title = 'Bar ' + (pos + 1) + ': ' + patternNames[idx] + ' (click to cycle, right-click to remove)';
 
       if (pos === this._chainPosition) {
-        pill.style.background = color + '44';
-        pill.style.color = color;
         pill.setAttribute("data-playing", "");
       } else {
-        pill.style.background = 'transparent';
-        pill.style.color = color + '88';
         pill.removeAttribute("data-playing");
       }
 

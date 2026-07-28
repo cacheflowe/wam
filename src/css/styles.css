@@ -94,6 +94,11 @@ small {
   flex-shrink: 0;
 }
 
+/* Pattern tabs need position context for playing indicator */
+.wam-pattern-tab {
+  position: relative;
+}
+
 .wam-chain-bar {
   display: flex;
   gap: 3px;
@@ -108,7 +113,13 @@ small {
   flex-shrink: 0;
 }
 
-/* Playing indicator on active pattern tab */
+/* Active pattern tab: matches wam-action-btn hover */
+.wam-pattern-tab[data-active] {
+  background: var(--slider-accent, #0f0);
+  color: #000;
+}
+
+/* Playing indicator on pattern tab */
 .wam-pattern-tab[data-playing]::after {
   content: '';
   position: absolute;
@@ -122,7 +133,9 @@ small {
 
 /* Chain pill playing glow */
 .wam-chain-pill[data-playing] {
-  box-shadow: 0 0 4px currentColor;
+  background: var(--slider-accent, #0f0);
+  color: #000;
+  box-shadow: 0 0 4px var(--slider-accent, #0f0);
 }
 
 /* Chain slot: bar number absolutely positioned above pill */
