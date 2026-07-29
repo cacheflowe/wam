@@ -531,7 +531,20 @@ export class WebAudioControlsBase extends HTMLElement {
   _createSequencer(expanded, color, onRandomize = null) {
     this._seq = document.createElement("wam-step-seq");
     const initOpts = this._seqInitOptions(color);
-    initOpts.onRandomize = onRandomize;
+    initOpts.onRandomize = onRandomize ? () => {
+      // Randomize targets the currently selected pattern
+      const activeName = Object.entries(this._patternTabs)
+        .find(([, tab]) => tab.hasAttribute("data-active"))?.[0] || 'A';
+      onRandomize();
+      // Sync new steps back to active pattern
+      if (this._patterns[activeName]) {
+        this._patterns[activeName].steps = this._seq.steps;
+      }
+      // Keep active tab highlighted
+      this._stylePatternTab(this._patternTabs[activeName], true,
+        this._playingPattern === activeName, color);
+      this._emitChange();
+    } : null;
     this._seq.init(initOpts);
 
     // Initialize multi-pattern system
