@@ -536,9 +536,9 @@ export class WebAudioControlsBase extends HTMLElement {
       const activeName = Object.entries(this._patternTabs)
         .find(([, tab]) => tab.hasAttribute("data-active"))?.[0] || 'A';
       onRandomize();
-      // Sync new steps back to active pattern
+      // Deep-copy new steps into active pattern
       if (this._patterns[activeName]) {
-        this._patterns[activeName].steps = this._seq.steps;
+        this._patterns[activeName].steps = this._seq.steps.map(s => ({ ...s }));
       }
       // Keep active tab highlighted
       this._stylePatternTab(this._patternTabs[activeName], true,
@@ -778,7 +778,10 @@ export class WebAudioControlsBase extends HTMLElement {
     for (const [name, tab] of Object.entries(this._patternTabs)) {
       if (tab.hasAttribute("data-active")) {
         if (this._seq && this._patterns[name]) {
-          this._patterns[name].steps = this._seq.steps;
+          // Deep copy so each pattern owns its own array.
+          // Without this, randomize (which assigns a new array to
+          // this._seq.steps) would leave old patterns pointing at stale data.
+          this._patterns[name].steps = this._seq.steps.map(s => ({ ...s }));
         }
         break;
       }

@@ -113,13 +113,13 @@ small {
   flex-shrink: 0;
 }
 
-/* Active pattern tab: matches wam-action-btn hover */
+/* Active pattern tab: bright fill (overrides injected wam-action-btn) */
 .wam-pattern-tab[data-active] {
-  background: var(--slider-accent, #0f0);
-  color: #000;
+  background: var(--slider-accent, #0f0) !important;
+  color: #000 !important;
 }
 
-/* Playing indicator on pattern tab */
+/* Playing indicator dot on pattern tab */
 .wam-pattern-tab[data-playing]::after {
   content: '';
   position: absolute;
@@ -131,10 +131,10 @@ small {
   background: currentColor;
 }
 
-/* Chain pill playing glow */
+/* Chain pill: playing state gets bright fill + glow */
 .wam-chain-pill[data-playing] {
-  background: var(--slider-accent, #0f0);
-  color: #000;
+  background: var(--slider-accent, #0f0) !important;
+  color: #000 !important;
   box-shadow: 0 0 4px var(--slider-accent, #0f0);
 }
 
