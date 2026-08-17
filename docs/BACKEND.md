@@ -35,7 +35,7 @@ class WebAudioSynthAcid {
 |---|---|---|---|
 | `WebAudioSynthAcid` | `synth-acid.js` | Mono bass | Filter sweep, portamento, unison, distortion |
 | `WebAudioSynth808` | `synth-808.js` | Pitched bass | Pitch sweep, click transient, sub oscillator |
-| `WebAudioSynthFM` | `synth-fm.js` | Poly FM | 2-op FM, mod envelope, BPM-synced filter LFO, chord mode |
+| `WebAudioSynthFM` | `synth-fm.js` | Poly FM | 2-op FM, mod envelope, BPM-synced filter LFO, chord mode, unison |
 | `WebAudioSynthMono` | `synth-mono.js` | Mono | Saw/square/tri, ADSR, filter envelope, sub osc |
 | `WebAudioSynthPad` | `synth-pad.js` | Poly pad | Chord voicing, constant-power voice scaling |
 | `WebAudioSynthPoly` | `synth-poly.js` | Poly subtractive | Dual osc + sub + noise, unison, per-voice filter ADSR + key track, dual tempo-syncable LFOs, voice stealing, chords. Built on the shared `dsp/` primitives. |

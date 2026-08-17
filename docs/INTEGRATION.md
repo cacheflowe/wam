@@ -203,7 +203,9 @@ fm.bpm = 120; // syncs LFO to tempo
 fm.modIndex = 5;    // FM depth; higher = more metallic
 fm.carrierRatio = 1;
 fm.modRatio = 2;
-```
+fm.unison = true;          // 3 detuned voices per note
+fm.unisonSpread = 5;       // cent spread between voices
+fm.modWaveform = "square"; // modulator waveform (sine|square|sawtooth|triangle)
 
 Presets: `Bell`, `E_Piano`, `Vibes`, `Organ`, `Brass`, `Kalimba`, `Sitar`, `Glass`, `Ether`, and more.
 

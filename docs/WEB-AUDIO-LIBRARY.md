@@ -36,7 +36,7 @@ Effects & Utilities           WebAudioFxDelay, WebAudioFxUnit, WebAudioSequencer
 |------|-------|------|-------------|
 | `synth-acid.js` | `WebAudioSynthAcid` | Mono bass | TB-303-style acid synth with resonant filter sweep, portamento, unison |
 | `synth-808.js` | `WebAudioSynth808` | Pitched bass | 808 sub-bass with pitch sweep, click transient, sub oscillator, tone filter |
-| `synth-fm.js` | `WebAudioSynthFM` | Poly FM | 2-operator FM synth with mod envelope, BPM-synced filter LFO, chord mode |
+| `synth-fm.js` | `WebAudioSynthFM` | Poly FM | 2-operator FM synth with mod envelope, BPM-synced filter LFO, chord mode, unison |
 | `synth-mono.js` | `WebAudioSynthMono` | Mono synth | Sawtooth/square/triangle with ADSR, filter envelope, detune, sub osc |
 | `synth-pad.js` | `WebAudioSynthPad` | Poly pad | Chord pad with constant-power voice scaling |
 | `synth-blipfx.js` | `WebAudioSynthBlipFX` | SFX | Procedural sound effects with 6 waveforms, FM, bit-crush, randomization |
