@@ -135,6 +135,11 @@ export default class WebAudioPercKick extends WebAudioInstrumentBase {
 
     return this;
   }
+
+  /** Trigger the sequence step, handling ratchet subdivisions. */
+  triggerSequenceStep(index, s, subTime, subStepDur) {
+    this._triggerRatcheted(s, subTime, subStepDur, (t) => this.trigger(0.9, t));
+  }
 }
 
 // ---- Controls companion component ----
@@ -231,18 +236,6 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
     };
   }
 
-  _seqTriggerStep(s, subTime, subStepDur) {
-    const ratchet = s.ratchet ?? 1;
-    if (ratchet > 1) {
-      const ratchetDuration = subStepDur / ratchet;
-      for (let i = 0; i < ratchet; i++) {
-        this._instrument.trigger(0.9, subTime + i * ratchetDuration);
-      }
-    } else {
-      this._instrument.trigger(0.9, subTime);
-    }
-  }
-
   _triggerJam(time, stepDurationSec) {
     this._instrument.trigger(0.9, time);
   }
@@ -255,7 +248,7 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
       conditions: "off",
     }));
     newSteps[0] = { active: true, probability: 1, ratchet: 1, conditions: "off" };
-    if (this._seq) this._seq.steps = newSteps;
+    this._instrument.steps = newSteps;
     this._emitChange();
   }
 

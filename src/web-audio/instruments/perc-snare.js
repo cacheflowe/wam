@@ -247,6 +247,11 @@ export default class WebAudioPercSnare extends WebAudioInstrumentBase {
     noise.start(t);
     noise.stop(t + this.noiseDecay + 0.05);
   }
+
+  /** Trigger the sequence step, handling ratchet subdivisions. */
+  triggerSequenceStep(index, s, subTime, subStepDur) {
+    this._triggerRatcheted(s, subTime, subStepDur, (t) => this.trigger(0.8, t));
+  }
 }
 
 // ---- Controls companion component ----
@@ -380,18 +385,6 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
     };
   }
 
-  _seqTriggerStep(s, subTime, subStepDur) {
-    const ratchet = s.ratchet ?? 1;
-    if (ratchet > 1) {
-      const ratchetDuration = subStepDur / ratchet;
-      for (let i = 0; i < ratchet; i++) {
-        this._instrument.trigger(0.8, subTime + i * ratchetDuration);
-      }
-    } else {
-      this._instrument.trigger(0.8, subTime);
-    }
-  }
-
   _triggerJam(time, stepDurationSec) {
     this._instrument.trigger(0.8, time);
   }
@@ -403,7 +396,7 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
       ratchet: 1,
       conditions: "off",
     }));
-    if (this._seq) this._seq.steps = newSteps;
+    this._instrument.steps = newSteps;
     this._emitChange();
   }
 

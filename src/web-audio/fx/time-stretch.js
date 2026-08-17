@@ -17,7 +17,7 @@
  *   ts.seek(0.5);          // jump to 50% through buffer
  */
 
-import "../ui/slider.js";
+import "../ui/knob.js";
 import { injectControlsCSS, createSection, createCtrl } from "../ui/controls-factory.js";
 
 export default class WebAudioTimeStretch {
@@ -224,7 +224,7 @@ export class WebAudioTimeStretchControls extends HTMLElement {
   constructor() {
     super();
     this._target = null;
-    this._pitchSlider = null;
+    this._pitchKnob = null;
     this._stretchSelect = null;
     this._styleSelect = null;
   }
@@ -245,17 +245,16 @@ export class WebAudioTimeStretchControls extends HTMLElement {
     const { el: sectionEl, controls } = createSection(options.title || "Pitch / Time");
     this.appendChild(sectionEl);
 
-    // Pitch slider
-    const pitchSlider = document.createElement("wam-slider");
-    pitchSlider.setAttribute("param", "pitchShift");
-    pitchSlider.setAttribute("label", "Pitch");
-    pitchSlider.setAttribute("min", -24);
-    pitchSlider.setAttribute("max", 24);
-    pitchSlider.setAttribute("step", 0.1);
-    pitchSlider.setAttribute("default", 0);
-    pitchSlider.value = target.pitchShift ?? 0;
-    controls.appendChild(pitchSlider);
-    this._pitchSlider = pitchSlider;
+    // Pitch knob
+    const pitchKnob = document.createElement("wam-knob");
+    pitchKnob.setAttribute("param", "pitchShift");
+    pitchKnob.setAttribute("label", "Pitch");
+    pitchKnob.setAttribute("min", -24);
+    pitchKnob.setAttribute("max", 24);
+    pitchKnob.setAttribute("step", 0.1);
+    pitchKnob.value = target.pitchShift ?? 0;
+    controls.appendChild(pitchKnob);
+    this._pitchKnob = pitchKnob;
 
     // Time stretch ratio select
     const stretchWrap = createCtrl("Time");
@@ -293,8 +292,8 @@ export class WebAudioTimeStretchControls extends HTMLElement {
     styleWrap.appendChild(this._styleSelect);
     controls.appendChild(styleWrap);
 
-    // Slider event delegation
-    this.addEventListener("slider-input", (e) => {
+    // Knob event delegation
+    this.addEventListener("knob-input", (e) => {
       if (!this._target || e.detail.param !== "pitchShift") return;
       this._target.pitchShift = e.detail.value;
       this._emitChange();
@@ -322,7 +321,7 @@ export class WebAudioTimeStretchControls extends HTMLElement {
     if (!obj || !this._target) return;
     if (obj.pitchShift != null) {
       this._target.pitchShift = obj.pitchShift;
-      if (this._pitchSlider) this._pitchSlider.value = obj.pitchShift;
+      if (this._pitchKnob) this._pitchKnob.value = obj.pitchShift;
     }
     if (obj.stretchRatio != null) {
       this._target.stretchRatio = obj.stretchRatio;

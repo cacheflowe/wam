@@ -118,6 +118,12 @@ export default class WebAudioPercHihat extends WebAudioInstrumentBase {
 
     return this;
   }
+
+  /** Trigger the sequence step, handling ratchet subdivisions and open/closed state. */
+  triggerSequenceStep(index, s, subTime, subStepDur) {
+    const isOpen = s.open ?? false;
+    this._triggerRatcheted(s, subTime, subStepDur, (t) => this.trigger(0.7, t, isOpen));
+  }
 }
 
 // ---- Controls companion component ----
@@ -224,19 +230,6 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
     };
   }
 
-  _seqTriggerStep(s, subTime, subStepDur) {
-    const ratchet = s.ratchet ?? 1;
-    const isOpen = s.open ?? false;
-    if (ratchet > 1) {
-      const ratchetDuration = subStepDur / ratchet;
-      for (let i = 0; i < ratchet; i++) {
-        this._instrument.trigger(0.7, subTime + i * ratchetDuration, isOpen);
-      }
-    } else {
-      this._instrument.trigger(0.7, subTime, isOpen);
-    }
-  }
-
   _triggerJam(time, stepDurationSec) {
     this._instrument.trigger(0.7, time, false);
   }
@@ -249,7 +242,7 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
       conditions: "off",
       open: Math.random() < 0.15, // occasional open hats
     }));
-    if (this._seq) this._seq.steps = newSteps;
+    this._instrument.steps = newSteps;
     this._emitChange();
   }
 

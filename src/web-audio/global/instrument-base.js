@@ -13,11 +13,22 @@
  *     this.applyPreset(preset);  // now safe — extra nodes exist
  *   }
  */
-export default class WebAudioInstrumentBase {
+export default class WebAudioInstrumentBase extends EventTarget {
   constructor(ctx, preset) {
+    super();
     this.ctx = ctx;
     this._out = ctx.createGain();
+    this._steps = [];
     if (preset) this.applyPreset(preset);
+  }
+
+  get steps() {
+    return this._steps;
+  }
+
+  set steps(newSteps) {
+    this._steps = newSteps;
+    this.dispatchEvent(new CustomEvent("steps-changed", { detail: { steps: newSteps } }));
   }
 
   get input() {
@@ -56,5 +67,38 @@ export default class WebAudioInstrumentBase {
    */
   static _midiToFreq(midi) {
     return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+
+  /**
+   * Trigger an audio event based on sequencer step data. Override in subclasses —
+   * most implementations just call `this._triggerRatcheted(s, subTime, subStepDur, hit)`.
+   * @param {number} index - The step's index in the pattern (0–15).
+   * @param {Object} s - The step data { active, note, accent, probability, ratchet, conditions }.
+   * @param {number} subTime - The scheduled audio time.
+   * @param {number} subStepDur - The duration of the step in seconds.
+   */
+  triggerSequenceStep(index, s, subTime, subStepDur) {}
+
+  /**
+   * Shared ratchet-subdivision helper for triggerSequenceStep() implementations.
+   * Calls `hit(time, dur, i)` once per ratchet subdivision (or once, unratcheted,
+   * when `s.ratchet` is 1 or unset). `dur` is shortened to 90% of the subdivision
+   * when ratcheted, so repeats don't run together; `i` is the subdivision index
+   * (0-based), useful for one-shot articulation like an accent on the first hit only.
+   * @param {Object} s - The step data (reads `s.ratchet`).
+   * @param {number} subTime - The step's scheduled start time.
+   * @param {number} subStepDur - The step's full duration.
+   * @param {(time: number, dur: number, i: number) => void} hit - Called per subdivision.
+   */
+  _triggerRatcheted(s, subTime, subStepDur, hit) {
+    const ratchet = s.ratchet ?? 1;
+    if (ratchet > 1) {
+      const ratchetDuration = subStepDur / ratchet;
+      for (let i = 0; i < ratchet; i++) {
+        hit(subTime + i * ratchetDuration, ratchetDuration * 0.9, i);
+      }
+    } else {
+      hit(subTime, subStepDur, 0);
+    }
   }
 }

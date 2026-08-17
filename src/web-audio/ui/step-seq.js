@@ -203,6 +203,7 @@ export default class WebAudioStepSeq extends HTMLElement {
   constructor() {
     super();
     this._steps = [];
+    this._noteOptions = [];
     this._stepEls = [];
     this._onBtns = [];
     this._noteSelects = [];
@@ -279,6 +280,7 @@ export default class WebAudioStepSeq extends HTMLElement {
     this._patternControls = patternControls;
     this._onRandomize = onRandomize;
     if (color) this.style.setProperty("--seq-color", color);
+    this._noteOptions = noteOptions;
     if (stepClass) this._stepClass = stepClass;
     this._initialized = true;
     this._render(noteOptions);
@@ -529,6 +531,9 @@ export default class WebAudioStepSeq extends HTMLElement {
   /** Replace all step data and re-render the UI. */
   set steps(newSteps) {
     if (!this._initialized) return;
+    const oldLength = this._steps.length;
+    const newLength = newSteps.length;
+
     this._steps = newSteps.map((s) => ({
       active: s.active,
       note: s.note,
@@ -537,8 +542,12 @@ export default class WebAudioStepSeq extends HTMLElement {
       ...(this._hasRatchet ? { ratchet: s.ratchet ?? 1 } : {}),
       ...(this._hasConditions ? { conditions: normalizeCondition(s.conditions) } : {}),
     }));
-    // Update UI in place without full re-render
-    this._steps.forEach((_step, i) => this._syncStepCell(i));
+
+    if (oldLength !== newLength) {
+      this._render(this._noteOptions);
+    } else {
+      this._steps.forEach((_step, i) => this._syncStepCell(i));
+    }
   }
 
   /**
@@ -554,6 +563,7 @@ export default class WebAudioStepSeq extends HTMLElement {
       });
       return;
     }
+    this._noteOptions = opts;
     const vals = opts.map(([, m]) => m);
     this._noteSelects.forEach((sel, i) => {
       sel.style.display = "";

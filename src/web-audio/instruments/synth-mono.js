@@ -457,6 +457,11 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
 
     return this;
   }
+
+  /** Trigger the sequence step, handling ratchet subdivisions. */
+  triggerSequenceStep(index, s, subTime, subStepDur) {
+    this._triggerRatcheted(s, subTime, subStepDur, (t, dur) => this.trigger(s.note, dur, 0.8, t));
+  }
 }
 
 // ---- Controls companion component ----
@@ -640,18 +645,6 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     };
   }
 
-  _seqTriggerStep(s, subTime, subStepDur) {
-    const ratchet = s.ratchet ?? 1;
-    if (ratchet > 1) {
-      const ratchetDuration = subStepDur / ratchet;
-      for (let i = 0; i < ratchet; i++) {
-        this._instrument.trigger(s.note, ratchetDuration * 0.9, 0.8, subTime + i * ratchetDuration);
-      }
-    } else {
-      this._instrument.trigger(s.note, subStepDur, 0.8, subTime);
-    }
-  }
-
   setScale(rootMidi, scaleName) {
     this._rootMidi = rootMidi;
     this._scaleName = scaleName;
@@ -668,7 +661,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
       return { active, note, probability: 1, ratchet: 1, conditions: "off" };
     });
     newSteps[0] = { active: true, note: this._rootMidi, probability: 1, ratchet: 1, conditions: "off" };
-    if (this._seq) this._seq.steps = newSteps;
+    this._instrument.steps = newSteps;
     this._emitChange();
   }
 

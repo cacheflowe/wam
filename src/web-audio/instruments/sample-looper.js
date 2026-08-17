@@ -431,7 +431,7 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
       param: "gainBoost",
       label: "Boost",
       min: 0.25,
-      max: 2,
+      max: 4,
       step: 0.01,
       tooltip: "Instrument gain multiplier before channel-strip volume.",
     },
@@ -593,7 +593,7 @@ export class WebAudioLoopPlayerControls extends WebAudioControlsBase {
 
     // ---- Mix section ----
     const { el: mixEl, controls: mixCtrl } = createSection("Mix");
-    mixCtrl.appendChild(mkSlider({ param: "gainBoost", label: "Boost", min: 0.25, max: 2, step: 0.01 }));
+    mixCtrl.appendChild(mkSlider({ param: "gainBoost", label: "Boost", min: 0.25, max: 4, step: 0.01 }));
     controls.appendChild(mixEl);
 
     // ---- Time-stretch controls (only when enabled) ----

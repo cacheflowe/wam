@@ -458,6 +458,9 @@ export default class WebAudioSynthFM extends WebAudioInstrumentBase {
     this._bpm = 120;
     this.octaveOffset = 0;
     this.octaveJumpProb = 0;
+    // Chord context for sequenced steps (mirrored from Controls on change)
+    this._scaleName = "Minor";
+    this._chordSize = 3;
 
     this.applyPreset(preset);
   }
@@ -619,6 +622,13 @@ export default class WebAudioSynthFM extends WebAudioInstrumentBase {
   applyPreset(name) {
     Object.assign(this, WebAudioSynthFM.DEFAULT_EXTRA_PARAMS);
     super.applyPreset(name);
+  }
+
+  /** Trigger the sequence step, building a chord from the current scale and handling ratchet. */
+  triggerSequenceStep(index, s, subTime, subStepDur) {
+    const chordSize = this._chordSize ?? 1;
+    const chord = chordSize === 1 ? s.note + 24 : buildChordFromScale(s.note + 24, this._scaleName, chordSize);
+    this._triggerRatcheted(s, subTime, subStepDur, (t, dur) => this.trigger(chord, dur, t));
   }
 }
 
@@ -784,6 +794,8 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
 
   bind(instrument, ctx, options = {}) {
     this._chordSize = options.chordSize ?? 3;
+    instrument._chordSize = this._chordSize;
+    instrument._scaleName = this._scaleName;
     // Set BPM on instrument so LFO interval computes correctly
     if (options.fx?.bpm) instrument.bpm = options.fx.bpm;
     super.bind(instrument, ctx, options);
@@ -913,6 +925,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     });
     this._chordSizeSelect.addEventListener("change", () => {
       this._chordSize = parseInt(this._chordSizeSelect.value);
+      this._instrument._chordSize = this._chordSize;
       this._emitChange();
     });
     chordWrap.appendChild(this._chordSizeSelect);
@@ -933,20 +946,6 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
       conditions: true,
       color,
     };
-  }
-
-  _seqTriggerStep(s, subTime, subStepDur) {
-    const chord =
-      this._chordSize === 1 ? s.note + 24 : buildChordFromScale(s.note + 24, this._scaleName, this._chordSize);
-    const ratchet = s.ratchet ?? 1;
-    if (ratchet > 1) {
-      const ratchetDuration = subStepDur / ratchet;
-      for (let i = 0; i < ratchet; i++) {
-        this._instrument.trigger(chord, ratchetDuration * 0.9, subTime + i * ratchetDuration);
-      }
-    } else {
-      this._instrument.trigger(chord, subStepDur, subTime);
-    }
   }
 
   // ---- Slider input override (unison toggle visual) ----
@@ -988,6 +987,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
   _restoreExtra(obj) {
     if (obj.chordSize != null) {
       this._chordSize = obj.chordSize;
+      if (this._instrument) this._instrument._chordSize = obj.chordSize;
       if (this._chordSizeSelect) this._chordSizeSelect.value = obj.chordSize;
     }
     const inst = this._instrument;
@@ -1014,6 +1014,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
   setScale(rootMidi, scaleName) {
     this._rootMidi = rootMidi;
     this._scaleName = scaleName;
+    if (this._instrument) this._instrument._scaleName = scaleName;
     this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 24, 48));
   }
 
@@ -1027,14 +1028,8 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
       active: activeSet.has(i),
       note: scaleNotes[Math.floor(Math.random() * scaleNotes.length)],
     }));
-    if (this._seq) this._seq.steps = newSteps;
+    this._instrument.steps = newSteps;
     this._emitChange();
-  }
-
-  step(step, time, dur) {
-    this._seq.setActiveStep(step);
-    const s = this._seq.steps[step];
-    this._instrument.trigger(s.note, dur, time);
   }
 }
 

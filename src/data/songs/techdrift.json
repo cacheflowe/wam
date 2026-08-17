@@ -1,0 +1,3771 @@
+{
+  "v": 1,
+  "songName": null,
+  "transport": {
+    "bpm": 128,
+    "masterVolume": 1,
+    "muted": false,
+    "root": 29,
+    "scale": "Minor",
+    "midiParamBindings": {},
+    "fx": {
+      "reverbWet": 0,
+      "reverbDecay": 2.5,
+      "reverbPreDelay": 0,
+      "reverbHpFreq": 80,
+      "reverbLpFreq": 8000,
+      "reverbDamping": 0.5,
+      "reverbWidth": 1,
+      "delayInterval": 0.75,
+      "delayFeedback": 0.3499999940395355,
+      "delayMix": 0,
+      "delayFilterSweep": 0,
+      "delayModulation": 0,
+      "chorusVoices": 3,
+      "chorusRate": 0.8,
+      "chorusDepth": 0.5,
+      "chorusDelay": 10,
+      "chorusFeedback": 0,
+      "chorusWet": 0,
+      "chorusSpread": 1,
+      "chorusShape": 0,
+      "filterSweep": 0,
+      "filterQ": 0.699999988079071,
+      "compAmount": 0.7,
+      "compAttack": 10,
+      "compRelease": 200,
+      "compSync": 0,
+      "compReleaseBeats": 3,
+      "compThreshold": 0.1,
+      "compSourceId": null
+    },
+    "fxVisible": false
+  },
+  "instruments": [
+    {
+      "id": "fm",
+      "instanceId": 8,
+      "state": {
+        "params": {
+          "volume": 0.3400000035762787,
+          "octaveOffset": 1,
+          "octaveJumpProb": 0.27,
+          "carrierRatio": 1,
+          "modRatio": 4,
+          "modIndex": 3,
+          "modAttack": 0.002,
+          "modDecay": 1.19,
+          "feedback": 250,
+          "unisonSpread": 12,
+          "attack": 0.001,
+          "decay": 0.68,
+          "sustain": 0,
+          "release": 0.01,
+          "filterFreq": 12000,
+          "filterQ": 0.699999988079071,
+          "detune": 0,
+          "lfoDepth": 1260,
+          "lfoInterval": 0.25,
+          "lfoShape": "sine",
+          "modSustain": 0.1,
+          "modRelease": 0.5,
+          "modWaveform": "sawtooth",
+          "unison": false
+        },
+        "fx": {
+          "reverbWet": 0.17000000178813934,
+          "reverbDecay": 2.5,
+          "reverbPreDelay": 0,
+          "reverbHpFreq": 80,
+          "reverbLpFreq": 8000,
+          "reverbDamping": 0.5,
+          "reverbWidth": 1,
+          "delayInterval": 0.75,
+          "delayFeedback": 0.4000000059604645,
+          "delayMix": 0.33000001311302185,
+          "delayFilterSweep": 0.667,
+          "delayModulation": 0,
+          "chorusVoices": 3,
+          "chorusRate": 0.8,
+          "chorusDepth": 0.5,
+          "chorusDelay": 10,
+          "chorusFeedback": 0,
+          "chorusWet": 0,
+          "chorusSpread": 1,
+          "chorusShape": 0,
+          "filterSweep": 0,
+          "filterQ": 0.699999988079071,
+          "compAmount": 0.7,
+          "compAttack": 10,
+          "compRelease": 200,
+          "compSync": 0,
+          "compReleaseBeats": 3,
+          "compThreshold": 0.1,
+          "compSourceId": null
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": -0.36000001430511475,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "n"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": false,
+          "seq": false
+        },
+        "patterns": {
+          "A": {
+            "steps": [
+              {
+                "active": true,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 29,
+                "probability": 0.46,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 29,
+                "probability": 0.46,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 29,
+                "probability": 0.61,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "B": {
+            "steps": [
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "C": {
+            "steps": [
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "D": {
+            "steps": [
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          }
+        },
+        "chain": [0],
+        "chordSize": 1
+      }
+    },
+    {
+      "id": "kick",
+      "instanceId": 9,
+      "state": {
+        "params": {
+          "startFreq": 250,
+          "endFreq": 45,
+          "sweepTime": 0.04,
+          "decay": 0.3,
+          "click": 0.73,
+          "drive": 0.33,
+          "volume": 0.38999998569488525
+        },
+        "fx": {
+          "reverbWet": 0,
+          "reverbDecay": 2.5,
+          "reverbPreDelay": 0,
+          "reverbHpFreq": 80,
+          "reverbLpFreq": 8000,
+          "reverbDamping": 0.5,
+          "reverbWidth": 1,
+          "delayInterval": 0.75,
+          "delayFeedback": 0.3499999940395355,
+          "delayMix": 0,
+          "delayFilterSweep": 0,
+          "delayModulation": 0,
+          "chorusVoices": 3,
+          "chorusRate": 0.8,
+          "chorusDepth": 0.5,
+          "chorusDelay": 10,
+          "chorusFeedback": 0,
+          "chorusWet": 0,
+          "chorusSpread": 1,
+          "chorusShape": 0,
+          "filterSweep": 0,
+          "filterQ": 0.699999988079071,
+          "compAmount": 0.7,
+          "compAttack": 10,
+          "compRelease": 200,
+          "compSync": 0,
+          "compReleaseBeats": 3,
+          "compThreshold": 0.1,
+          "compSourceId": null
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "2"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": false,
+          "seq": false
+        },
+        "patterns": {
+          "A": {
+            "steps": [
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "B": {
+            "steps": [
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "C": {
+            "steps": [
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 0.65,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "D": {
+            "steps": [
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          }
+        },
+        "chain": [2, 2]
+      }
+    },
+    {
+      "id": "snare",
+      "instanceId": 10,
+      "state": {
+        "params": {
+          "toneFreq": 230,
+          "toneSweep": 123,
+          "toneDecay": 0.23,
+          "noiseFreq": 2000,
+          "noiseDecay": 0.19,
+          "noiseSweep": 0.64,
+          "noiseMix": 0.59,
+          "buzz": 0.77,
+          "volume": 0.5299999713897705,
+          "clapMode": true,
+          "toneWave": "triangle"
+        },
+        "fx": {
+          "reverbWet": 0.3400000035762787,
+          "reverbDecay": 2.5,
+          "reverbPreDelay": 0,
+          "reverbHpFreq": 80,
+          "reverbLpFreq": 8000,
+          "reverbDamping": 0.5,
+          "reverbWidth": 1,
+          "delayInterval": 0.75,
+          "delayFeedback": 0.3499999940395355,
+          "delayMix": 0.07999999821186066,
+          "delayFilterSweep": 0,
+          "delayModulation": 0,
+          "chorusVoices": 3,
+          "chorusRate": 0.8,
+          "chorusDepth": 0.5,
+          "chorusDelay": 10,
+          "chorusFeedback": 0,
+          "chorusWet": 0.10000000149011612,
+          "chorusSpread": 1,
+          "chorusShape": 0,
+          "filterSweep": 0,
+          "filterQ": 0.699999988079071,
+          "compAmount": 0.7,
+          "compAttack": 10,
+          "compRelease": 200,
+          "compSync": 0,
+          "compReleaseBeats": 3,
+          "compThreshold": 0.1,
+          "compSourceId": null
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "3"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": false,
+          "seq": false
+        },
+        "patterns": {
+          "A": {
+            "steps": [
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 0.47,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "B": {
+            "steps": [
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "C": {
+            "steps": [
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "D": {
+            "steps": [
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          }
+        },
+        "chain": [0]
+      }
+    },
+    {
+      "id": "hihat",
+      "instanceId": 11,
+      "state": {
+        "params": {
+          "tone": 272,
+          "metalMix": 0.88,
+          "filterFreq": 10000,
+          "filterQ": 0.699999988079071,
+          "decay": 0.2,
+          "openDecay": 0.6100000000000001,
+          "volume": 0.5400000214576721
+        },
+        "fx": {
+          "reverbWet": 0,
+          "reverbDecay": 2.5,
+          "reverbPreDelay": 0,
+          "reverbHpFreq": 80,
+          "reverbLpFreq": 8000,
+          "reverbDamping": 0.5,
+          "reverbWidth": 1,
+          "delayInterval": 0.75,
+          "delayFeedback": 0.3499999940395355,
+          "delayMix": 0,
+          "delayFilterSweep": 0,
+          "delayModulation": 0,
+          "chorusVoices": 3,
+          "chorusRate": 0.8,
+          "chorusDepth": 0.5,
+          "chorusDelay": 10,
+          "chorusFeedback": 0,
+          "chorusWet": 0,
+          "chorusSpread": 1,
+          "chorusShape": 0,
+          "filterSweep": 0,
+          "filterQ": 0.699999988079071,
+          "compAmount": 0.7,
+          "compAttack": 10,
+          "compRelease": 200,
+          "compSync": 0,
+          "compReleaseBeats": 3,
+          "compThreshold": 0.1,
+          "compSourceId": null
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "4"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": false,
+          "seq": false
+        },
+        "patterns": {
+          "A": {
+            "steps": [
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "B": {
+            "steps": [
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "C": {
+            "steps": [
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "D": {
+            "steps": [
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          }
+        },
+        "chain": [0]
+      }
+    },
+    {
+      "id": "acid",
+      "instanceId": 12,
+      "state": {
+        "params": {
+          "volume": 0.3400000035762787,
+          "cutoff": 393,
+          "resonance": 18,
+          "envMod": 0.6,
+          "decay": 0.25,
+          "attack": 0.005,
+          "distortion": 0,
+          "portamento": 0.032,
+          "unisonVoices": 1,
+          "unisonDetune": 0,
+          "octaveOffset": 0,
+          "octaveJumpProb": 0.11,
+          "oscType": "square",
+          "filterLfoActive": false,
+          "filterLfoLow": 100,
+          "filterLfoHigh": 4000,
+          "filterLfoInterval": 4,
+          "filterLfoOffset": 0
+        },
+        "fx": {
+          "reverbWet": 0,
+          "reverbDecay": 2.5,
+          "reverbPreDelay": 0,
+          "reverbHpFreq": 80,
+          "reverbLpFreq": 8000,
+          "reverbDamping": 0.5,
+          "reverbWidth": 1,
+          "delayInterval": 1.25,
+          "delayFeedback": 0.30000001192092896,
+          "delayMix": 0.36000001430511475,
+          "delayFilterSweep": 0.667,
+          "delayModulation": 0.699999975040555,
+          "chorusVoices": 2,
+          "chorusRate": 0.7400000000000001,
+          "chorusDepth": 0.79,
+          "chorusDelay": 1,
+          "chorusFeedback": 0,
+          "chorusWet": 0.6299999952316284,
+          "chorusSpread": 0.92,
+          "chorusShape": 0,
+          "filterSweep": 0,
+          "filterQ": 0.699999988079071,
+          "compAmount": 0.53,
+          "compAttack": 2,
+          "compRelease": 30,
+          "compSync": 0,
+          "compReleaseBeats": 3,
+          "compThreshold": 0.09,
+          "compSourceId": null
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "b"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": false,
+          "seq": false
+        },
+        "patterns": {
+          "A": {
+            "steps": [
+              {
+                "active": true,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 34,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 24,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 24,
+                "accent": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 27,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 31,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 32,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 34,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 39,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 44,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 41,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 39,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "B": {
+            "steps": [
+              {
+                "active": false,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 34,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 24,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 32,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 24,
+                "accent": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 27,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 31,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 32,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 34,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 39,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 44,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 41,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 39,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "C": {
+            "steps": [
+              {
+                "active": true,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 34,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 24,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 24,
+                "accent": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 27,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 31,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 32,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 34,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 39,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 44,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 41,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 39,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "D": {
+            "steps": [
+              {
+                "active": true,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 34,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 24,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 24,
+                "accent": true,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 27,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 31,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 32,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 34,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 39,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 44,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 41,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 39,
+                "accent": false,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          }
+        },
+        "chain": [0, 1],
+        "preset": "Default"
+      }
+    },
+    {
+      "id": "bass808",
+      "instanceId": 13,
+      "state": {
+        "params": {
+          "volume": 0.41999998688697815,
+          "decay": 3,
+          "pitchSweepSemitones": 12,
+          "pitchDecay": 0.2,
+          "distortion": 0.05,
+          "click": 0.2,
+          "subOscMix": 0.78,
+          "tone": 2000,
+          "octaveOffset": 0,
+          "octaveJumpProb": 0
+        },
+        "fx": {
+          "reverbWet": 0,
+          "reverbDecay": 2.5,
+          "reverbPreDelay": 0,
+          "reverbHpFreq": 80,
+          "reverbLpFreq": 8000,
+          "reverbDamping": 0.5,
+          "reverbWidth": 1,
+          "delayInterval": 0.75,
+          "delayFeedback": 0.3499999940395355,
+          "delayMix": 0,
+          "delayFilterSweep": 0,
+          "delayModulation": 0,
+          "chorusVoices": 3,
+          "chorusRate": 0.8,
+          "chorusDepth": 0.5,
+          "chorusDelay": 10,
+          "chorusFeedback": 0,
+          "chorusWet": 0,
+          "chorusSpread": 1,
+          "chorusShape": 0,
+          "filterSweep": 0,
+          "filterQ": 0.699999988079071,
+          "compAmount": 0.7,
+          "compAttack": 10,
+          "compRelease": 200,
+          "compSync": 0,
+          "compReleaseBeats": 3,
+          "compThreshold": 0.1,
+          "compSourceId": null
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "6"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": false,
+          "seq": false
+        },
+        "patterns": {
+          "A": {
+            "steps": [
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "B": {
+            "steps": [
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "C": {
+            "steps": [
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "D": {
+            "steps": [
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          }
+        },
+        "chain": [0]
+      }
+    },
+    {
+      "id": "poly",
+      "instanceId": 14,
+      "state": {
+        "params": {
+          "oscASemi": 12,
+          "oscADetune": -6,
+          "oscALevel": 0.7,
+          "oscBSemi": 0,
+          "oscBDetune": 5,
+          "oscBLevel": 0.5700000000000001,
+          "subLevel": 0.6,
+          "noiseLevel": 0,
+          "unisonVoices": 1,
+          "unisonDetune": 0,
+          "filterFreq": 4061,
+          "filterQ": 5.199999809265137,
+          "filterEnvAmt": 4.9,
+          "filterKeytrack": 0.52,
+          "filterAttack": 0.293,
+          "filterDecay": 0.8200000000000001,
+          "filterSustain": 0.35000000000000003,
+          "filterRelease": 2.8699999999999997,
+          "attack": 0.001,
+          "decay": 0.2,
+          "sustain": 0.6,
+          "release": 0.2,
+          "glide": 0.04,
+          "lfo1Rate": 5,
+          "lfo1Depth": 0,
+          "lfo2Rate": 0.5,
+          "lfo2Depth": 0,
+          "octaveOffset": -1,
+          "octaveJumpProb": 0.15,
+          "voiceLimit": 8,
+          "volume": 0.3100000023841858,
+          "oscAType": "triangle",
+          "oscBType": "square",
+          "filterType": "lowpass",
+          "lfo1Shape": "sine",
+          "lfo1Dest": "filter",
+          "lfo1Sync": 0,
+          "lfo2Shape": "sine",
+          "lfo2Dest": "pitch",
+          "lfo2Sync": 0
+        },
+        "fx": {
+          "reverbWet": 0.6600000262260437,
+          "reverbDecay": 2.9000000000000004,
+          "reverbPreDelay": 64.99999761581421,
+          "reverbHpFreq": 80,
+          "reverbLpFreq": 8000,
+          "reverbDamping": 0.5,
+          "reverbWidth": 0.4,
+          "delayInterval": 0.5,
+          "delayFeedback": 0.5,
+          "delayMix": 0.38999998569488525,
+          "delayFilterSweep": -0.26,
+          "delayModulation": 0.5699999940892061,
+          "chorusVoices": 3,
+          "chorusRate": 0.8,
+          "chorusDepth": 0.73,
+          "chorusDelay": 5.800000000000001,
+          "chorusFeedback": 0.550000011920929,
+          "chorusWet": 0.7799999713897705,
+          "chorusSpread": 0.79,
+          "chorusShape": 0,
+          "filterSweep": 0,
+          "filterQ": 5.199999809265137,
+          "compAmount": 0.53,
+          "compAttack": 3,
+          "compRelease": 33,
+          "compSync": 0,
+          "compReleaseBeats": 1,
+          "compThreshold": 0.17,
+          "compSourceId": null
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0.3400000035762787,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "7"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "patternParams": {
+          "playEvery": 1,
+          "rotationOffset": 0,
+          "rotationIntervalBars": 1
+        },
+        "sections": {
+          "ctrl": false,
+          "seq": false
+        },
+        "patterns": {
+          "A": {
+            "steps": [
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 67,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 70,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 53,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 55,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 61,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 70,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 58,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 37,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 60,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 51,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 67,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 46,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 72,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 51,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 39,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "B": {
+            "steps": [
+              {
+                "active": false,
+                "note": 29,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 43,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 68,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 65,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 48,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 46,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": true,
+                "note": 65,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 58,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 55,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 44,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 68,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 37,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 39,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 39,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 56,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 63,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "C": {
+            "steps": [
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          },
+          "D": {
+            "steps": [
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              },
+              {
+                "active": false,
+                "note": 41,
+                "probability": 1,
+                "ratchet": 1,
+                "conditions": "off"
+              }
+            ]
+          }
+        },
+        "chain": [0, 1],
+        "chordSize": 1
+      }
+    },
+    {
+      "id": "loop-breaks",
+      "instanceId": 15,
+      "state": {
+        "params": {
+          "volume": 0.4099999964237213,
+          "gainBoost": 2.25,
+          "randomChance": 0,
+          "reverseChance": 0.05
+        },
+        "fx": {
+          "reverbWet": 0,
+          "reverbDecay": 2.5,
+          "reverbPreDelay": 0,
+          "reverbHpFreq": 80,
+          "reverbLpFreq": 8000,
+          "reverbDamping": 0.5,
+          "reverbWidth": 1,
+          "delayInterval": 0.75,
+          "delayFeedback": 0.3499999940395355,
+          "delayMix": 0,
+          "delayFilterSweep": 0,
+          "delayModulation": 0,
+          "chorusVoices": 3,
+          "chorusRate": 0.8,
+          "chorusDepth": 0.5,
+          "chorusDelay": 10,
+          "chorusFeedback": 0,
+          "chorusWet": 0,
+          "chorusSpread": 1,
+          "chorusShape": 0,
+          "filterSweep": 0,
+          "filterQ": 0.699999988079071,
+          "compAmount": 0.43,
+          "compAttack": 2,
+          "compRelease": 28,
+          "compSync": 0,
+          "compReleaseBeats": 3,
+          "compThreshold": 0.1,
+          "compSourceId": 9
+        },
+        "muted": false,
+        "soloed": false,
+        "pan": 0,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "8"
+        },
+        "midiParamBindings": {},
+        "speedMultiplier": 1,
+        "sections": {
+          "ctrl": true,
+          "seq": true
+        },
+        "file": "_assets/samples/09-breaks/0032-break-FUNKYDRUM_loop_8_.wav",
+        "speedMode": "auto",
+        "subdivision": 4,
+        "returnSteps": 1,
+        "ts": {
+          "pitchShift": 0,
+          "stretchRatio": 1,
+          "grainStyle": "clean"
+        }
+      }
+    }
+  ]
+}

@@ -378,6 +378,26 @@ export class WebAudioControlsBase extends HTMLElement {
 
     // Audio routing
     this._setupRouting(instrument, ctx, strip, waveform, color);
+
+    // Synchronize pattern data between UI and Instrument.
+    if (this._seq) {
+      // UI -> Instrument: when user edits a step in the UI
+      this._seq.addEventListener("step-change", (e) => {
+        if (e.detail.rotated) return;
+        const { index, step } = e.detail;
+        if (index !== undefined && step) {
+          const newSteps = [...this._instrument.steps];
+          newSteps[index] = { ...step };
+          this._instrument.steps = newSteps;
+        }
+      });
+
+      // Instrument -> UI: when the instrument's steps change (e.g. randomize)
+      this._instrument.addEventListener("steps-changed", (e) => {
+        this._seq.steps = e.detail.steps;
+        this._syncPatternEdit();
+      });
+    }
   }
 
   // ---- Subclass hooks ----
@@ -530,30 +550,26 @@ export class WebAudioControlsBase extends HTMLElement {
    */
   _createSequencer(expanded, color, onRandomize = null) {
     this._seq = document.createElement("wam-step-seq");
-    const initOpts = this._seqInitOptions(color);
-    initOpts.onRandomize = onRandomize ? () => {
-      // Randomize targets the currently selected pattern
-      const activeName = Object.entries(this._patternTabs)
-        .find(([, tab]) => tab.hasAttribute("data-active"))?.[0] || 'A';
-      onRandomize();
-      // Deep-copy new steps into active pattern
-      if (this._patterns[activeName]) {
-        this._patterns[activeName].steps = this._seq.steps.map(s => ({ ...s }));
-      }
-      // Keep active tab highlighted
-      this._stylePatternTab(this._patternTabs[activeName], true,
-        this._playingPattern === activeName, color);
-      this._emitChange();
-    } : null;
+    this._seq._instrument = this._instrument;
+    const baseOpts = this._seqInitOptions(color) || {};
+    // Seed the instrument's canonical steps from the default pattern on first bind.
+    if (!this._instrument.steps.length) {
+      this._instrument.steps = baseOpts.steps ?? [];
+    }
+    const instrumentSteps = this._instrument.steps.map(s => ({ ...s }));
+    const initOpts = {
+      ...baseOpts,
+      steps: instrumentSteps,
+      onRandomize,
+    };
     this._seq.init(initOpts);
 
     // Initialize multi-pattern system
-    const defaultSteps = this._seq.steps.slice();
     this._patterns = {
-      A: { steps: defaultSteps },
-      B: { steps: defaultSteps.map(s => ({ ...s, active: false })) },
-      C: { steps: defaultSteps.map(s => ({ ...s, active: false })) },
-      D: { steps: defaultSteps.map(s => ({ ...s, active: false })) },
+      A: { steps: instrumentSteps },
+      B: { steps: instrumentSteps.map(s => ({ ...s, active: false })) },
+      C: { steps: instrumentSteps.map(s => ({ ...s, active: false })) },
+      D: { steps: instrumentSteps.map(s => ({ ...s, active: false })) },
     };
     this._chain = [0];
     this._chainPosition = 0;
@@ -561,14 +577,21 @@ export class WebAudioControlsBase extends HTMLElement {
 
     expanded.appendChild(this._seq);
 
-    // Build pattern tabs and chain bar (must be after appendChild so insertBefore works)
+    // Build pattern tabs and chain bar
     this._buildPatternSelector(expanded, color);
 
     this._seq.addEventListener("step-change", () => {
       this._syncPatternEdit();
       this._emitChange();
     });
-    this._seq.addEventListener("pattern-change", () => this._emitChange());
+    this._seq.addEventListener("pattern-change", () => {
+      const activeName = Object.entries(this._patternTabs)
+        .find(([, tab]) => tab.hasAttribute("data-active"))?.[0];
+      if (activeName) {
+        this._playingPattern = activeName;
+        this._emitChange();
+      }
+    });
   }
 
   /** Build pattern tab bar and chain bar UI. */
@@ -864,33 +887,6 @@ export class WebAudioControlsBase extends HTMLElement {
   }
 
   /**
-   * Called by the base step() for each active step. Override to implement
-   * instrument-specific triggering.
-   * @param {object} s  Step data { active, note, accent, probability, ratchet, conditions }
-   * @param {number} subTime  AudioContext timestamp
-   * @param {number} subStepDur  Duration of this sub-step in seconds
-   */
-  _seqTrigger(s, subTime, subStepDur) {
-    // Default: no-op. Subclasses override.
-  }
-
-  /**
-   * Handle a single step's audio. Called by base step() for each active step.
-   * Default implementation handles ratchet. Override for custom behavior (chords, etc.).
-   */
-  _seqTriggerStep(s, subTime, subStepDur) {
-    const ratchet = s.ratchet ?? 1;
-    if (ratchet > 1) {
-      const ratchetDuration = subStepDur / ratchet;
-      for (let i = 0; i < ratchet; i++) {
-        this._seqTrigger(s, subTime + i * ratchetDuration, ratchetDuration);
-      }
-    } else {
-      this._seqTrigger(s, subTime, subStepDur);
-    }
-  }
-
-  /**
    * Called by the base step() when the pattern completes a full cycle and
    * rotation is active.
    * @param {number} offset  Rotation offset from pattern params
@@ -902,11 +898,22 @@ export class WebAudioControlsBase extends HTMLElement {
   /**
    * Base sequencer step handler. Called on each global tick.
    * Handles: speed multiplier, bar density, rotation, probability, ratchet, conditions.
-   * Calls _seqTrigger() for active steps, _triggerJam() if pending.
+   * Calls instrument.triggerSequenceStep() for active steps, _triggerJam() if pending.
    * Subclasses that need custom timing logic can override, but most should not.
+   *
+   * @param {boolean} [isManual]  Bypass playback counters and fire this exact step
+   *   immediately (e.g. a UI preview click) instead of advancing the sequence.
    */
-  step(index, time, stepDurationSec) {
+  step(index, time, stepDurationSec, isManual = false) {
     if (!this._instrument || !this._seq) return;
+
+    // Manual trigger: bypass playback counters, fire immediately.
+    if (isManual) {
+      this._seq.setActiveStep(index);
+      const s = this._instrument.steps[index];
+      if (s) this._instrument.triggerSequenceStep(index, s, time, stepDurationSec);
+      return;
+    }
 
     // Hook for instrument-specific per-tick processing (e.g. acid LFO position)
     this._onStepTick?.(index, time, stepDurationSec);
@@ -954,10 +961,10 @@ export class WebAudioControlsBase extends HTMLElement {
       }
     }
 
-    // Get active pattern's steps
+    // Get active pattern's steps (falls back to the live-edited instrument steps)
     const activePatternName = ['A', 'B', 'C', 'D'][this._chain[this._chainPosition] ?? 0];
     const activePattern = this._patterns?.[activePatternName];
-    const steps = activePattern?.steps ?? this._seq.steps;
+    const steps = activePattern?.steps ?? this._instrument.steps;
 
     // Advance sequencer position (2x = 2 steps per tick, offset in time)
     const stepsToAdvance = multiplier === 2 ? 2 : 1;
@@ -972,7 +979,7 @@ export class WebAudioControlsBase extends HTMLElement {
         if (Math.random() < (s.probability ?? 1)) {
           if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
             stepFired = true;
-            this._seqTriggerStep(s, subTime, subStepDur);
+            this._instrument.triggerSequenceStep(stepIndex, s, subTime, subStepDur);
           }
         }
       }

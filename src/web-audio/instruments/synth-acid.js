@@ -275,6 +275,23 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
       vca.disconnect();
     });
   }
+
+  /** Trigger the sequence step, delegating to the instrument. */
+  triggerSequenceStep(index, s, time, dur) {
+    this._seqTriggerStep(s, time, dur);
+  }
+
+  /** Internal sequencer trigger logic (audio). */
+  _seqTriggerStep(s, subTime, subStepDur) {
+    this._triggerRatcheted(s, subTime, subStepDur, (t, dur, i) =>
+      this.trigger(s.note, dur, s.accent && i === 0, t),
+    );
+  }
+
+  /** Update internal LFO state. */
+  _onStepTick(index) {
+    this._lfoStepPosition = index;
+  }
 }
 
 // ---- Controls companion component ----
@@ -539,8 +556,9 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     controls.appendChild(octEl);
 
     // ---- Sequencer ----
-    this._buildSequencerSection({ onRandomize: () => this.randomize() });
-    this._createSequencer(expanded, color);
+    const onRandomize = () => this.randomize();
+    this._buildSequencerSection({ onRandomize });
+    this._createSequencer(expanded, color, onRandomize);
   }
 
   // ---- Subclass hooks ----
@@ -557,20 +575,8 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     };
   }
 
-  _seqTriggerStep(s, subTime, subStepDur) {
-    const ratchet = s.ratchet ?? 1;
-    if (ratchet > 1) {
-      const ratchetDuration = subStepDur / ratchet;
-      for (let i = 0; i < ratchet; i++) {
-        this._instrument.trigger(s.note, ratchetDuration * 0.9, s.accent && i === 0, subTime + i * ratchetDuration);
-      }
-    } else {
-      this._instrument.trigger(s.note, subStepDur, s.accent, subTime);
-    }
-  }
-
   _onStepTick(index) {
-    this._instrument._lfoStepPosition = index;
+    this._instrument._onStepTick(index);
   }
 
   // ---- Serialization hooks ----
@@ -680,18 +686,18 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     });
 
     let prevNote = root;
-    const newSteps = Array.from({ length: 16 }, (_, i) => {
+    const currentSteps = this._instrument.steps;
+    const newSteps = currentSteps.map((s, i) => {
       const active = Math.random() < STEP_WEIGHTS[i];
       const nearby = pool.filter((n) => Math.abs(n - prevNote) <= 7);
       const src = nearby.length >= 3 ? nearby : pool;
       const note = src[Math.floor(Math.random() * src.length)];
       if (active) prevNote = note;
       const accent = [0, 4, 8, 12].includes(i) && Math.random() < 0.4;
-      return { active, note, accent };
+      return { ...s, active, note, accent };
     });
-    newSteps[0] = { active: true, note: root, accent: Math.random() < 0.5 };
-    this._seq.steps = newSteps;
-    this._emitChange();
+    newSteps[0] = { ...currentSteps[0], active: true, note: root, accent: Math.random() < 0.5 };
+    this._instrument.steps = newSteps;
   }
 }
 
