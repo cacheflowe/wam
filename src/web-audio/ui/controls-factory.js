@@ -22,6 +22,8 @@ export function injectControlsCSS() {
       border: 1px solid #222;
       border-radius: 6px;
       font-family: monospace;
+      -webkit-user-select: none;
+      user-select: none;
     }
     /* ---- Transport strip groups ---- */
     .wam-strip-bpm-group {
@@ -66,6 +68,17 @@ export function injectControlsCSS() {
     .wam-controls .wam-section[data-fx-section] {
       background: rgba(15, 20, 35, 0.3);
       border-color: #2a2a3a;
+    }
+    /* Ctrl and FX toggle independently within the same flowing grid, keyed
+       off the data-fx-section marker FX sections already carry. Descendant
+       (not child) combinator — <wam-fx-unit> sits between .wam-controls and
+       its .wam-section children via display:contents, which doesn't change
+       the DOM tree that selectors match against. */
+    .wam-section-top[data-hide-ctrl] .wam-controls .wam-section:not([data-fx-section]) {
+      display: none;
+    }
+    .wam-section-top[data-hide-fx] .wam-controls .wam-section[data-fx-section] {
+      display: none;
     }
     .wam-section {
       display: flex;
@@ -270,6 +283,12 @@ export function injectControlsCSS() {
       border-bottom: 1px solid #1d1d1d;
       border-radius: 5px 5px 0 0;
       overflow: visible;
+      /* Sticky so the name/mute/solo/collapse row stays reachable while
+         scrolling through a tall expanded panel — most useful on mobile. */
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #141414;
     }
     .wam-strip-name-group {
       display: flex;
@@ -329,6 +348,11 @@ export function injectControlsCSS() {
     }
     .wam-strip-mix-group wam-knob             { flex: 0 0 auto; }
     .wam-strip-mix-group wam-knob[param="pan"] { flex: 0 0 auto; }
+    .wam-strip-mute-solo-group {
+      display: flex;
+      gap: 6px;
+      flex: 0 0 auto;
+    }
     .wam-strip-nav-group {
       display: flex;
       align-items: flex-end;
@@ -341,6 +365,13 @@ export function injectControlsCSS() {
     @media (max-width: 520px) {
       .wam-strip-name-group { flex: 0 0 100%; overflow: visible; padding-bottom: 2px; }
       .wam-strip-nav-group  { margin-left: 0; }
+      /* Stack mute/solo into a narrow column instead of a row, freeing
+         horizontal space for the vol/pan knobs. */
+      .wam-strip-mute-solo-group { flex-direction: column; gap: 2px; }
+      .wam-strip-mute-solo-group .wam-ctrl label { display: none; }
+      /* Waveform is a nice-to-have at this width — shrink it to reclaim space. */
+      .wam-strip-viz-group { max-width: 90px; }
+      .wam-strip-viz-group wam-waveform { height: 20px; }
     }
     /* ---- Expanded / collapsed ---- */
     /* Sections are hidden via data-hidden (setAllPanels). data-collapsed only
@@ -349,12 +380,14 @@ export function injectControlsCSS() {
     [data-no-sequencer] .wam-action-row { display: none; }
     /* ---- PicoCSS tooltip overrides for slider label ---- */
     .wam-label-text[data-tooltip],
-    .wam-ctrl label[data-tooltip] {
+    .wam-ctrl label[data-tooltip],
+    .wam-title[data-tooltip] {
       cursor: help;
       border-bottom: 0;
     }
     .wam-label-text[data-tooltip]::before,
-    .wam-ctrl label[data-tooltip]::before {
+    .wam-ctrl label[data-tooltip]::before,
+    .wam-title[data-tooltip]::before {
       white-space: normal;
       overflow: visible;
       min-width: 130px;
@@ -495,13 +528,19 @@ export function createChannelStrip(
     mixGroup.appendChild(panSlider);
   }
 
+  // Mute + Solo share a sub-group so they can stack into a narrow column on
+  // small screens (see the mobile media query below) instead of eating into
+  // the horizontal space the vol/pan knobs need.
+  const muteSoloGroup = document.createElement("div");
+  muteSoloGroup.className = "wam-strip-mute-solo-group";
+
   const muteBtn = showMuteSolo ? document.createElement("button") : null;
   if (muteBtn) {
     muteBtn.className = "wam-mute-btn";
     muteBtn.textContent = "Mute";
     const muteWrap = createCtrl("Mute", { tooltip: "Mute/unmute this channel." });
     muteWrap.appendChild(muteBtn);
-    mixGroup.appendChild(muteWrap);
+    muteSoloGroup.appendChild(muteWrap);
   }
 
   const soloBtn = showMuteSolo ? document.createElement("button") : null;
@@ -510,8 +549,10 @@ export function createChannelStrip(
     soloBtn.textContent = "Solo";
     const soloWrap = createCtrl("Solo", { tooltip: "Solo this channel — mute all others." });
     soloWrap.appendChild(soloBtn);
-    mixGroup.appendChild(soloWrap);
+    muteSoloGroup.appendChild(soloWrap);
   }
+
+  if (muteBtn || soloBtn) mixGroup.appendChild(muteSoloGroup);
 
   strip.appendChild(mixGroup);
 

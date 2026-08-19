@@ -154,12 +154,10 @@ export class WebAudioControlsBase extends HTMLElement {
     // Collapse is the panel's concern, not the strip's. Apply the default state
     // and toggle it when the strip requests it (click on title → strip-collapse-toggle).
     // The listener lives on `this` (persistent across re-binds), so guard it.
-    // Interaction flow (title click on strip):
-    //   pointerdown: excluded (name group is in the ignore list) — no focus dispatch
+    // Interaction flow (title click is the only way to expand/collapse/focus):
     //   click: strip-collapse-toggle dispatched by the factory
     //     → if collapsed: dispatch wam-instrument-focus (closes others, sets wam-focused),
-    //       then expand all sections. Playground scrolls. _wasFocusedOnPress guard below
-    //       prevents the subsequent body-click path from toggling shut.
+    //       then expand all sections. Playground scrolls.
     //     → if expanded: collapse all sections. No focus change.
     if (CHANNEL_STRIP_COLLAPSED_DEFAULT) {
       this.setAttribute("data-collapsed", "");
@@ -172,9 +170,8 @@ export class WebAudioControlsBase extends HTMLElement {
         if (!this.hasAttribute("data-collapsed") && e.detail?.onWaveform) return;
 
         if (this.hasAttribute("data-collapsed")) {
-          // Expanding — capture focus state, then dispatch focus so the app
-          // collapses all other instruments and scrolls this one into view.
-          this._wasFocusedOnPress = this.classList.contains("wam-focused");
+          // Expanding — dispatch focus so the app collapses all other
+          // instruments and scrolls this one into view.
           this.dispatchEvent(
             new CustomEvent("wam-instrument-focus", { bubbles: true, detail: { controls: this } }),
           );
@@ -187,20 +184,6 @@ export class WebAudioControlsBase extends HTMLElement {
             this.scrollIntoView({ behavior: "smooth", block: "start" });
           }
         } else {
-          // Title-click path: pointerdown is excluded for name group, so
-          // _wasFocusedOnPress may be stale. Capture it here — title click is
-          // an explicit collapse intent regardless of prior focus state.
-          // Body-click path: _wasFocusedOnPress was set by pointerdown.
-          // If this gesture just moved focus here (wasn't focused before), an
-          // app-level focus handler is already expanding. Force it open rather
-          // than toggling shut. Without a focus manager (`wam-focused` never
-          // set), this branch never triggers and collapse runs as normal.
-          const wasFocusedBeforeThisGesture = e.detail?.fromTitle
-            ? this.classList.contains("wam-focused")
-            : this._wasFocusedOnPress;
-          if (this.classList.contains("wam-focused") && !wasFocusedBeforeThisGesture) {
-            return;
-          }
           // Collapsing — hide all three sections.
           this.setAttribute("data-collapsed", "");
           this.setAllPanels(false);
@@ -261,29 +244,17 @@ export class WebAudioControlsBase extends HTMLElement {
     this._buildStripActions(strip.jamGroup, options);
     this._attachInputLearn();
 
-    // Clicking anywhere on the panel focuses this instrument (for hardware
-    // control: the 16 sequencer buttons follow the focused instrument).
-    if (!this._focusWired) {
-      this._focusWired = true;
-      this.addEventListener("pointerdown", (e) => {
-        // Mixing controls (mute/solo/vol/pan) and jam triggers act on the
-        // channel in place — they must not change which instrument is
-        // focused/expanded. The Ctrl/Seq/FX nav toggles still focus, since
-        // they rely on focus to reveal their section.
-        if (e.target.closest(".wam-strip-name-group, .wam-strip-mix-group, .wam-strip-jam-group")) return;
-        // Capture focus state before dispatching, so the collapse toggle (which
-        // fires later on `click`) can tell whether this gesture is what focused
-        // the instrument — and avoid toggling shut what focus just expanded.
-        this._wasFocusedOnPress = this.classList.contains("wam-focused");
-        this.dispatchEvent(new CustomEvent("wam-instrument-focus", { bubbles: true, detail: { controls: this } }));
-      });
-    }
-
     // Combined Ctrl+FX section: a single grid where instrument knobs and FX
-    // sections flow in columns side by side. Hidden together by the Ctrl toggle.
+    // sections flow in columns side by side. Ctrl and FX sections toggle
+    // independently via data-hide-ctrl/data-hide-fx (see CSS in
+    // controls-factory.js, keyed off FX sections' own data-fx-section marker).
+    // data-hidden is derived from those two — the row only fully collapses
+    // (border/padding gone) once both are hidden.
     this._topSection = document.createElement("div");
     this._topSection.className = "wam-section-top";
-    this._topSection.setAttribute("data-hidden", ""); // default: hidden
+    this._topSection.setAttribute("data-hide-ctrl", "");
+    this._topSection.setAttribute("data-hide-fx", "");
+    this._topSection.setAttribute("data-hidden", ""); // default: both hidden
     this.appendChild(this._topSection);
 
     // Single grid container — Ctrl sections and FX sections flow in columns.
@@ -303,7 +274,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._seqSection.appendChild(this._seqControls);
 
     // Wire toggle buttons.
-    // Ctrl toggles the combined Ctrl+FX row. FX always travels with Ctrl.
+    // Ctrl and FX each toggle their own subset of the shared Ctrl+FX row.
     // Seq toggles the sequencer independently.
     const wireToggle = (btn, section) => {
       btn.addEventListener("click", () => {
@@ -313,16 +284,13 @@ export class WebAudioControlsBase extends HTMLElement {
         this._emitChange();
       });
     };
-    wireToggle(this._ctrlBtn, this._topSection);
     wireToggle(this._seqBtn, this._seqSection);
-    // FX button is kept for the nav group but is decorative — it just mirrors
-    // the Ctrl toggle state since FX always travels with controls.
+    this._ctrlBtn.addEventListener("click", () => {
+      this._applyTopSectionPart("ctrl", this._topSection.hasAttribute("data-hide-ctrl"));
+      this._emitChange();
+    });
     this._fxBtn.addEventListener("click", () => {
-      // Delegate to Ctrl toggle (same section)
-      const nowHidden = this._topSection.hasAttribute("data-hidden");
-      this._topSection.toggleAttribute("data-hidden", !nowHidden);
-      this._ctrlBtn.toggleAttribute("data-active", nowHidden);
-      this._fxBtn.toggleAttribute("data-active", nowHidden);
+      this._applyTopSectionPart("fx", this._topSection.hasAttribute("data-hide-fx"));
       this._emitChange();
     });
 
@@ -563,6 +531,12 @@ export class WebAudioControlsBase extends HTMLElement {
       onRandomize,
     };
     this._seq.init(initOpts);
+    // Default to compact mode — most people want more steps visible at once
+    // over seeing every per-step control. This is a real-time display
+    // preference, not song data — it's intentionally not serialized, so it
+    // always starts compact regardless of what a loaded song last had open.
+    this._seq.compact = true;
+    this._compactBtn?.toggleAttribute("data-active", true);
 
     // Initialize multi-pattern system
     this._patterns = {
@@ -579,6 +553,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
     // Build pattern tabs and chain bar
     this._buildPatternSelector(expanded, color);
+    this._refreshAllMiniStrips();
 
     this._seq.addEventListener("step-change", () => {
       this._syncPatternEdit();
@@ -596,46 +571,65 @@ export class WebAudioControlsBase extends HTMLElement {
 
   /** Build pattern tab bar and chain bar UI. */
   _buildPatternSelector(container, color) {
-    // Action row: tabs | chain | ops (wraps if needed)
+    // Patterns | Chain | Actions as bordered cards in the same auto-fill grid
+    // used by the Ctrl/FX sections — cards reflow onto their own rows on
+    // narrow screens instead of the old single flex row bunching up.
     const patternRow = document.createElement("div");
-    patternRow.className = "wam-action-row wam-pattern-row";
+    patternRow.className = "wam-pattern-row";
 
     // --- Pattern tabs ---
-    const tabsGroup = document.createElement("div");
-    tabsGroup.className = "wam-ctrl";
-
-    const tabsLabel = document.createElement("label");
-    tabsLabel.textContent = "Patterns";
-    tabsLabel.setAttribute("data-tooltip", "A/B/C/D — click to switch editing context");
-    tabsGroup.appendChild(tabsLabel);
+    const { el: tabsEl, controls: tabsGroup } = createSection("Patterns");
+    tabsEl.querySelector(".wam-title").setAttribute("data-tooltip", "A/B/C/D — click to switch editing context");
 
     const tabs = document.createElement("div");
     tabs.className = "wam-pattern-tabs";
 
     const patternNames = ['A', 'B', 'C', 'D'];
     this._patternTabs = {};
+    this._miniStripDots = {};
 
     patternNames.forEach(name => {
+      const col = document.createElement("div");
+      col.className = "wam-pattern-col";
+
       const tab = this._makeActionBtn();
+      tab.className += " wam-pattern-tab";
       tab.textContent = name;
       tab.title = name + ' — click to edit';
       this._stylePatternTab(tab, name === 'A', false, color);
       tab.addEventListener("click", () => this._selectPattern(name));
-      tabs.appendChild(tab);
+      col.appendChild(tab);
       this._patternTabs[name] = tab;
+
+      // Mini step-strip — a compact, always-visible, read-only preview of this
+      // pattern's 16 steps. Lets you see every pattern at a glance instead of
+      // only the one you happen to have selected for editing, and the playhead
+      // dot shows which pattern is actually sounding during chained playback
+      // even when it's not the one on screen in the big editable grid.
+      const miniStrip = document.createElement("div");
+      miniStrip.className = "wam-mini-strip";
+      const dots = [];
+      for (let i = 0; i < 16; i++) {
+        const dot = document.createElement("span");
+        dot.className = "wam-mini-dot";
+        miniStrip.appendChild(dot);
+        dots.push(dot);
+      }
+      col.appendChild(miniStrip);
+      this._miniStripDots[name] = dots;
+
+      tabs.appendChild(col);
     });
 
     tabsGroup.appendChild(tabs);
-    patternRow.appendChild(tabsGroup);
+    patternRow.appendChild(tabsEl);
 
     // --- Chain bar ---
-    const chainGroup = document.createElement("div");
-    chainGroup.className = "wam-ctrl wam-ctrl-wide";
-
-    const chainLabel = document.createElement("label");
-    chainLabel.textContent = "Chain";
-    chainLabel.setAttribute("data-tooltip", "Playback order — click pill to cycle, right-click to remove");
-    chainGroup.appendChild(chainLabel);
+    const { el: chainEl, controls: chainGroup } = createSection("Chain");
+    chainEl.querySelector(".wam-title").setAttribute(
+      "data-tooltip",
+      "Playback order — click pill to cycle, right-click to remove",
+    );
 
     const chainBar = document.createElement("div");
     chainBar.className = "wam-chain-bar";
@@ -644,16 +638,11 @@ export class WebAudioControlsBase extends HTMLElement {
     this._chainPills = [];
     this._updateChainBar(color);
     chainGroup.appendChild(chainBar);
-    patternRow.appendChild(chainGroup);
+    patternRow.appendChild(chainEl);
 
     // --- Ops ---
-    const opsGroup = document.createElement("div");
-    opsGroup.className = "wam-ctrl";
-
-    const opsLabel = document.createElement("label");
-    opsLabel.textContent = "Actions";
-    opsLabel.setAttribute("data-tooltip", "⧉ copy to others  ✕ clear  ⇧ dup chain  ↺ reset");
-    opsGroup.appendChild(opsLabel);
+    const { el: opsEl, controls: opsGroup } = createSection("Actions");
+    opsEl.querySelector(".wam-title").setAttribute("data-tooltip", "⧉ copy to others  ✕ clear  ⇧ dup chain  ↺ reset");
 
     const opsCol = document.createElement("div");
     opsCol.className = "wam-pattern-ops";
@@ -683,7 +672,7 @@ export class WebAudioControlsBase extends HTMLElement {
     opsCol.appendChild(resetBtn);
 
     opsGroup.appendChild(opsCol);
-    patternRow.appendChild(opsGroup);
+    patternRow.appendChild(opsEl);
 
     // Insert before the sequencer grid
     container.insertBefore(patternRow, this._seq);
@@ -710,6 +699,37 @@ export class WebAudioControlsBase extends HTMLElement {
     }
   }
 
+  /** Redraw one pattern's mini step-strip from its current step data. */
+  _refreshMiniStrip(name) {
+    const dots = this._miniStripDots?.[name];
+    const steps = this._patterns?.[name]?.steps;
+    if (!dots || !steps) return;
+    dots.forEach((dot, i) => dot.toggleAttribute("data-on", !!steps[i]?.active));
+  }
+
+  /** Redraw every pattern's mini step-strip. */
+  _refreshAllMiniStrips() {
+    Object.keys(this._patternTabs || {}).forEach((name) => this._refreshMiniStrip(name));
+  }
+
+  /** Move the mini step-strip playhead dot to `index` on pattern `name`, clearing any other pattern's. */
+  _setMiniStripPlayhead(name, index) {
+    if (this._miniPlayheadPattern && this._miniPlayheadPattern !== name) {
+      this._miniStripDots?.[this._miniPlayheadPattern]?.forEach((d) => d.removeAttribute("data-current"));
+    }
+    const dots = this._miniStripDots?.[name];
+    if (!dots) return;
+    dots.forEach((d, i) => d.toggleAttribute("data-current", i === index));
+    this._miniPlayheadPattern = name;
+  }
+
+  /** Clear the mini step-strip playhead on stop/reset. */
+  _clearMiniStripPlayhead() {
+    if (!this._miniPlayheadPattern) return;
+    this._miniStripDots?.[this._miniPlayheadPattern]?.forEach((d) => d.removeAttribute("data-current"));
+    this._miniPlayheadPattern = null;
+  }
+
   /** Update chain bar UI. */
   _updateChainBar(color) {
     const chainBar = this._chainBarEl;
@@ -721,17 +741,14 @@ export class WebAudioControlsBase extends HTMLElement {
     const patternNames = ['A', 'B', 'C', 'D'];
 
     this._chain.forEach((idx, pos) => {
-      // Pill container with bar number (absolute positioned, doesn't affect layout)
-      const pillContainer = document.createElement("div");
-      pillContainer.className = "wam-chain-slot";
+      const pill = this._makeActionBtn();
+      pill.className += " wam-chain-pill";
 
       const pillNum = document.createElement("span");
       pillNum.className = "wam-chain-num";
       pillNum.textContent = pos + 1;
-
-      const pill = this._makeActionBtn();
-      pill.className += " wam-chain-pill";
-      pill.textContent = patternNames[idx];
+      pill.appendChild(pillNum);
+      pill.appendChild(document.createTextNode(patternNames[idx]));
       pill.title = 'Bar ' + (pos + 1) + ': ' + patternNames[idx] + ' (click to cycle, right-click to remove)';
 
       if (pos === this._chainPosition) {
@@ -745,22 +762,36 @@ export class WebAudioControlsBase extends HTMLElement {
         this._cycleChainEntry(pos);
       });
 
-      // Right-click to remove (minimum 1 entry)
+      const removeEntry = () => {
+        if (this._chain.length <= 1) return;
+        this._chain.splice(pos, 1);
+        if (this._chainPosition >= this._chain.length) {
+          this._chainPosition = this._chain.length - 1;
+        }
+        this._updateChainBar(color);
+        this._emitChange();
+      };
+
+      // Right-click to remove (desktop shortcut)
       pill.addEventListener("contextmenu", (e) => {
         e.preventDefault();
-        if (this._chain.length > 1) {
-          this._chain.splice(pos, 1);
-          if (this._chainPosition >= this._chain.length) {
-            this._chainPosition = this._chain.length - 1;
-          }
-          this._updateChainBar(color);
-          this._emitChange();
-        }
+        removeEntry();
       });
 
-      pillContainer.appendChild(pillNum);
-      pillContainer.appendChild(pill);
-      chainBar.appendChild(pillContainer);
+      // Always-visible remove tap target (right-click has no touch equivalent)
+      if (this._chain.length > 1) {
+        const removeBtn = document.createElement("span");
+        removeBtn.className = "wam-chain-remove";
+        removeBtn.textContent = "×";
+        removeBtn.title = "Remove from chain";
+        removeBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          removeEntry();
+        });
+        pill.appendChild(removeBtn);
+      }
+
+      chainBar.appendChild(pill);
       this._chainPills.push(pill);
     });
 
@@ -789,9 +820,14 @@ export class WebAudioControlsBase extends HTMLElement {
       this._stylePatternTab(tab, n === name, tabIsPlaying, color);
     });
 
-    // Sync sequencer to selected pattern
+    // Sync sequencer to selected pattern. instrument.steps must track the
+    // pattern being edited too — the UI->Instrument step-change listener reads
+    // and rewrites *that* array, so leaving it stale here would mean editing
+    // a step after switching patterns resets to whatever instrument.steps was
+    // last (e.g. the pattern active when the instrument was first created).
     if (this._seq && this._patterns[name]) {
       this._seq.steps = this._patterns[name].steps;
+      this._instrument.steps = this._patterns[name].steps.map(s => ({ ...s }));
     }
   }
 
@@ -805,6 +841,7 @@ export class WebAudioControlsBase extends HTMLElement {
           // Without this, randomize (which assigns a new array to
           // this._seq.steps) would leave old patterns pointing at stale data.
           this._patterns[name].steps = this._seq.steps.map(s => ({ ...s }));
+          this._refreshMiniStrip(name);
         }
         break;
       }
@@ -831,6 +868,7 @@ export class WebAudioControlsBase extends HTMLElement {
       }
     });
     if (this._seq) this._seq.steps = sourceSteps;
+    this._refreshAllMiniStrips();
     this._emitChange();
   }
 
@@ -844,6 +882,8 @@ export class WebAudioControlsBase extends HTMLElement {
       ...s, active: false
     }));
     if (this._seq) this._seq.steps = this._patterns[activeName].steps;
+    this._instrument.steps = this._patterns[activeName].steps.map(s => ({ ...s }));
+    this._refreshMiniStrip(activeName);
     this._emitChange();
   }
 
@@ -974,6 +1014,8 @@ export class WebAudioControlsBase extends HTMLElement {
       const subTime = time + si * subStepDur;
       const stepIndex = this._seqPosition % 16;
       const s = steps[stepIndex];
+
+      this._setMiniStripPlayhead(activePatternName, stepIndex);
 
       if (s?.active) {
         if (Math.random() < (s.probability ?? 1)) {
@@ -1533,6 +1575,20 @@ export class WebAudioControlsBase extends HTMLElement {
       seqCtrl.appendChild(randWrap);
     }
 
+    const compactWrap = createCtrl("Compact", { tooltip: "Hide per-step note/probability/ratchet controls — fits more steps per row on small screens." });
+    const compactBtn = document.createElement("button");
+    compactBtn.textContent = "Compact";
+    compactBtn.className = "wam-toggle-btn";
+    compactBtn.addEventListener("click", () => {
+      if (!this._seq) return;
+      this._seq.compact = !this._seq.compact;
+      compactBtn.toggleAttribute("data-active", this._seq.compact);
+      this._emitChange();
+    });
+    compactWrap.appendChild(compactBtn);
+    seqCtrl.appendChild(compactWrap);
+    this._compactBtn = compactBtn;
+
     // Append to the seq controls wrapper so these controls share standard panel padding
     this._seqControls?.appendChild(el);
     return { el, controls: seqCtrl };
@@ -1606,7 +1662,8 @@ export class WebAudioControlsBase extends HTMLElement {
       speedMultiplier: this._speedMultiplier,
       patternParams: this._seq?.getPatternParams(),
       sections: {
-        ctrl: !this._topSection?.hasAttribute("data-hidden"),
+        ctrl: !this._topSection?.hasAttribute("data-hide-ctrl"),
+        fx: !this._topSection?.hasAttribute("data-hide-fx"),
         seq: !this._seqSection?.hasAttribute("data-hidden"),
       },
     };
@@ -1645,17 +1702,37 @@ export class WebAudioControlsBase extends HTMLElement {
       // Multi-pattern system
       this._patterns = obj.patterns;
       this._chain = obj.chain ?? [0];
-      // Sync active pattern to the grid
       const activeName = ['A', 'B', 'C', 'D'][this._chain[this._chainPosition] ?? 0];
-      this._seq.steps = this._patterns[activeName]?.steps ?? this._seq.steps;
+      // Mark the correct tab active BEFORE touching instrument.steps below —
+      // setting instrument.steps fires steps-changed, whose listener calls
+      // _syncPatternEdit(), which trusts the tab's data-active state to know
+      // which pattern to write into. Doing this out of order would corrupt
+      // whichever pattern was still marked active from the initial build.
+      const color = this._defaultColor?.() || '#0f0';
+      this._updateChainBar(color);
+      Object.entries(this._patternTabs ?? {}).forEach(([n, tab]) => {
+        this._stylePatternTab(tab, n === activeName, this._playingPattern === n, color);
+      });
+      // Sync active pattern to the grid AND to instrument.steps — the
+      // UI->Instrument step-change listener reads/rewrites instrument.steps,
+      // so leaving it stale (e.g. the pattern the instrument was created
+      // with) means touching any step after loading a song resets it and
+      // wipes the restored pattern out from under you.
+      const activeSteps = this._patterns[activeName]?.steps ?? this._seq.steps;
+      this._seq.steps = activeSteps;
+      this._instrument.steps = activeSteps.map(s => ({ ...s }));
+      this._refreshAllMiniStrips();
     } else if (obj.steps) {
       // Legacy single-pattern: migrate to pattern A
       if (this._patterns) {
         this._patterns.A.steps = obj.steps;
         this._chain = [0];
         this._seq.steps = obj.steps;
+        this._instrument.steps = obj.steps.map(s => ({ ...s }));
+        this._refreshAllMiniStrips();
       } else {
         this._seq.steps = obj.steps;
+        this._instrument.steps = obj.steps.map(s => ({ ...s }));
       }
     }
     this._seqRestoreExtra?.(obj);
@@ -1703,11 +1780,12 @@ export class WebAudioControlsBase extends HTMLElement {
         this._rotateIntervalInput.value = obj.patternParams.rotationIntervalBars;
     }
     if (obj.sections) {
-      // FX always travels with Ctrl. Backward compat: if old save had 'fx' but not
-      // 'ctrl', use fx visibility as the combined row state.
+      // Backward compat: old saves only had a combined 'ctrl' flag (Ctrl+FX
+      // travelled together) — fall back to it for whichever of ctrl/fx is missing.
       const ctrlVisible = obj.sections.ctrl ?? obj.sections.fx ?? false;
-      this._applyPanel(this._topSection, this._ctrlBtn, ctrlVisible);
-      this._applyPanel(this._topSection, this._fxBtn, ctrlVisible);
+      const fxVisible = obj.sections.fx ?? obj.sections.ctrl ?? false;
+      this._applyTopSectionPart("ctrl", ctrlVisible);
+      this._applyTopSectionPart("fx", fxVisible);
       this._applyPanel(this._seqSection, this._seqBtn, obj.sections.seq ?? true);
     }
   }
@@ -1720,13 +1798,30 @@ export class WebAudioControlsBase extends HTMLElement {
   }
 
   /**
+   * Show/hide the Ctrl or FX subset of the shared top section and sync its
+   * toggle button. data-hidden on the row itself is derived from both flags —
+   * the row (border/padding) only fully collapses once both are hidden.
+   * @param {"ctrl"|"fx"} kind
+   * @param {boolean} visible
+   */
+  _applyTopSectionPart(kind, visible) {
+    if (!this._topSection) return;
+    const attr = kind === "ctrl" ? "data-hide-ctrl" : "data-hide-fx";
+    const btn = kind === "ctrl" ? this._ctrlBtn : this._fxBtn;
+    this._topSection.toggleAttribute(attr, !visible);
+    btn?.toggleAttribute("data-active", visible);
+    const bothHidden = this._topSection.hasAttribute("data-hide-ctrl") && this._topSection.hasAttribute("data-hide-fx");
+    this._topSection.toggleAttribute("data-hidden", bothHidden);
+  }
+
+  /**
    * Show or hide all sections (Ctrl+FX row, Seq) at once. Used to emphasize
    * the focused instrument (expand all) and de-emphasize the rest (collapse
    * all) so the active one stands out.
    */
   setAllPanels(visible) {
-    this._applyPanel(this._topSection, this._ctrlBtn, visible);
-    this._applyPanel(this._topSection, this._fxBtn, visible);
+    this._applyTopSectionPart("ctrl", visible);
+    this._applyTopSectionPart("fx", visible);
     this._applyPanel(this._seqSection, this._seqBtn, visible);
   }
 
@@ -1818,6 +1913,7 @@ export class WebAudioControlsBase extends HTMLElement {
   resetSequencer() {
     this._globalStep = 0;
     this._seqPosition = 0;
+    this._clearMiniStripPlayhead();
   }
 
   /** Hide or show the step sequencer UI. */

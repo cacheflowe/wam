@@ -113,28 +113,33 @@ class WebAudioParamDisplay extends HTMLElement {
     document.body.appendChild(el);
     WebAudioParamDisplay.#instance = el;
 
-    // Track whether the user has an active pointer on a control.
-    // This prevents automated value changes (LFOs, etc.) from showing the overlay.
-    const isOnControl = (e) => !!e.target.closest?.("wam-knob, wam-slider");
+    // Track the exact control the user has an active pointer on (not just
+    // "some control is active") — this prevents automated value changes
+    // (LFOs, etc.) on OTHER controls from showing the overlay. A synth's LFO
+    // can dispatch real knob-input events on its own knob every animation
+    // frame; if the user happens to be dragging a different knob at that
+    // moment, a plain boolean flag would let the LFO's event through too.
+    const controlOf = (e) => e.target.closest?.("wam-knob, wam-slider") ?? null;
 
     document.addEventListener(
       "pointerdown",
       (e) => {
-        if (isOnControl(e)) el._pointerActive = true;
+        const control = controlOf(e);
+        if (control) el._activeControl = control;
       },
       true,
     );
     document.addEventListener(
       "pointerup",
       () => {
-        el._pointerActive = false;
+        el._activeControl = null;
       },
       true,
     );
     document.addEventListener(
       "pointercancel",
       () => {
-        el._pointerActive = false;
+        el._activeControl = null;
       },
       true,
     );
@@ -144,19 +149,22 @@ class WebAudioParamDisplay extends HTMLElement {
     // handler, then we clear the flag on the next microtask so LFO-driven
     // events on the following animation frame are still filtered out.
     const briefActivate = (e) => {
-      if (!isOnControl(e)) return;
-      el._pointerActive = true;
+      const control = controlOf(e);
+      if (!control) return;
+      el._activeControl = control;
       queueMicrotask(() => {
-        el._pointerActive = false;
+        if (el._activeControl === control) el._activeControl = null;
       });
     };
     document.addEventListener("wheel", briefActivate, true);
     document.addEventListener("dblclick", briefActivate, true);
 
     // Listen at document level (capture phase) for all knob/slider events.
-    // Only show when a user pointer is actively interacting with a control.
+    // Only show when the event's own control is the one the user is actively
+    // touching — this is what filters out an LFO-driven update on a
+    // different control while the user drags something else.
     const handler = (e) => {
-      if (!el._pointerActive) return;
+      if (!el._activeControl || controlOf(e) !== el._activeControl) return;
       const { label, value } = e.detail;
       if (label != null) el.show(label, value);
     };

@@ -82,10 +82,22 @@ small {
   animation: flash-anim 2s 1;
 }
 
-/* Sequencer pattern row: uses wam-action-row + wam-ctrl from controls-factory */
+/* Sequencer pattern row: Patterns / Chain / Actions as bordered .wam-section
+   cards in the same auto-fill grid the Ctrl/FX sections use (see
+   .wam-section-top > .wam-controls in controls-factory.js) — cards wrap onto
+   their own rows on narrow screens instead of bunching up in one flex row. */
 .wam-pattern-row {
-  padding: 4px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 8px;
+  padding: 4px 0;
+}
+
+/* Each card holds one row (tabs / chain bar / ops), not a grid of small
+   controls — override .wam-section-controls' auto-fill grid (meant for many
+   knob-sized children) so that single row fills the card's full width. */
+.wam-pattern-row .wam-section-controls {
+  display: block;
 }
 
 .wam-pattern-tabs {
@@ -94,9 +106,13 @@ small {
   flex-shrink: 0;
 }
 
-/* Pattern tabs need position context for playing indicator */
+/* Pattern tabs need position context for playing indicator. Stretched to the
+   mini-strip's width (the column's natural width) so the button isn't
+   narrower than the preview underneath it. */
 .wam-pattern-tab {
   position: relative;
+  width: 100%;
+  text-align: center;
 }
 
 .wam-chain-bar {
@@ -131,6 +147,49 @@ small {
   background: currentColor;
 }
 
+/* Pattern column: tab button + its always-visible mini step-strip preview */
+.wam-pattern-col {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+}
+
+.wam-mini-strip {
+  display: flex;
+  justify-content: center;
+  gap: 1px;
+}
+
+.wam-mini-dot {
+  width: 3px;
+  height: 9px;
+  border-radius: 1px;
+  background: var(--pico-muted-border-color, #444);
+}
+
+/* Active step in this pattern: filled with the instrument's accent color */
+.wam-mini-dot[data-on] {
+  background: var(--slider-accent, #0f0);
+}
+
+/* Live playhead — only lit on whichever pattern is actually chain-playing,
+   independent of which pattern tab is selected for editing. */
+.wam-mini-dot[data-current] {
+  outline: 1px solid #fff;
+  outline-offset: 0;
+}
+
+/* On very narrow phones the Patterns card's 4-column tab+mini-strip row
+   (4 × 16-dot strips + gaps ≈ 264px) can be wider than the available content
+   width inside the page/section padding. Narrower dots close that gap
+   without losing the always-visible preview. */
+@media (max-width: 400px) {
+  .wam-mini-dot {
+    width: 2px;
+  }
+}
+
 /* Chain pill: playing state gets bright fill + glow */
 .wam-chain-pill[data-playing] {
   background: var(--slider-accent, #0f0) !important;
@@ -138,21 +197,28 @@ small {
   box-shadow: 0 0 4px var(--slider-accent, #0f0);
 }
 
-/* Chain slot: bar number absolutely positioned above pill */
-.wam-chain-slot {
-  position: relative;
+/* Bar number, inline inside the pill before the pattern letter */
+.wam-chain-num {
+  font-size: 0.75em;
+  opacity: 0.6;
+  margin-right: 2px;
+  pointer-events: none;
 }
 
-.wam-chain-num {
-  position: absolute;
-  top: -9px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 8px;
-  color: #666;
-  line-height: 1;
-  pointer-events: none;
-  z-index: 1;
+.wam-chain-pill[data-playing] .wam-chain-num {
+  opacity: 0.7;
+}
+
+/* Inline remove tap target — right-click removes too, but touch needs this */
+.wam-chain-remove {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 3px;
+  opacity: 0.55;
+}
+
+.wam-chain-remove:hover {
+  opacity: 1;
 }
 
 /* Chain add button: dashed border */

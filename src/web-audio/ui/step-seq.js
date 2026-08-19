@@ -196,6 +196,19 @@ export default class WebAudioStepSeq extends HTMLElement {
         padding: 6px 4px;
         border-top: 1px solid #333;
       }
+      /* Compact mode: hide everything but the step number + on/off toggle,
+         so cells stay legible at 8 (or even 16) per row on a narrow screen. */
+      wam-step-seq[data-compact] .wass-note,
+      wam-step-seq[data-compact] .wass-accent,
+      wam-step-seq[data-compact] .wass-probability,
+      wam-step-seq[data-compact] .wass-ratchet,
+      wam-step-seq[data-compact] .wass-conditions {
+        display: none;
+      }
+      wam-step-seq[data-compact] .wass-step {
+        padding: 2px 1px;
+        gap: 1px;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -230,7 +243,12 @@ export default class WebAudioStepSeq extends HTMLElement {
     WebAudioStepSeq.#injectCSS();
     this._ro = new ResizeObserver(([entry]) => {
       const w = entry.contentRect.width;
-      const cols = w < 350 ? 4 : w < 650 ? 8 : 16;
+      // Most phones land in the 220-350px range once page/section padding is
+      // subtracted — keep those at 8-per-row (2 rows) rather than dropping to
+      // 4 (4 rows), which is what made steps feel bunched up. Compact mode
+      // (data-compact) is what actually makes 8-wide legible at that width by
+      // hiding the secondary per-step controls.
+      const cols = w < 180 ? 4 : w < 650 ? 8 : 16;
       this.style.setProperty("--seq-cols", cols);
     });
     this._ro.observe(this);
@@ -644,6 +662,19 @@ export default class WebAudioStepSeq extends HTMLElement {
     if (params.rotationOffset != null) this._patternParams.rotationOffset = params.rotationOffset;
     if (params.rotationIntervalBars != null) this._patternParams.rotationIntervalBars = params.rotationIntervalBars;
     // Note: UI update would require re-render; assuming external code handles that
+  }
+
+  /**
+   * Compact display mode — hides the secondary per-step controls (note
+   * select, accent, probability, ratchet, conditions) via CSS so each cell
+   * shrinks to just the step number + on/off toggle. Doesn't touch step data.
+   */
+  get compact() {
+    return this.hasAttribute("data-compact");
+  }
+
+  set compact(v) {
+    this.toggleAttribute("data-compact", !!v);
   }
 
   /**

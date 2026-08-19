@@ -66,7 +66,7 @@ const samplesConfig = {
   breaks: {
     glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/09-breaks/*.wav")),
     servedAt: "_assets/samples/09-breaks/",
-    fallbackDir: "public/audio/samples/breaks/",
+    fallbackDir: "audio/samples/breaks/",
     fallbackFiles: [
       "funky-drummer-loop-8.wav",
       "shack-up-loop-16.wav",
@@ -77,25 +77,25 @@ const samplesConfig = {
   percloops: {
     glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/10-perc-loops/*.wav")),
     servedAt: "_assets/samples/10-perc-loops/",
-    fallbackDir: "public/audio/samples/perc-loops/",
+    fallbackDir: "audio/samples/perc-loops/",
     fallbackFiles: ["FX_Loops_058_loop_4_.wav", "FX_Loops_068_loop_4_.wav"],
   },
   kicks: {
     glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/01-kick/*.wav")),
     servedAt: "_assets/samples/01-kick/",
-    fallbackDir: "public/audio/samples/kicks/",
+    fallbackDir: "audio/samples/kicks/",
     fallbackFiles: ["B.DRUM_14.wav", "B.DRUM_17.wav", "B.DRUM_23.wav", "B.DRUM_27.wav"],
   },
   snares: {
     glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/02-snare/*.wav")),
     servedAt: "_assets/samples/02-snare/",
-    fallbackDir: "public/audio/samples/snares/",
+    fallbackDir: "audio/samples/snares/",
     fallbackFiles: ["CLAP_5.wav", "SNARE_5.wav", "SNARE_7.wav", "SNARE_14.wav"],
   },
   hits: {
     glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/04-perc/*.wav")),
     servedAt: "_assets/samples/04-perc/",
-    fallbackDir: "public/audio/samples/hits/",
+    fallbackDir: "audio/samples/hits/",
     fallbackFiles: [
       "AMINDDR11.wav",
       "BATA_HI.wav",
@@ -109,7 +109,7 @@ const samplesConfig = {
   vocals: {
     glob: tryGlobKeys(() => import.meta.glob("/_assets/samples/11-vocals/*.wav")),
     servedAt: "_assets/samples/11-vocals/",
-    fallbackDir: "public/audio/samples/vocals/",
+    fallbackDir: "audio/samples/vocals/",
     fallbackFiles: ["eek-a-mouse-loop-8.wav"],
   },
 };
@@ -364,6 +364,10 @@ export default class PlaygroundApp extends HTMLElement {
 
     this._onInstrumentFocus = (e) => {
       const ctrl = e.detail?.controls;
+      // Newly-added instruments become the focused/hardware-target instrument
+      // like any other focus, but shouldn't auto-expand — they should appear
+      // collapsed until the user opens them.
+      const keepCollapsed = !!e.detail?.keepCollapsed;
       const idx = ctrl ? this._instruments.findIndex((en) => en.ctrl === ctrl) : -1;
       // Publish the focused instrument's serializable id (not the element).
       window._store?.set(StoreKeys.FOCUS_INSTRUMENT_ID, idx >= 0 ? this._instruments[idx].instanceId : null);
@@ -375,8 +379,9 @@ export default class PlaygroundApp extends HTMLElement {
       // and the strip-click toggle stays predictable.
       for (const entry of this._instruments) {
         const isFocused = entry.ctrl === ctrl;
-        entry.ctrl.setAllPanels?.(isFocused);
-        if (entry.ctrl) entry.ctrl.collapsed = !isFocused;
+        const expand = isFocused && !keepCollapsed;
+        entry.ctrl.setAllPanels?.(expand);
+        if (entry.ctrl) entry.ctrl.collapsed = !expand;
       }
       if (idx >= 0) this._scrollInstrumentIntoView(this._instruments[idx].row);
 
@@ -663,7 +668,10 @@ export default class PlaygroundApp extends HTMLElement {
       btn.addEventListener("mouseout", () => {
         btn.style.background = `${def.color}22`;
       });
-      btn.addEventListener("click", () => this._addInstrument(def));
+      btn.addEventListener("click", () => {
+        this._addInstrument(def);
+        this._drawer.close();
+      });
       palette.appendChild(btn);
     }
     this._drawer.addPanel("add", palette, "Add Instrument");
@@ -881,12 +889,25 @@ export default class PlaygroundApp extends HTMLElement {
     removeBtn.textContent = "✕ Remove";
     removeBtn.style.cssText =
       "position:absolute;top:-.5rem;right:-.5rem;background:#ff334422;border:1px solid #ff334466;color:#f88;padding:.2rem .5rem;border-radius:4px;cursor:pointer;font-size:.75rem;z-index:1;";
-    removeBtn.addEventListener("click", () => this._removeInstrument(entry, row));
+    removeBtn.addEventListener("click", () => {
+      if (!confirm(`Remove ${def.label}?`)) return;
+      this._removeInstrument(entry, row);
+    });
 
     row.appendChild(removeBtn);
     row.appendChild(ctrl);
     this._instrumentList.appendChild(row);
     entry.row = row;
+
+    // A freshly-added instrument becomes the focused/hardware-target instrument
+    // (same as clicking its title), but stays collapsed instead of auto-expanding.
+    // Skip this while restoring a saved song (triggerSave === false) — loading
+    // shouldn't steal focus onto whichever instrument happens to load last.
+    if (triggerSave) {
+      ctrl.dispatchEvent(
+        new CustomEvent("wam-instrument-focus", { bubbles: true, detail: { controls: ctrl, keepCollapsed: true } }),
+      );
+    }
 
     this._emptyMsg.style.display = "none";
     if (triggerSave && !this._isLoadingState) {

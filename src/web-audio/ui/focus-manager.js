@@ -29,7 +29,10 @@ export class FocusManager {
     this._target = target;
     this._focused = null;
     this._started = false;
-    this._onFocus = (e) => this.focus(e.detail?.controls ?? null);
+    this._onFocus = (e) => {
+      const { controls, ...extra } = e.detail ?? {};
+      this.focus(controls ?? null, extra);
+    };
   }
 
   start() {
@@ -48,13 +51,18 @@ export class FocusManager {
     return this._focused;
   }
 
-  focus(controls) {
+  /**
+   * @param {HTMLElement|null} controls
+   * @param {object} [extra]  Extra fields forwarded verbatim on the rebroadcast
+   *   event's detail (e.g. { keepCollapsed: true } for newly-added instruments).
+   */
+  focus(controls, extra = {}) {
     if (controls === this._focused) return;
     this._focused?.classList.remove("wam-focused");
     this._focused = controls || null;
     this._focused?.classList.add("wam-focused");
     this._target.dispatchEvent(
-      new CustomEvent("wam-instrument-focus-change", { detail: { controls: this._focused } }),
+      new CustomEvent("wam-instrument-focus-change", { detail: { controls: this._focused, ...extra } }),
     );
   }
 }

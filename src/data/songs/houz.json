@@ -1090,7 +1090,7 @@
           "seq": false,
           "fx": false
         },
-        "file": "public/audio/samples/breaks/hot-pants-loop-4.wav",
+        "file": "audio/samples/breaks/hot-pants-loop-4.wav",
         "speedMode": "auto",
         "subdivision": 4,
         "returnSteps": 1,
