@@ -6,6 +6,7 @@ import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 import { createCtrl } from "../ui/controls-factory.js";
 import { makeSoftClipCurve } from "../global/dsp/distortion.js";
 import { scheduleEnvelope } from "../global/dsp/envelope.js";
+import { sliderDefs } from "../global/param-schema.js";
 
 /**
  * WebAudioSynthAcid — TB-303-style monophonic acid bass synthesizer.
@@ -124,6 +125,71 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
     { label: "1/4", beats: 1 },
     { label: "1/2", beats: 2 },
     { label: "1 bar", beats: 4 },
+  ];
+
+  /**
+   * Param schema (see global/param-schema.js). Single source of truth for the
+   * UI, serialization, randomize/mutate, and hardware mapping. `rand` ranges
+   * are the musically useful sub-ranges a randomize/mutate may land in.
+   */
+  static PARAMS = [
+    // ---- Filter ----
+    { param: "cutoff", label: "Cutoff", min: 50, max: 10000, step: 1, scale: "log",
+      group: "filter", role: "cutoff", priority: 1, rand: { min: 150, max: 2500 },
+      tooltip: "Base filter cutoff. Lower = darker tone." },
+    { param: "resonance", label: "Resonance", min: 0.1, max: 30, step: 0.1,
+      group: "filter", role: "resonance", priority: 1, rand: { min: 4, max: 24 },
+      tooltip: "Filter resonance. High values add a nasal peak at the cutoff." },
+    { param: "envMod", label: "Env Mod", min: 0, max: 1, step: 0.01,
+      group: "filter", role: "envAmt", priority: 1, rand: { min: 0.2, max: 0.95 },
+      tooltip: "How much the envelope opens the filter. Higher = more 'wah'." },
+    // ---- Envelope ----
+    { param: "decay", label: "Decay", min: 0.01, max: 2, step: 0.01,
+      group: "amp-env", role: "decay", priority: 1, rand: { min: 0.08, max: 0.6 },
+      tooltip: "Envelope decay time. Sets how quickly the filter closes." },
+    { param: "attack", label: "Attack", min: 0.001, max: 0.3, step: 0.001,
+      group: "amp-env", role: "attack", priority: 2, rand: { min: 0.001, max: 0.02 },
+      tooltip: "Envelope attack time. Short = sharp pluck, long = swell." },
+    // ---- Character ----
+    { param: "distortion", label: "Distortion", min: 0, max: 1, step: 0.01,
+      group: "character", role: "drive", priority: 1, rand: { min: 0, max: 0.5 },
+      tooltip: "Waveshaper distortion. Adds harmonic grit to the bass." },
+    { param: "portamento", label: "Portamento", min: 0, max: 0.5, step: 0.001,
+      group: "pitch", role: "glide", priority: 2, rand: { min: 0, max: 0.08 },
+      tooltip: "Slide time between notes. 0 = instant pitch change." },
+    // ---- Oscillator ----
+    { param: "oscType", label: "Shape", type: "enum", options: ["sawtooth", "square"],
+      group: "osc", role: "wave", priority: 1, rand: { weights: [3, 1] },
+      tooltip: "Oscillator waveform." },
+    { param: "unisonVoices", label: "Unison", min: 1, max: 4, step: 1,
+      group: "osc", role: "unison", priority: 3, rand: { min: 1, max: 2 },
+      tooltip: "Number of detuned oscillator voices stacked together." },
+    { param: "unisonDetune", label: "Detune", min: 0, max: 50, step: 1,
+      group: "osc", role: "detune", priority: 2, rand: { min: 0, max: 20 },
+      tooltip: "Pitch spread between unison voices in cents." },
+    // ---- Filter LFO ----
+    { param: "filterLfoActive", label: "Active", type: "bool",
+      group: "mod", role: "lfoOn", priority: 3, rand: false,
+      tooltip: "Toggle filter cutoff oscillation synced to BPM." },
+    { param: "filterLfoLow", label: "Low", min: 50, max: 10000, step: 1, scale: "log",
+      group: "mod", role: "lfoLow", priority: 3, rand: { min: 100, max: 1000 },
+      tooltip: "Lower bound of the LFO cutoff sweep." },
+    { param: "filterLfoHigh", label: "High", min: 50, max: 10000, step: 1, scale: "log",
+      group: "mod", role: "lfoHigh", priority: 3, rand: { min: 600, max: 6000 },
+      tooltip: "Upper bound of the LFO cutoff sweep." },
+    { param: "filterLfoInterval", label: "Rate", type: "enum", options: [1, 2, 4],
+      group: "mod", role: "lfoRate", priority: 3, rand: false,
+      tooltip: "LFO cycle length as a rhythmic division. Syncs to the current BPM." },
+    { param: "filterLfoOffset", label: "Offset", min: 0, max: 15, step: 1,
+      group: "mod", role: "lfoPhase", priority: 3, rand: false,
+      tooltip: "Phase offset in steps. Shifts where the LFO cycle starts within the loop." },
+    // ---- Pitch / sequencing (part-level: excluded from randomize) ----
+    { param: "octaveOffset", label: "Octave", min: -2, max: 2, step: 1,
+      group: "pitch", role: "octave", priority: 3, rand: false,
+      tooltip: "Shift all notes up or down by octaves." },
+    { param: "octaveJumpProb", label: "Oct Jump", min: 0, max: 1, step: 0.01,
+      group: "seq", role: "octaveJump", priority: 3, rand: false,
+      tooltip: "Probability of randomly jumping an octave on each note." },
   ];
 
   constructor(ctx, preset = "Default") {
@@ -324,98 +390,7 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
  *   controls.step(index, time, stepDurationSec);
  */
 export class WebAudioSynthAcidControls extends WebAudioControlsBase {
-  static SLIDER_DEFS = [
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
-    {
-      param: "cutoff",
-      label: "Cutoff",
-      min: 50,
-      max: 10000,
-      step: 1,
-      scale: "log",
-      tooltip: "Base filter cutoff. Lower = darker tone.",
-    },
-    {
-      param: "resonance",
-      label: "Resonance",
-      min: 0.1,
-      max: 30,
-      step: 0.1,
-      tooltip: "Filter resonance. High values add a nasal peak at the cutoff.",
-    },
-    {
-      param: "envMod",
-      label: "Env Mod",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "How much the envelope opens the filter. Higher = more 'wah'.",
-    },
-    {
-      param: "decay",
-      label: "Decay",
-      min: 0.01,
-      max: 2,
-      step: 0.01,
-      tooltip: "Envelope decay time. Sets how quickly the filter closes.",
-    },
-    {
-      param: "attack",
-      label: "Attack",
-      min: 0.001,
-      max: 0.3,
-      step: 0.001,
-      tooltip: "Envelope attack time. Short = sharp pluck, long = swell.",
-    },
-    {
-      param: "distortion",
-      label: "Distortion",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Waveshaper distortion. Adds harmonic grit to the bass.",
-    },
-    {
-      param: "portamento",
-      label: "Portamento",
-      min: 0,
-      max: 0.5,
-      step: 0.001,
-      tooltip: "Slide time between notes. 0 = instant pitch change.",
-    },
-    {
-      param: "unisonVoices",
-      label: "Unison",
-      min: 1,
-      max: 4,
-      step: 1,
-      tooltip: "Number of detuned oscillator voices stacked together.",
-    },
-    {
-      param: "unisonDetune",
-      label: "Detune",
-      min: 0,
-      max: 50,
-      step: 1,
-      tooltip: "Pitch spread between unison voices in cents.",
-    },
-    {
-      param: "octaveOffset",
-      label: "Octave",
-      min: -2,
-      max: 2,
-      step: 1,
-      tooltip: "Shift all notes up or down by octaves.",
-    },
-    {
-      param: "octaveJumpProb",
-      label: "Oct Jump",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Probability of randomly jumping an octave on each note.",
-    },
-  ];
+  static SLIDER_DEFS = sliderDefs(WebAudioSynthAcid.PARAMS);
 
   static DEFAULT_PATTERN() {
     const notes = [29, 29, 36, 29, 34, 29, 36, 41, 29, 36, 34, 29, 32, 34, 36, 29];
@@ -472,9 +447,9 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
 
     // ---- Filter ----
     const { el: filterEl, controls: filterCtrl } = createSection("Filter");
-    filterCtrl.appendChild(mkSlider({ param: "cutoff", label: "Cutoff", min: 50, max: 10000, step: 1, scale: "log" }));
-    filterCtrl.appendChild(mkSlider({ param: "resonance", label: "Resonance", min: 0.1, max: 30, step: 0.1 }));
-    filterCtrl.appendChild(mkSlider({ param: "envMod", label: "Env Mod", min: 0, max: 1, step: 0.01 }));
+    filterCtrl.appendChild(mkSlider("cutoff"));
+    filterCtrl.appendChild(mkSlider("resonance"));
+    filterCtrl.appendChild(mkSlider("envMod"));
     controls.appendChild(filterEl);
 
     // ---- Filter LFO ----
@@ -489,26 +464,10 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     this._lfoToggle = lfoToggle;
     lfoCtrl.appendChild(lfoWrap);
     lfoCtrl.appendChild(
-      mkSlider({
-        param: "filterLfoLow",
-        label: "Low",
-        min: 50,
-        max: 10000,
-        step: 1,
-        scale: "log",
-        tooltip: "Lower bound of the LFO cutoff sweep.",
-      }),
+      mkSlider("filterLfoLow"),
     );
     lfoCtrl.appendChild(
-      mkSlider({
-        param: "filterLfoHigh",
-        label: "High",
-        min: 50,
-        max: 10000,
-        step: 1,
-        scale: "log",
-        tooltip: "Upper bound of the LFO cutoff sweep.",
-      }),
+      mkSlider("filterLfoHigh"),
     );
     lfoCtrl.appendChild(
       (() => {
@@ -530,39 +489,32 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
       })(),
     );
     lfoCtrl.appendChild(
-      mkSlider({
-        param: "filterLfoOffset",
-        label: "Offset",
-        min: 0,
-        max: 15,
-        step: 1,
-        tooltip: "Phase offset in steps. Shifts where the LFO cycle starts within the loop.",
-      }),
+      mkSlider("filterLfoOffset"),
     );
     controls.appendChild(lfoEl);
 
     // ---- Envelope ----
     const { el: envEl, controls: envCtrl } = createSection("Envelope");
-    envCtrl.appendChild(mkSlider({ param: "attack", label: "Attack", min: 0.001, max: 0.3, step: 0.001 }));
-    envCtrl.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.01, max: 2, step: 0.01 }));
+    envCtrl.appendChild(mkSlider("attack"));
+    envCtrl.appendChild(mkSlider("decay"));
     controls.appendChild(envEl);
 
     // ---- Character ----
     const { el: charEl, controls: charCtrl } = createSection("Character");
-    charCtrl.appendChild(mkSlider({ param: "distortion", label: "Distortion", min: 0, max: 1, step: 0.01 }));
-    charCtrl.appendChild(mkSlider({ param: "portamento", label: "Portamento", min: 0, max: 0.5, step: 0.001 }));
+    charCtrl.appendChild(mkSlider("distortion"));
+    charCtrl.appendChild(mkSlider("portamento"));
     controls.appendChild(charEl);
 
     // ---- Unison ----
     const { el: unisonEl, controls: unisonCtrl } = createSection("Unison");
-    unisonCtrl.appendChild(mkSlider({ param: "unisonVoices", label: "Voices", min: 1, max: 4, step: 1 }));
-    unisonCtrl.appendChild(mkSlider({ param: "unisonDetune", label: "Detune", min: 0, max: 50, step: 1 }));
+    unisonCtrl.appendChild(mkSlider("unisonVoices", { label: "Voices" }));
+    unisonCtrl.appendChild(mkSlider("unisonDetune"));
     controls.appendChild(unisonEl);
 
     // ---- Octave ----
     const { el: octEl, controls: octCtrl } = createSection("Octave");
-    octCtrl.appendChild(mkSlider({ param: "octaveOffset", label: "Offset", min: -2, max: 2, step: 1 }));
-    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0, max: 1, step: 0.01 }));
+    octCtrl.appendChild(mkSlider("octaveOffset", { label: "Offset" }));
+    octCtrl.appendChild(mkSlider("octaveJumpProb", { label: "Jump Prob" }));
     controls.appendChild(octEl);
 
     // ---- Sequencer ----

@@ -71,6 +71,10 @@ applyPreset(name) {
 
 The `!= null` guard allows partial presets; new parameters can be added without invalidating existing preset objects.
 
+### Param schema (`global/param-schema.js`)
+
+Instruments declare their parameters as `static PARAMS` on the **instrument** class (not the Controls class), so the engine knows its own params headless. Each entry carries range/scale/step plus `group` (UI section + randomize-lock unit), `role` (shared vocabulary that drives hardware mapping — the same role lands on the same knob on every instrument), `priority`, and `rand` (the curated, musically useful sub-range for randomize/mutate, or `false`). Enum and bool params are included. Controls derive `SLIDER_DEFS = sliderDefs(Instrument.PARAMS)` and build each knob with `mkSlider("param", overrides?)`, so a param is declared exactly once. Migration status and the role list: [exec-plans/active/jammable-playground.md](exec-plans/active/jammable-playground.md). Validation: [tests/param-schema.test.js](tests/param-schema.test.js).
+
 ### Shared DSP primitives (`global/dsp/`)
 
 Common per-voice DSP is factored into standalone functions that **schedule on existing AudioParams or create nodes at a caller-controlled point** — keeping the fire-and-forget model (no stateful classes, synths still own their node graph and creation order).

@@ -294,8 +294,16 @@ export class WebAudioControlsBase extends HTMLElement {
       this._emitChange();
     });
 
-    // Slider factory — creates a wam-slider or wam-knob, registers in _sliders, returns element
-    const mkSlider = (def) => {
+    // Slider factory — creates a wam-slider or wam-knob, registers in _sliders, returns element.
+    // Accepts a full def, or a param name (+ optional overrides like a section-specific
+    // label) looked up in SLIDER_DEFS so each param is declared once, in the schema.
+    const mkSlider = (defOrParam, overrides = null) => {
+      let def = defOrParam;
+      if (typeof defOrParam === "string") {
+        const found = (this.constructor.SLIDER_DEFS || []).find((d) => d.param === defOrParam);
+        if (!found) throw new Error(`[WAM] mkSlider: no SLIDER_DEFS entry for "${defOrParam}"`);
+        def = overrides ? { ...found, ...overrides } : found;
+      }
       const tag = def.knob === false ? "wam-slider" : "wam-knob";
       const s = document.createElement(tag);
       s.setAttribute("param", def.param);

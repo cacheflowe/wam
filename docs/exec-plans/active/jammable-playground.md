@@ -100,12 +100,12 @@ Placement is by `role` (fixed knob per role), then unfilled slots in a row get t
 - [x] Timeline-evaluating envelope tests; snapshots updated only for the bug cases.
 
 ### Phase 1 — Param schema in the engine (no behavior change)
-- [ ] `global/param-roles.js`: role + group vocabulary.
-- [ ] `static PARAMS` on instrument classes; Controls `SLIDER_DEFS` → derived from it (compat getter).
+- [x] Role + group vocabulary — lives in `global/param-schema.js` (`ROLES`, `GROUPS`) with normalize/quantize/`randRange`/`validateParams` helpers.
+- [x] `static PARAMS` on instrument classes; Controls `SLIDER_DEFS = sliderDefs(Instrument.PARAMS)` (acid).
 - [ ] Enum params (selects) in the schema; UI registers selects from it.
-- [ ] Build sliders from the schema; delete duplicated `mkSlider` literals (per instrument).
-- [ ] Schema validation test (roles known, `rand` ⊆ `[min,max]`, preset keys ⊆ params).
-- [ ] Migrate: acid (pilot) → poly → mono → pad → fm → 808 → kick/snare/hihat → blipfx → sample player/looper.
+- [x] `mkSlider("param", overrides?)` looks up the schema def; acid's duplicated literals removed. Remaining instruments: per migration below.
+- [x] Schema validation test ([tests/param-schema.test.js](../../../tests/param-schema.test.js)) — add each instrument to `MIGRATED` as it moves.
+- [ ] Migrate: ~~acid (pilot)~~ ✅ → poly → mono → pad → fm → 808 → kick/snare/hihat → blipfx → sample player/looper.
 
 ### Phase 2 — Sound-design engine
 - [ ] `global/sound-design.js`: `randomize`, `mutate`, `constrain` hook, sound history (undo/redo).
