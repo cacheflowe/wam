@@ -1,12 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { AutoMap } from "../src/web-audio/midi/auto-map.js";
-import { bindingFor, getControl } from "../src/web-audio/midi/launch-control-xl.js";
+import { AutoMap, layoutKnobs, ROLE_SLOTS } from "../src/web-audio/midi/auto-map.js";
+import { bindingFor } from "../src/web-audio/midi/launch-control-xl.js";
+import WebAudioSynthAcid from "../src/web-audio/instruments/synth-acid.js";
+import WebAudioSynthPoly from "../src/web-audio/instruments/synth-poly.js";
+import WebAudioPercKick from "../src/web-audio/instruments/perc-kick.js";
 
-// Minimal stand-in for a controls instance: just the bits AutoMap reads/calls.
-function fakeControls(paramOrder, manual = {}) {
-  const registry = {};
-  for (const p of paramOrder) registry[p] = { tagName: "WAM-KNOB" };
+const KNOB = (row, col) => `knob${"ABC"[row]}${col + 1}`;
+
+/** Minimal stand-in for a controls instance: just the bits AutoMap reads/calls. */
+function fakeControls(paramsOrCls, manual = {}) {
+  const Cls = typeof paramsOrCls === "function" ? paramsOrCls : null;
+  const names = Cls ? Cls.PARAMS.map((d) => d.param) : paramsOrCls;
+  const registry = { volume: {}, pan: {} };
+  for (const p of names) registry[p] = { getAttribute: () => p };
   return {
+    _instrument: Cls ? { constructor: Cls } : { constructor: {} },
     _learnRegistry: registry,
     _paramBindings: manual,
     autoBindings: null,
@@ -19,39 +27,108 @@ function fakeControls(paramOrder, manual = {}) {
   };
 }
 
-describe("AutoMap.computeMap", () => {
-  it("maps params to knobs/faders in order", () => {
-    const am = new AutoMap();
-    const ctrl = fakeControls(["cutoff", "resonance", "decay"]);
-    const map = am.computeMap(ctrl);
-    expect(map.cutoff).toEqual(bindingFor("knobA1"));
-    expect(map.resonance).toEqual(bindingFor("knobA2"));
-    expect(map.decay).toEqual(bindingFor("knobA3"));
+describe("layoutKnobs (pure)", () => {
+  it("puts each role on its fixed knob regardless of schema order", () => {
+    const [page] = layoutKnobs([
+      { param: "rel", role: "release", group: "amp-env" },
+      { param: "cut", role: "cutoff", group: "filter" },
+      { param: "res", role: "resonance", group: "filter" },
+    ]);
+    expect(page[0]).toBe("cut");
+    expect(page[1]).toBe("res");
+    expect(page[8 + 3]).toBe("rel"); // row 2, col 4
   });
 
+  it("second claimant of a role falls back to its group's home row", () => {
+    const [page] = layoutKnobs([
+      { param: "oscA", role: "wave", group: "osc" },
+      { param: "oscB", role: "wave", group: "osc" },
+    ]);
+    expect(page[4]).toBe("oscA"); // wave slot
+    expect(page.indexOf("oscB")).toBeLessThan(8); // somewhere on row 1
+  });
+
+  it("spills onto further pages when more than 24 params", () => {
+    const defs = Array.from({ length: 30 }, (_, i) => ({ param: `p${i}` }));
+    const pages = layoutKnobs(defs);
+    expect(pages).toHaveLength(2);
+    expect(pages[0].filter(Boolean)).toHaveLength(24);
+    expect(pages[1].filter(Boolean)).toHaveLength(6);
+  });
+
+  it("never places params on blocked knobs", () => {
+    const [page] = layoutKnobs([{ param: "cut", role: "cutoff" }], new Set([0]));
+    expect(page[0]).toBeNull();
+    expect(page.indexOf("cut")).toBeGreaterThan(0);
+  });
+});
+
+describe("AutoMap with real instruments", () => {
+  it("cutoff / resonance / attack / decay land on the same knobs for every synth", () => {
+    for (const Cls of [WebAudioSynthAcid, WebAudioSynthPoly]) {
+      const am = new AutoMap();
+      const ctrl = fakeControls(Cls);
+      am.focus(ctrl);
+      const byKnob = Object.fromEntries(
+        Object.entries(ctrl.autoBindings).map(([param, b]) => [JSON.stringify(b), param]),
+      );
+      const at = (row, col) => byKnob[JSON.stringify(bindingFor(KNOB(row, col)))];
+      const roleAt = (row, col) => Cls.PARAMS.find((d) => d.param === at(row, col))?.role;
+      expect(roleAt(...ROLE_SLOTS.cutoff), Cls.name).toBe("cutoff");
+      expect(roleAt(...ROLE_SLOTS.resonance), Cls.name).toBe("resonance");
+      expect(roleAt(...ROLE_SLOTS.attack), Cls.name).toBe("attack");
+      expect(roleAt(...ROLE_SLOTS.decay), Cls.name).toBe("decay");
+    }
+  });
+
+  it("never maps volume/pan, enums, or faders", () => {
+    const am = new AutoMap();
+    const ctrl = fakeControls(WebAudioSynthPoly);
+    am.focus(ctrl);
+    const params = Object.keys(ctrl.autoBindings);
+    expect(params).not.toContain("volume");
+    expect(params).not.toContain("pan");
+    expect(params).not.toContain("oscAType"); // enum
+    for (const b of Object.values(ctrl.autoBindings)) expect([77, 78, 79, 80, 81, 82, 83, 84]).not.toContain(b.controller);
+  });
+
+  it("poly pages: ← / → walks pages and wraps", () => {
+    const am = new AutoMap();
+    const ctrl = fakeControls(WebAudioSynthPoly);
+    am.focus(ctrl);
+    expect(am.pageCount).toBe(2);
+    const page1 = Object.keys(ctrl.autoBindings);
+    am.stepPage(1);
+    const page2 = Object.keys(ctrl.autoBindings);
+    expect(page2.some((p) => !page1.includes(p))).toBe(true);
+    am.stepPage(1);
+    expect(am.page).toBe(0);
+    am.stepPage(-1);
+    expect(am.page).toBe(1);
+  });
+
+  it("small instruments fit on one page", () => {
+    const am = new AutoMap();
+    am.focus(fakeControls(WebAudioPercKick));
+    expect(am.pageCount).toBe(1);
+  });
+});
+
+describe("AutoMap manual bindings", () => {
   it("skips params that are already manually bound", () => {
     const am = new AutoMap();
-    // resonance manually bound → excluded from auto-map
     const ctrl = fakeControls(["cutoff", "resonance", "decay"], { resonance: bindingFor("fader1") });
     const map = am.computeMap(ctrl);
     expect(map.resonance).toBeUndefined();
-    expect(Object.keys(map)).toEqual(["cutoff", "decay"]);
+    expect(Object.keys(map).sort()).toEqual(["cutoff", "decay"]);
   });
 
-  it("skips controls already used by a manual binding (no double-driving)", () => {
+  it("a knob used by a manual binding is skipped and the param moves to a free knob", () => {
     const am = new AutoMap();
-    // cutoff manually bound to knobA1 → auto-map must not reuse knobA1
     const ctrl = fakeControls(["cutoff", "resonance"], { cutoff: bindingFor("knobA1") });
     const map = am.computeMap(ctrl);
-    // resonance is the only unbound param; first available control is knobA2 (knobA1 taken)
-    expect(map.resonance).toEqual(bindingFor("knobA2"));
-  });
-
-  it("stops when controls run out (more params than 32 knobs+faders)", () => {
-    const am = new AutoMap();
-    const manyParams = Array.from({ length: 40 }, (_, i) => `p${i}`);
-    const map = am.computeMap(fakeControls(manyParams));
-    expect(Object.keys(map)).toHaveLength(32); // 24 knobs + 8 faders
+    expect(map.resonance).toBeDefined();
+    expect(map.resonance).not.toEqual(bindingFor("knobA1"));
   });
 });
 
@@ -60,27 +137,36 @@ describe("AutoMap focus lifecycle", () => {
     const am = new AutoMap();
     const a = fakeControls(["cutoff"]);
     const b = fakeControls(["gain"]);
-
     am.focus(a);
     expect(a.autoBindings.cutoff).toEqual(bindingFor("knobA1"));
-
     am.focus(b);
-    expect(a.autoBindings).toBeNull(); // previous cleared
+    expect(a.autoBindings).toBeNull();
     expect(b.autoBindings.gain).toEqual(bindingFor("knobA1"));
-
     am.focus(null);
     expect(b.autoBindings).toBeNull();
   });
 
-  it("does nothing when disabled, and clears current", () => {
+  it("does nothing when disabled, and clears current; re-enabling restores the focused map", () => {
     const am = new AutoMap();
     const a = fakeControls(["cutoff"]);
     am.focus(a);
-    expect(a.autoBindings).not.toBeNull();
     am.setEnabled(false);
     expect(a.autoBindings).toBeNull();
     const b = fakeControls(["gain"]);
     am.focus(b);
-    expect(b.autoBindings).toBeNull(); // disabled → no map
+    expect(b.autoBindings).toBeNull();
+    am.setEnabled(true);
+    expect(b.autoBindings.gain).toBeDefined();
+  });
+
+  it("emits wam-automap-change with page info and knob labels", () => {
+    const target = new EventTarget();
+    const am = new AutoMap(target);
+    let detail = null;
+    target.addEventListener("wam-automap-change", (e) => (detail = e.detail));
+    am.focus(fakeControls(["cutoff"]));
+    expect(detail.page).toBe(0);
+    expect(detail.pageCount).toBe(1);
+    expect(detail.assignments.knobA1).toEqual({ param: "cutoff", label: "cutoff" });
   });
 });

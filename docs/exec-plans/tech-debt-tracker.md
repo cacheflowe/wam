@@ -13,6 +13,7 @@ Last reviewed: 2026-04-27
 | 4 | `src/site/app.js` not yet created | High — no runnable demo | High | Justin Gitlin | Near-term |
 | 5 | Delay BPM-change click | Low — audible click when BPM changes while delay is active | Low | TODO | — |
 | 6 | No JSDoc on effects classes | Low — instruments have JSDoc, effects mostly don't | Low | TODO | — |
+| 8 | User presets + autosaved songs live in localStorage (~5 MB per origin) — move to IndexedDB | Low now — grows with saved presets/songs; a full store makes saves fail | Low | TODO | — |
 
 ## Resolved Debt
 

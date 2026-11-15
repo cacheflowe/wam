@@ -106,6 +106,9 @@ A binding can now map to a high-level **command** (app action) rather than a par
 - [x] Tests: command press/release + dispatch in `midi-source.test.js` and `keyboard-source.test.js`.
 
 ### Phase 6 — Polish
+
+> Phase 4 of [jammable-playground.md](jammable-playground.md) superseded the positional auto-map and added button modes, the fader mixer and knob paging (side buttons Mute/Solo/Rec Arm now select modes; ←/→ page knobs).
+
 - [ ] Make command bindings learnable + persisted (currently hardcoded defaults).
 - [ ] Persist MIDI focus + per-instrument seq-button-enabled flag in `toJSON/fromJSON`.
 - [ ] Handle template switches mid-session (LEDs re-paint on the now-displayed template).

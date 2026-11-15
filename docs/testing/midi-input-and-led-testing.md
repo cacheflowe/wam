@@ -93,16 +93,27 @@ In the playground with the LCXL connected + MIDI input selected.
 - ☐ Edit the pattern on screen (click steps) → the button LEDs update to match.
 - ☐ Sweep knobs hard while the playhead runs (combines §6) → input stays alive; LEDs keep up.
 
-## 5c. Auto-map — "device follows focus" 🎛 (Phase 4)
+## 5c. Performance layout 🎛 (jammable-playground Phase 4)
 
-The knobs/faders auto-bind to whichever instrument is focused. Manual learn still wins and persists.
+Verified in-browser with simulated MIDI on channel 13; **needs on-device confirmation.** Layout reference: [launch-control-xl.md → Playground performance layout](../references/launch-control-xl.md#playground-performance-layout).
 
-- ☐ Open **🎛 MIDI** → confirm **"Auto-map device to focused instrument"** is checked (default on).
-- ☐ **Click an instrument** → its knobs/faders auto-bind: the LCXL **knob LEDs light amber** (auto) for the mapped params. Turn a knob → the matching parameter moves (no manual learn needed).
-- ☐ **Click another instrument** → the previous auto-map clears and the new instrument's params take over the knobs (LEDs repaint).
-- ☐ **Manual still wins:** MIDI-learn one knob to a specific param (it lights **red**). Refocus the instrument — that knob stays on your manual binding (red), and auto-map fills the *other* knobs around it (amber), never double-driving the manual one.
-- ☐ **Uncheck** the auto-map toggle → auto-bindings clear; only manual bindings remain active.
-- ☐ Faders auto-map too (they have no LEDs, so no light — but moving a mapped fader should still drive its parameter).
+**Knobs (auto-map)**
+- ☐ Focus Poly, then Acid → knob **A1 is cutoff** on both, A2 resonance, B1–B4 attack/decay/sustain/release. Knob LEDs amber.
+- ☐ Focus Poly → **← / → LEDs lit**; → moves to page 2 (different params on the knobs; on-screen map says "page 2/2"); ← back.
+- ☐ Manual MIDI-learn on a knob still wins (red LED) and auto-map fills around it.
+- ☐ Uncheck "Auto-map knobs to focused instrument" → auto knobs clear.
+
+**Faders (mixer)**
+- ☐ Fader 1 controls instrument row 1's volume, fader 2 row 2, … regardless of focus or mode.
+- ☐ **Pickup:** set a volume on screen, then move the fader from far away → nothing changes until the fader passes the current level; then it follows. The on-screen map shows "↕ pick up" until then.
+
+**Modes (Mute / Solo / Record Arm side buttons)**
+- ☐ The current mode's side button is lit yellow; the others are dark. ⚠ Confirm these side buttons transmit on factory template 5 (notes 105–108, channel 13).
+- ☐ **Steps:** 16 buttons toggle steps of the focused instrument (unchanged from 5b).
+- ☐ **Mixer:** top row mutes rows 1–8 (green / red LEDs); bottom row focuses rows 1–8 (focused = bright amber).
+- ☐ **Perform:** top 1–4 launch patterns A–D — while playing, the switch happens on the next bar (amber = queued → green = playing). 5/6 step presets, 7 randomizes the pattern. Bottom 1–3 mutate subtle/medium/wild, 4 randomize sound, 5/6 undo/redo (lit only when available).
+- ☐ Switching back to Steps repaints the step pattern on the buttons.
+- ☐ **Reliability:** hammer buttons/faders for a minute in each mode → the device input never goes dead (LED traffic is batched; see §6).
 
 ## 6. Reliability — no port wedge 🎛
 

@@ -126,18 +126,29 @@ export const COMMANDS = {
   PLAY_STOP: "play-stop",
   NEXT_INSTRUMENT: "next-instrument",
   PREV_INSTRUMENT: "prev-instrument",
+  MODE_STEPS: "mode-steps",
+  MODE_MIXER: "mode-mixer",
+  MODE_PERFORM: "mode-perform",
+  PAGE_PREV: "page-prev",
+  PAGE_NEXT: "page-next",
 };
 
 /**
- * Default control → command map. Uses buttons the sequencer (channel buttons
- * focus1-8/control1-8) and auto-map (knobs/faders) don't claim: the standalone
- * side/arrow buttons. The app layer turns this into command bindings via
- * bindingFor() + registerCommandBinding(); this module stays declarative.
+ * Default control → command map, on the standalone side/arrow buttons (the
+ * 16 channel buttons belong to the performance surface's modes, knobs to
+ * auto-map, faders to the mixer). The app layer turns this into command
+ * bindings via bindingFor() + registerCommandBinding(); this module stays
+ * declarative. See midi/performance-surface.js for the full layout.
  */
 export const DEFAULT_COMMAND_CONTROLS = {
   device: COMMANDS.PLAY_STOP, // top side button
+  mute: COMMANDS.MODE_STEPS, // side buttons select the channel-button mode
+  solo: COMMANDS.MODE_MIXER,
+  recordArm: COMMANDS.MODE_PERFORM,
   up: COMMANDS.PREV_INSTRUMENT, // up arrow
   down: COMMANDS.NEXT_INSTRUMENT, // down arrow
+  left: COMMANDS.PAGE_PREV, // knob pages
+  right: COMMANDS.PAGE_NEXT,
 };
 
 const controlsById = new Map(CONTROLS.map((c) => [c.id, c]));

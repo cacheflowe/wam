@@ -643,6 +643,11 @@ export function createChannelStrip(
       // Keep existing behavior for state restore: unmuting does not overwrite restored volume.
       applyMuteState(v, { restoreOnUnmute: false });
     },
+    /** Live toggle — same path as clicking the Mute button (restores volume on unmute). */
+    toggleMuted: () => {
+      applyMuteState(!muted, { restoreOnUnmute: true });
+      parentEl.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
+    },
     setSoloed: (v) => {
       soloed = !!v;
       syncSoloButton();

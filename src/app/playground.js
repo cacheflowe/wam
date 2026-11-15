@@ -36,6 +36,8 @@ import { focusManager } from "../web-audio/ui/focus-manager.js";
 import { sequencerHardware } from "../web-audio/midi/sequencer-hardware.js";
 import { ledFeedback } from "../web-audio/midi/led-feedback.js";
 import { autoMap } from "../web-audio/midi/auto-map.js";
+import { performanceSurface } from "../web-audio/midi/performance-surface.js";
+import "../web-audio/ui/hardware-map.js";
 import {
   bindingFor,
   COMMANDS,
@@ -346,6 +348,10 @@ export default class PlaygroundApp extends HTMLElement {
     focusManager.start();
     sequencerHardware.start();
     autoMap.start();
+    // Launch Control XL performance layer: fader mixer (slots in row order),
+    // Steps/Mixer/Perform button modes, knob paging, LED state.
+    performanceSurface.setInstrumentsProvider(() => [...this._instruments, ...this._pendingInstruments].map((e) => e.ctrl));
+    performanceSurface.start();
 
     // Make sure raw MIDI and keyboard are translated into normalized
     // control-input/command events even before learn mode is engaged, then
@@ -361,6 +367,8 @@ export default class PlaygroundApp extends HTMLElement {
     registerCommandBinding({ source: "keyboard", key: "arrowup" }, COMMANDS.PREV_INSTRUMENT);
     registerCommandBinding({ source: "keyboard", key: "arrowdown" }, COMMANDS.NEXT_INSTRUMENT);
     registerCommandBinding({ source: "keyboard", key: " " }, COMMANDS.PLAY_STOP);
+    registerCommandBinding({ source: "keyboard", key: "arrowleft" }, COMMANDS.PAGE_PREV);
+    registerCommandBinding({ source: "keyboard", key: "arrowright" }, COMMANDS.PAGE_NEXT);
 
     this._onInstrumentFocus = (e) => {
       const ctrl = e.detail?.controls;
@@ -439,6 +447,7 @@ export default class PlaygroundApp extends HTMLElement {
     this.removeEventListener("controls-change", this._onControlsChange);
     document.removeEventListener("wam-instrument-focus-change", this._onInstrumentFocus);
     document.removeEventListener("wam-command", this._onCommand);
+    performanceSurface.stop();
     sequencerHardware.stop();
     autoMap.stop();
     focusManager.stop();
@@ -571,8 +580,34 @@ export default class PlaygroundApp extends HTMLElement {
     autoMapToggle.type = "checkbox";
     autoMapToggle.checked = autoMap.enabled;
     autoMapToggle.addEventListener("change", () => autoMap.setEnabled(autoMapToggle.checked));
-    autoMapLabel.append(autoMapToggle, "Auto-map device to focused instrument");
+    autoMapLabel.append(autoMapToggle, "Auto-map knobs to focused instrument");
     this._midiPanelEl.appendChild(autoMapLabel);
+
+    // On-screen map of the Launch Control XL layout (clickable; can dock to the bottom).
+    this._hardwareMap = document.createElement("wam-hardware-map");
+    this._hardwareMap.surface = performanceSurface;
+    const dockLabel = document.createElement("label");
+    dockLabel.style.cssText = autoMapLabel.style.cssText;
+    const dockToggle = document.createElement("input");
+    dockToggle.type = "checkbox";
+    const dockKey = "wam_hardware_map_docked";
+    const setDocked = (on) => {
+      dockToggle.checked = on;
+      if (on) {
+        this._hardwareMap.setAttribute("docked", "");
+        document.body.appendChild(this._hardwareMap);
+      } else {
+        this._hardwareMap.removeAttribute("docked");
+        this._midiPanelEl.insertBefore(this._hardwareMap, dockLabel.nextSibling);
+      }
+      try { localStorage.setItem(dockKey, on ? "1" : "0"); } catch {}
+    };
+    dockToggle.addEventListener("change", () => setDocked(dockToggle.checked));
+    dockLabel.append(dockToggle, "Dock hardware map at the bottom of the page");
+    this._midiPanelEl.appendChild(dockLabel);
+    let docked = false;
+    try { docked = localStorage.getItem(dockKey) === "1"; } catch {}
+    setDocked(docked);
 
     this._midiPanelEl.appendChild(document.createElement("wam-midi-monitor"));
     this._drawer.addPanel("midi", this._midiPanelEl, "MIDI");
@@ -880,6 +915,7 @@ export default class PlaygroundApp extends HTMLElement {
     } else {
       this._instruments.push(entry);
     }
+    performanceSurface.requestRefresh();
 
     // Wrapper row
     const row = document.createElement("div");
@@ -932,6 +968,7 @@ export default class PlaygroundApp extends HTMLElement {
     }
     this._instruments = this._instruments.filter((e) => e !== entry);
     this._pendingInstruments = this._pendingInstruments.filter((e) => e !== entry);
+    performanceSurface.requestRefresh();
     if (this._instruments.length === 0 && this._pendingInstruments.length === 0) {
       this._emptyMsg.style.display = "";
     }

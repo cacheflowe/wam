@@ -211,6 +211,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._muteHandle = {
       isMuted: strip.isMuted,
       setMuted: strip.setMuted,
+      toggleMuted: strip.toggleMuted,
       setPreMuteVolume: strip.setPreMuteVolume,
       getVolume: strip.getVolume,
     };
@@ -934,6 +935,84 @@ export class WebAudioControlsBase extends HTMLElement {
   }
 
   /** Update playing indicator on pattern tabs. */
+  // ---- Performance API (hardware / commands). Public, stable surface so the
+  // MIDI layer never reaches into private state. ----
+
+  /** Pattern names this instrument supports (empty if it has no multi-pattern sequencer). */
+  get patternNames() {
+    return this._patterns ? ["A", "B", "C", "D"].filter((n) => this._patterns[n]) : [];
+  }
+
+  /** Name of the pattern currently playing. */
+  get playingPattern() {
+    return this._playingPattern ?? null;
+  }
+
+  /** Name of a pattern waiting for the next bar, or null. */
+  get queuedPattern() {
+    return this._queuedPattern != null ? ["A", "B", "C", "D"][this._queuedPattern] : null;
+  }
+
+  /** Does a pattern have any active steps? */
+  patternHasSteps(name) {
+    return !!this._patterns?.[name]?.steps?.some((s) => s.active);
+  }
+
+  /**
+   * Launch a pattern: it loops alone (chain = [it]) starting at the next bar
+   * boundary — immediately if we're already on one (or stopped). The editor
+   * follows, so step buttons edit what you hear.
+   */
+  launchPattern(name) {
+    const idx = ["A", "B", "C", "D"].indexOf(name);
+    if (idx < 0 || !this._patterns?.[name]) return;
+    this._queuedPattern = idx;
+    if (this._seqPosition % 16 === 0) this._applyQueuedPattern();
+    else this.dispatchEvent(new CustomEvent("pattern-queued", { bubbles: true, detail: { name } }));
+  }
+
+  _applyQueuedPattern() {
+    const idx = this._queuedPattern;
+    this._queuedPattern = null;
+    const name = ["A", "B", "C", "D"][idx];
+    this._chain = [idx];
+    this._chainPosition = 0;
+    this._playingPattern = name;
+    const color = this._defaultColor?.() || "#0f0";
+    this._updateChainBar(color);
+    // Mark the launched tab as the edited one before syncing the grid (see _restoreSequencer).
+    Object.entries(this._patternTabs ?? {}).forEach(([n, tab]) => tab.toggleAttribute("data-active", n === name));
+    this._selectPattern(name);
+    this.dispatchEvent(new CustomEvent("pattern-launched", { bubbles: true, detail: { name } }));
+    this._emitChange();
+  }
+
+  /** Randomize the step pattern (instrument-specific generators). */
+  randomizePattern() {
+    if (typeof this.randomize === "function" && this._seq) this.randomize();
+  }
+
+  /** Channel-strip volume (pre-mute), 0..1. */
+  get volume() {
+    return this._muteHandle?.getVolume() ?? 1;
+  }
+
+  /** Set channel-strip volume through the control event path (respects mute). */
+  setVolume(v) {
+    const slider = this._sliders.volume;
+    if (!slider) return;
+    slider.value = v;
+    slider.dispatchEvent(new CustomEvent("knob-input", { bubbles: true, detail: { param: "volume", value: v } }));
+  }
+
+  get muted() {
+    return !!this._muteHandle?.isMuted();
+  }
+
+  toggleMute() {
+    this._muteHandle?.toggleMuted?.();
+  }
+
   _updateTabPlayingIndicators(color) {
     Object.entries(this._patternTabs).forEach(([n, tab]) => {
       const tabIsPlaying = this._playingPattern === n;
@@ -1026,6 +1105,9 @@ export class WebAudioControlsBase extends HTMLElement {
         }
       }
     }
+
+    // A pattern launched from hardware takes over at the bar boundary.
+    if (this._queuedPattern != null && this._seqPosition % 16 === 0) this._applyQueuedPattern();
 
     // Get active pattern's steps (falls back to the live-edited instrument steps)
     const activePatternName = ['A', 'B', 'C', 'D'][this._chain[this._chainPosition] ?? 0];

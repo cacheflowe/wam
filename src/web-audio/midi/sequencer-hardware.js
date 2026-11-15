@@ -32,6 +32,7 @@ export class SequencerHardware {
     this._seq = null;
     this._playhead = -1;
     this._started = false;
+    this._enabled = true; // false while another button mode owns the 16 buttons
     this._onInput = (e) => this._handleInput(e.detail);
     this._onFocusChange = (e) => this.setSequencer(e.detail?.controls?.sequencer ?? null);
     this._onStepChange = (e) => {
@@ -59,6 +60,22 @@ export class SequencerHardware {
     this._started = false;
   }
 
+  /**
+   * Enable/disable the step mapping. While disabled (another button mode owns
+   * the 16 buttons) it ignores presses and never touches their LEDs; on
+   * re-enable it repaints the focused pattern.
+   */
+  setEnabled(on) {
+    on = !!on;
+    if (on === this._enabled) return;
+    this._enabled = on;
+    if (on) this._paint();
+  }
+
+  get enabled() {
+    return this._enabled;
+  }
+
   /** Point the buttons at a new sequencer (or null to release them). */
   setSequencer(seq) {
     if (seq === this._seq) return;
@@ -69,7 +86,7 @@ export class SequencerHardware {
   }
 
   _handleInput(detail) {
-    if (!this._seq || detail?.kind !== "trigger" || detail.pressed === false) return;
+    if (!this._enabled || !this._seq || detail?.kind !== "trigger" || detail.pressed === false) return;
     const step = this._stepForBinding(detail.binding);
     if (step != null) this._seq.toggleStep(step); // → step-change → repaint
   }
@@ -82,7 +99,8 @@ export class SequencerHardware {
   }
 
   _paint() {
-    if (!this._seq) return;
+    if (!this._enabled) return;
+    if (!this._seq) return this._clear();
     const steps = this._seq.steps;
     for (let i = 0; i < STEP_COUNT; i++) {
       this._out.queueControlLed(STEP_BUTTON_IDS[i], steps[i]?.active ? ACTIVE_COLOR : LED.OFF);
@@ -91,10 +109,15 @@ export class SequencerHardware {
   }
 
   _clear() {
+    if (!this._enabled) return;
     for (let i = 0; i < STEP_COUNT; i++) this._out.queueControlLed(STEP_BUTTON_IDS[i], LED.OFF);
   }
 
   _setPlayhead(i) {
+    if (!this._enabled) {
+      this._playhead = i;
+      return;
+    }
     // Restore the previous playhead cell to its base color.
     if (this._playhead >= 0 && this._playhead !== i && this._playhead < STEP_COUNT) {
       const wasActive = this._seq?.steps[this._playhead]?.active;

@@ -126,12 +126,13 @@ Placement is by `role` (fixed knob per role), then unfilled slots in a row get t
 - [ ] Tag the existing presets (part of Phase 5 curation).
 
 ### Phase 4 — LCXL performance layout
-- [ ] Role-based auto-map (rows by role, paging for overflow); drop volume/pan from knob candidates.
-- [ ] Faders → mixer (slot volumes), independent of focus.
-- [ ] Button modes (Steps / Mixer / Perform) on Mute/Solo/Rec Arm with LED mode indicator.
-- [ ] Perform-mode actions wired to commands (`mutate`, `randomize`, `undo`, `preset-next`, `pattern-select`, …) — keyboard mirrors where sensible.
-- [ ] On-screen hardware map strip.
-- [ ] Update [launch-control-xl-mapping.md](launch-control-xl-mapping.md) Phase 6 items that this supersedes; manual QA in [midi-input-and-led-testing.md](../../testing/midi-input-and-led-testing.md).
+- [x] Role-based auto-map (`layoutKnobs`, fixed `ROLE_SLOTS`, home-row fill, pages); volume/pan/enums excluded; manual-bound knobs removed from the layout.
+- [x] Faders → mixer (slot volumes, row order) with soft takeover; manually-learned faders leave the mixer.
+- [x] Button modes (Steps / Mixer / Perform) on Mute/Solo/Rec Arm with LED mode indicator (`midi/performance-surface.js`); `SequencerHardware.setEnabled` hands the buttons over.
+- [x] Perform actions via Controls' public performance API (`launchPattern` — bar-quantized, `stepPreset`, `mutate`, `undoSound`, …); new commands `mode-*`, `page-prev/next`; keyboard ←/→ page.
+- [x] `<wam-hardware-map>` in the MIDI drawer (optionally docked to the bottom); clickable — modes, pages and the 16 buttons work without a device.
+- [x] Docs: [launch-control-xl.md](../../references/launch-control-xl.md#playground-performance-layout), manual QA §5c in [midi-input-and-led-testing.md](../../testing/midi-input-and-led-testing.md), note in the old LCXL plan.
+- [ ] **On-device verification** (Justin) — everything above was verified in-browser with simulated channel-13 MIDI only.
 
 ### Phase 5 — Curation
 - [ ] Per instrument: jam, mutate, save keepers to JSON, delete weak presets, tag everything.
