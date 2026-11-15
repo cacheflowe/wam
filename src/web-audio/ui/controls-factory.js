@@ -90,6 +90,19 @@ export function injectControlsCSS() {
       background: rgba(255, 255, 255, 0.02);
     }
     .wam-section .wam-title { padding: 0; }
+    .wam-title-lockable { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+    .wam-lock-btn {
+      all: unset;
+      cursor: pointer;
+      font-size: 0.7rem;
+      line-height: 1;
+      opacity: 0.3;
+      filter: grayscale(1);
+      transition: opacity 0.15s;
+    }
+    .wam-lock-btn:hover { opacity: 0.8; }
+    .wam-lock-btn[data-locked] { opacity: 1; filter: none; }
+    .wam-section[data-locked] { border-style: dashed; }
     .wam-section-controls {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));

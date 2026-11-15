@@ -2,6 +2,7 @@ import WebAudioInstrumentBase from "../global/instrument-base.js";
 import "../ui/step-seq.js";
 import { STEP_WEIGHTS } from "../global/scales.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
+import { sliderDefs } from "../global/param-schema.js";
 
 /**
  * WebAudioPercSnare — layered snare drum with tone body, noise snap, and snare buzz.
@@ -142,6 +143,50 @@ export default class WebAudioPercSnare extends WebAudioInstrumentBase {
     },
   };
 
+  /**
+   * Param schema (see global/param-schema.js). Single source of truth for the
+   * UI, serialization, randomize/mutate, and hardware mapping.
+   */
+  static PARAMS = [
+    { param: "toneWave", label: "Shape", type: "enum", options: ["sine", "triangle", "square"],
+      group: "body", role: "wave", priority: 2, rand: { weights: [3, 2, 1] },
+      tooltip: "Tone body waveform." },
+    { param: "clapMode", label: "Clap", type: "bool",
+      group: "body", role: "body", priority: 3, rand: false,
+      tooltip: "Clap mode: multiple staggered noise bursts instead of a single snap." },
+    { param: "toneFreq", label: "Tone", min: 80, max: 500, step: 1,
+      group: "body", role: "pitch", priority: 1, rand: { min: 150, max: 320 },
+      tooltip: "Tone body pitch in Hz. Higher = snappier, lower = thumpier." },
+    { param: "toneSweep", label: "Sweep", min: 0, max: 300, step: 1,
+      group: "body", role: "pitchAmt", priority: 2, rand: { min: 30, max: 150 },
+      tooltip: "Pitch drop amount. More = punchier attack transient." },
+    { param: "toneDecay", label: "T.Decay", min: 0.01, max: 0.3, step: 0.01,
+      group: "body", role: "decay", priority: 2, rand: { min: 0.03, max: 0.15 },
+      tooltip: "Tone body decay time." },
+    { param: "noiseFreq", label: "N.Freq", min: 500, max: 8000, step: 1, scale: "log",
+      group: "filter", role: "cutoff", priority: 1, rand: { min: 900, max: 4000 },
+      tooltip: "Noise highpass filter frequency. Lower = fatter, higher = crackly." },
+    { param: "noiseDecay", label: "N.Decay", min: 0.02, max: 0.5, step: 0.01,
+      group: "amp-env", role: "release", priority: 1, rand: { min: 0.06, max: 0.3 },
+      tooltip: "Noise snap/rattle decay time." },
+    { param: "noiseSweep", label: "N.Swp", min: 0, max: 1, step: 0.01,
+      group: "filter", role: "envAmt", priority: 3, rand: { min: 0, max: 0.6 },
+      tooltip: "Noise filter sweep. Opens then closes for movement." },
+    { param: "noiseMix", label: "Mix", min: 0, max: 1, step: 0.01,
+      group: "body", role: "noise", priority: 1, rand: { min: 0.35, max: 0.85 },
+      tooltip: "Balance between tone body (0) and noise snap (1)." },
+    { param: "buzz", label: "Buzz", min: 0, max: 1, step: 0.01,
+      group: "character", role: "snap", priority: 2, rand: { min: 0, max: 0.45 },
+      tooltip: "Snare wire buzz/rattle amount. Longer sustaining tail." },
+  ];
+
+  /** Cross-param rules applied after randomize/mutate (see sound-design.js). */
+  static constrain(v) {
+    // A long, dark noise tail with heavy buzz turns to wash — keep the crack.
+    if (v.noiseDecay > 0.22 && v.buzz > 0.3) v.buzz = 0.3;
+    return v;
+  }
+
   constructor(ctx, preset = "Default") {
     super(ctx, null);
     this._noiseBuffer = this._buildNoiseBuffer();
@@ -257,67 +302,7 @@ export default class WebAudioPercSnare extends WebAudioInstrumentBase {
 // ---- Controls companion component ----
 
 export class WebAudioPercSnareControls extends WebAudioControlsBase {
-  static SLIDER_DEFS = [
-    {
-      param: "toneFreq",
-      label: "Tone",
-      min: 80,
-      max: 500,
-      step: 1,
-      tooltip: "Tone body pitch in Hz. Higher = snappier, lower = thumpier.",
-    },
-    {
-      param: "toneSweep",
-      label: "Sweep",
-      min: 0,
-      max: 300,
-      step: 1,
-      tooltip: "Pitch drop amount. More = punchier attack transient.",
-    },
-    { param: "toneDecay", label: "T.Decay", min: 0.01, max: 0.3, step: 0.01, tooltip: "Tone body decay time." },
-    {
-      param: "noiseFreq",
-      label: "N.Freq",
-      min: 500,
-      max: 8000,
-      step: 1,
-      scale: "log",
-      tooltip: "Noise highpass filter frequency. Lower = fatter, higher = crackly.",
-    },
-    {
-      param: "noiseDecay",
-      label: "N.Decay",
-      min: 0.02,
-      max: 0.5,
-      step: 0.01,
-      tooltip: "Noise snap/rattle decay time.",
-    },
-    {
-      param: "noiseSweep",
-      label: "N.Swp",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Noise filter sweep. Opens then closes for movement.",
-    },
-    {
-      param: "noiseMix",
-      label: "Mix",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Balance between tone body (0) and noise snap (1).",
-    },
-    {
-      param: "buzz",
-      label: "Buzz",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Snare wire buzz/rattle amount. Longer sustaining tail.",
-    },
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
-  ];
+  static SLIDER_DEFS = sliderDefs(WebAudioPercSnare.PARAMS);
 
   static DEFAULT_PATTERN() {
     return Array.from({ length: 16 }, (_, i) => ({
@@ -358,14 +343,14 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
     this._clapBtn = clapBtn;
     sec.appendChild(clapBtn);
 
-    sec.appendChild(mkSlider({ param: "toneFreq", label: "Tone", min: 80, max: 500, step: 1 }));
-    sec.appendChild(mkSlider({ param: "toneSweep", label: "Sweep", min: 0, max: 300, step: 1 }));
-    sec.appendChild(mkSlider({ param: "toneDecay", label: "T.Decay", min: 0.01, max: 0.3, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "noiseFreq", label: "N.Freq", min: 500, max: 8000, step: 1, scale: "log" }));
-    sec.appendChild(mkSlider({ param: "noiseDecay", label: "N.Decay", min: 0.02, max: 0.5, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "noiseSweep", label: "N.Swp", min: 0, max: 1, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "noiseMix", label: "Mix", min: 0, max: 1, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "buzz", label: "Buzz", min: 0, max: 1, step: 0.01 }));
+    sec.appendChild(mkSlider("toneFreq"));
+    sec.appendChild(mkSlider("toneSweep"));
+    sec.appendChild(mkSlider("toneDecay"));
+    sec.appendChild(mkSlider("noiseFreq"));
+    sec.appendChild(mkSlider("noiseDecay"));
+    sec.appendChild(mkSlider("noiseSweep"));
+    sec.appendChild(mkSlider("noiseMix"));
+    sec.appendChild(mkSlider("buzz"));
     controls.appendChild(el);
 
     // ---- Sequencer ----

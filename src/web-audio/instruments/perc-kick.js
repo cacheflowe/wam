@@ -2,6 +2,7 @@ import WebAudioInstrumentBase from "../global/instrument-base.js";
 import "../ui/step-seq.js";
 import { STEP_WEIGHTS } from "../global/scales.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
+import { sliderDefs } from "../global/param-schema.js";
 
 /**
  * WebAudioPercKick — Enhanced kick drum with pitch sweep, click transient, and drive.
@@ -38,6 +39,38 @@ export default class WebAudioPercKick extends WebAudioInstrumentBase {
       volume: 1,
     },
   };
+
+  /**
+   * Param schema (see global/param-schema.js). Single source of truth for the
+   * UI, serialization, randomize/mutate, and hardware mapping.
+   */
+  static PARAMS = [
+    { param: "startFreq", label: "Start", min: 50, max: 500, step: 1,
+      group: "pitch", role: "pitchAmt", priority: 1, rand: { min: 100, max: 300 },
+      tooltip: "Starting pitch of the pitch sweep." },
+    { param: "endFreq", label: "End", min: 20, max: 200, step: 1,
+      group: "pitch", role: "pitch", priority: 1, rand: { min: 35, max: 70 },
+      tooltip: "Final pitch at end of sweep. Lower = deeper sub." },
+    { param: "sweepTime", label: "Sweep", min: 0.01, max: 0.5, step: 0.01,
+      group: "pitch", role: "pitchDecay", priority: 1, rand: { min: 0.02, max: 0.15 },
+      tooltip: "Duration of the pitch drop." },
+    { param: "decay", label: "Decay", min: 0.05, max: 1.5, step: 0.01,
+      group: "amp-env", role: "decay", priority: 1, rand: { min: 0.2, max: 0.8 },
+      tooltip: "Body decay time. Longer = sustaining thump." },
+    { param: "click", label: "Click", min: 0, max: 1, step: 0.01,
+      group: "body", role: "click", priority: 2, rand: { min: 0, max: 0.6 },
+      tooltip: "Transient click amount. Adds 909-style attack definition." },
+    { param: "drive", label: "Drive", min: 0, max: 1, step: 0.01,
+      group: "character", role: "drive", priority: 2, rand: { min: 0, max: 0.5 },
+      tooltip: "Saturation/distortion amount. Adds grit and presence." },
+  ];
+
+  /** Cross-param rules applied after randomize/mutate (see sound-design.js). */
+  static constrain(v) {
+    // A kick needs a downward sweep: keep the start well above the end pitch.
+    if (v.startFreq < v.endFreq * 1.5) v.startFreq = Math.min(500, Math.round(v.endFreq * 2));
+    return v;
+  }
 
   constructor(ctx, preset = "Default") {
     super(ctx, null);
@@ -146,43 +179,7 @@ export default class WebAudioPercKick extends WebAudioInstrumentBase {
 // ---- Controls companion component ----
 
 export class WebAudioPercKickControls extends WebAudioControlsBase {
-  static SLIDER_DEFS = [
-    { param: "startFreq", label: "Start", min: 50, max: 500, step: 1, tooltip: "Starting pitch of the pitch sweep." },
-    {
-      param: "endFreq",
-      label: "End",
-      min: 20,
-      max: 200,
-      step: 1,
-      tooltip: "Final pitch at end of sweep. Lower = deeper sub.",
-    },
-    { param: "sweepTime", label: "Sweep", min: 0.01, max: 0.5, step: 0.01, tooltip: "Duration of the pitch drop." },
-    {
-      param: "decay",
-      label: "Decay",
-      min: 0.05,
-      max: 1.5,
-      step: 0.01,
-      tooltip: "Body decay time. Longer = sustaining thump.",
-    },
-    {
-      param: "click",
-      label: "Click",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Transient click amount. Adds 909-style attack definition.",
-    },
-    {
-      param: "drive",
-      label: "Drive",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Saturation/distortion amount. Adds grit and presence.",
-    },
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
-  ];
+  static SLIDER_DEFS = sliderDefs(WebAudioPercKick.PARAMS);
 
   static DEFAULT_PATTERN() {
     return Array.from({ length: 16 }, (_, i) => ({
@@ -212,12 +209,12 @@ export class WebAudioPercKickControls extends WebAudioControlsBase {
 
     const { el, controls: sec } = createSection("Kick");
 
-    sec.appendChild(mkSlider({ param: "startFreq", label: "Start", min: 50, max: 500, step: 1 }));
-    sec.appendChild(mkSlider({ param: "endFreq", label: "End", min: 20, max: 200, step: 1 }));
-    sec.appendChild(mkSlider({ param: "sweepTime", label: "Sweep", min: 0.01, max: 0.5, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.05, max: 1.5, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "click", label: "Click", min: 0, max: 1, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "drive", label: "Drive", min: 0, max: 1, step: 0.01 }));
+    sec.appendChild(mkSlider("startFreq"));
+    sec.appendChild(mkSlider("endFreq"));
+    sec.appendChild(mkSlider("sweepTime"));
+    sec.appendChild(mkSlider("decay"));
+    sec.appendChild(mkSlider("click"));
+    sec.appendChild(mkSlider("drive"));
     controls.appendChild(el);
 
     // ---- Sequencer ----

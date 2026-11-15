@@ -4,6 +4,7 @@ import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/sca
 import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
 import { applyADSR, applyFilterEnv } from "../global/dsp/envelope.js";
 import { createUnisonOscBank } from "../global/dsp/oscillator.js";
+import { sliderDefs } from "../global/param-schema.js";
 
 export default class WebAudioSynthMono extends WebAudioInstrumentBase {
   static PRESETS = {
@@ -286,6 +287,113 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
     },
   };
 
+  /**
+   * Param schema (see global/param-schema.js). Single source of truth for the
+   * UI, serialization, randomize/mutate, and hardware mapping. `rand` ranges
+   * are the musically useful sub-ranges a randomize/mutate may land in.
+   */
+  static PARAMS = [
+    // ---- Tone ----
+    { param: "oscType", label: "Shape", type: "enum", options: ["sawtooth", "square", "triangle", "sine"],
+      group: "osc", role: "wave", priority: 1, rand: { weights: [4, 3, 2, 1] },
+      tooltip: "Oscillator waveform." },
+    { param: "detune", label: "Detune", min: -50, max: 50, step: 1,
+      group: "pitch", role: "pitch", priority: 3, rand: false,
+      tooltip: "Global pitch offset in cents." },
+    { param: "unisonVoices", label: "Voices", min: 1, max: 8, step: 1,
+      group: "osc", role: "unison", priority: 3, rand: { min: 1, max: 4 },
+      tooltip: "Unison voice count (1 = off)." },
+    { param: "unisonDetune", label: "Spread", min: 0, max: 100, step: 1,
+      group: "osc", role: "detune", priority: 2, rand: { min: 0, max: 30 },
+      tooltip: "Unison detune spread in cents across all voices." },
+    { param: "subGain", label: "Sub", min: 0, max: 1, step: 0.01,
+      group: "osc", role: "level", priority: 2, rand: { min: 0, max: 0.5 },
+      tooltip: "Sub-octave oscillator level." },
+    { param: "portamento", label: "Glide", min: 0, max: 2, step: 0.01,
+      group: "pitch", role: "glide", priority: 2, rand: { min: 0, max: 0.15, bias: 2 },
+      tooltip: "Portamento glide time in seconds." },
+    // ---- Envelope ----
+    { param: "attack", label: "Attack", min: 0.001, max: 4, step: 0.001,
+      group: "amp-env", role: "attack", priority: 1, rand: { min: 0.001, max: 0.4, bias: 2 },
+      tooltip: "Amplitude envelope attack time." },
+    { param: "decay", label: "Decay", min: 0.01, max: 4, step: 0.01,
+      group: "amp-env", role: "decay", priority: 1, rand: { min: 0.05, max: 1.2, bias: 1.5 },
+      tooltip: "Amplitude envelope decay time." },
+    { param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01,
+      group: "amp-env", role: "sustain", priority: 1, rand: { min: 0.1, max: 0.9 },
+      tooltip: "Amplitude sustain level during held notes." },
+    { param: "release", label: "Release", min: 0.01, max: 5, step: 0.01,
+      group: "amp-env", role: "release", priority: 2, rand: { min: 0.05, max: 1.5, bias: 1.5 },
+      tooltip: "Amplitude release time." },
+    { param: "gate", label: "Gate", min: 0.1, max: 16, step: 0.05, scale: "log",
+      group: "seq", role: "gate", priority: 2, rand: false,
+      tooltip: "Sequenced note length, in steps. Long attacks need a long gate to bloom." },
+    // ---- Filter ----
+    { param: "filterType", label: "Type", type: "enum", options: ["lowpass", "highpass", "bandpass", "notch"],
+      group: "filter", role: "filterType", priority: 2, rand: { weights: [8, 1, 2, 0] },
+      tooltip: "Filter mode." },
+    { param: "filterFreq", label: "Cutoff", min: 20, max: 12000, step: 1, scale: "log",
+      group: "filter", role: "cutoff", priority: 1, rand: { min: 150, max: 5000 },
+      tooltip: "Filter base cutoff frequency." },
+    { param: "filterQ", label: "Res", min: 0.5, max: 20, step: 0.1,
+      group: "filter", role: "resonance", priority: 1, rand: { min: 0.7, max: 12 },
+      tooltip: "Filter resonance." },
+    { param: "filterEnvAmt", label: "Env Amt", min: -6, max: 6, step: 0.1,
+      group: "filter", role: "envAmt", priority: 1, rand: { min: -1, max: 4 },
+      tooltip: "Filter envelope depth in octaves. Negative = downward sweep." },
+    // ---- Filter envelope ----
+    { param: "filterAttack", label: "F.Atk", min: 0.001, max: 4, step: 0.001,
+      group: "filter-env", role: "filterAttack", priority: 2, rand: { min: 0.001, max: 0.3, bias: 2 },
+      tooltip: "Filter envelope attack time." },
+    { param: "filterDecay", label: "F.Dec", min: 0.01, max: 4, step: 0.01,
+      group: "filter-env", role: "filterDecay", priority: 1, rand: { min: 0.05, max: 1.2, bias: 1.5 },
+      tooltip: "Filter envelope decay time." },
+    { param: "filterSustain", label: "F.Sus", min: 0, max: 1, step: 0.01,
+      group: "filter-env", role: "filterSustain", priority: 2, rand: { min: 0, max: 0.6 },
+      tooltip: "Filter sustain level (0 = full decay, 1 = stay at peak)." },
+    { param: "filterRelease", label: "F.Rel", min: 0.01, max: 5, step: 0.01,
+      group: "filter-env", role: "filterRelease", priority: 3, rand: { min: 0.05, max: 1.5, bias: 1.5 },
+      tooltip: "Filter envelope release time." },
+    // ---- LFO ----
+    { param: "lfoRate", label: "LFO Rate", min: 0.01, max: 20, step: 0.01,
+      group: "mod", role: "lfoRate", priority: 2, rand: { min: 0.1, max: 8, bias: 1.5 },
+      tooltip: "LFO speed in Hz." },
+    { param: "lfoDepth", label: "LFO Depth", min: 0, max: 1, step: 0.01,
+      group: "mod", role: "lfoDepth", priority: 2, rand: { min: 0, max: 0.3, bias: 1.5 },
+      tooltip: "LFO modulation depth (0 = off)." },
+    { param: "lfoShape", label: "Shape", type: "enum", options: ["sine", "triangle", "square", "sawtooth"],
+      group: "mod", role: "lfoShape", priority: 3, rand: { weights: [3, 2, 1, 1] },
+      tooltip: "LFO waveform." },
+    { param: "lfoDest", label: "Dest", type: "enum", options: ["filter", "pitch", "amp"],
+      group: "mod", role: "lfoTarget", priority: 3, rand: { weights: [3, 1, 1] },
+      tooltip: "What the LFO modulates." },
+    // ---- Pitch / sequencing (part-level: excluded from randomize) ----
+    { param: "octaveOffset", label: "Octave", min: -2, max: 2, step: 1,
+      group: "pitch", role: "octave", priority: 3, rand: false,
+      tooltip: "Shift all notes up or down by octaves." },
+    { param: "octaveJumpProb", label: "Oct Jump", min: 0, max: 1, step: 0.01,
+      group: "seq", role: "octaveJump", priority: 3, rand: false,
+      tooltip: "Probability of randomly jumping an octave on each note." },
+  ];
+
+  /**
+   * Cross-param rules applied after randomize/mutate (see sound-design.js).
+   * Keeps rolled sounds from landing in harsh, silent, or seasick corners.
+   */
+  static constrain(v) {
+    // Pitch LFO depth is ×1200 cents — keep it to a vibrato, not a siren.
+    if (v.lfoDest === "pitch" && v.lfoDepth > 0.05) v.lfoDepth = 0.05;
+    // A highpass with a high cutoff on a mono bass/lead is near-silent.
+    if (v.filterType === "highpass" && v.filterFreq > 1500) v.filterFreq = 1500;
+    // Bandpass at high Q gets whistly and loud.
+    if (v.filterType === "bandpass" && v.filterQ > 6) v.filterQ = 6;
+    // A closed lowpass with little envelope sweep is mud.
+    if (v.filterType === "lowpass" && v.filterFreq < 300 && v.filterEnvAmt < 1) v.filterEnvAmt = 1;
+    // Spread does nothing on a single voice; keep it at 0 so the knob reads honestly.
+    if (v.unisonVoices <= 1) v.unisonDetune = 0;
+    return v;
+  }
+
   constructor(ctx, preset = "Default") {
     super(ctx, null);
     this._lastFreq = 0;
@@ -468,80 +576,7 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
 // ---- Controls companion component ----
 
 export class WebAudioSynthMonoControls extends WebAudioControlsBase {
-  static SLIDER_DEFS = [
-    { param: "attack", label: "Attack", min: 0.001, max: 4, step: 0.001, tooltip: "Amplitude envelope attack time." },
-    { param: "decay", label: "Decay", min: 0.01, max: 4, step: 0.01, tooltip: "Amplitude envelope decay time." },
-    {
-      param: "sustain",
-      label: "Sustain",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Amplitude sustain level during held notes.",
-    },
-    { param: "release", label: "Release", min: 0.01, max: 5, step: 0.01, tooltip: "Amplitude release time." },
-    { param: "gate", label: "Gate", min: 0.1, max: 16, step: 0.05, scale: "log", tooltip: "Sequenced note length, in steps. Long attacks need a long gate to bloom." },
-    {
-      param: "filterFreq",
-      label: "Cutoff",
-      min: 20,
-      max: 12000,
-      step: 1,
-      scale: "log",
-      tooltip: "Filter base cutoff frequency.",
-    },
-    { param: "filterQ", label: "Res", min: 0.5, max: 20, step: 0.1, tooltip: "Filter resonance." },
-    {
-      param: "filterEnvAmt",
-      label: "Env Amt",
-      min: -6,
-      max: 6,
-      step: 0.1,
-      tooltip: "Filter envelope depth in octaves. Negative = downward sweep.",
-    },
-    { param: "filterAttack", label: "F.Atk", min: 0.001, max: 4, step: 0.001, tooltip: "Filter envelope attack time." },
-    { param: "filterDecay", label: "F.Dec", min: 0.01, max: 4, step: 0.01, tooltip: "Filter envelope decay time." },
-    {
-      param: "filterSustain",
-      label: "F.Sus",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Filter sustain level (0 = full decay, 1 = stay at peak).",
-    },
-    { param: "filterRelease", label: "F.Rel", min: 0.01, max: 5, step: 0.01, tooltip: "Filter envelope release time." },
-    { param: "detune", label: "Detune", min: -50, max: 50, step: 1, tooltip: "Global pitch offset in cents." },
-    { param: "unisonVoices", label: "Voices", min: 1, max: 8, step: 1, tooltip: "Unison voice count (1 = off)." },
-    {
-      param: "unisonDetune",
-      label: "Spread",
-      min: 0,
-      max: 100,
-      step: 1,
-      tooltip: "Unison detune spread in cents across all voices.",
-    },
-    { param: "subGain", label: "Sub", min: 0, max: 1, step: 0.01, tooltip: "Sub-octave oscillator level." },
-    { param: "portamento", label: "Glide", min: 0, max: 2, step: 0.01, tooltip: "Portamento glide time in seconds." },
-    { param: "lfoRate", label: "LFO Rate", min: 0.01, max: 20, step: 0.01, tooltip: "LFO speed in Hz." },
-    { param: "lfoDepth", label: "LFO Depth", min: 0, max: 1, step: 0.01, tooltip: "LFO modulation depth (0 = off)." },
-    {
-      param: "octaveOffset",
-      label: "Octave",
-      min: -2,
-      max: 2,
-      step: 1,
-      tooltip: "Shift all notes up or down by octaves.",
-    },
-    {
-      param: "octaveJumpProb",
-      label: "Oct Jump",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Probability of randomly jumping an octave on each note.",
-    },
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
-  ];
+  static SLIDER_DEFS = sliderDefs(WebAudioSynthMono.PARAMS);
 
   static DEFAULT_PATTERN() {
     return Array.from({ length: 16 }, (_, i) => ({
@@ -582,52 +617,52 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
 
     this._makeWaveSelect(["sawtooth", "square", "triangle", "sine"], toneCtrl);
-    toneCtrl.appendChild(mkSlider({ param: "detune", label: "Detune", min: -50, max: 50, step: 1 }));
-    toneCtrl.appendChild(mkSlider({ param: "unisonVoices", label: "Voices", min: 1, max: 8, step: 1 }));
-    toneCtrl.appendChild(mkSlider({ param: "unisonDetune", label: "Spread", min: 0, max: 100, step: 1 }));
-    toneCtrl.appendChild(mkSlider({ param: "subGain", label: "Sub", min: 0, max: 1, step: 0.01 }));
-    toneCtrl.appendChild(mkSlider({ param: "portamento", label: "Glide", min: 0, max: 2, step: 0.01 }));
+    toneCtrl.appendChild(mkSlider("detune"));
+    toneCtrl.appendChild(mkSlider("unisonVoices"));
+    toneCtrl.appendChild(mkSlider("unisonDetune"));
+    toneCtrl.appendChild(mkSlider("subGain"));
+    toneCtrl.appendChild(mkSlider("portamento"));
     controls.appendChild(toneEl);
 
     // ---- Envelope ----
     const { el: envEl, controls: envCtrl } = createSection("Envelope");
-    envCtrl.appendChild(mkSlider({ param: "attack", label: "Attack", min: 0.001, max: 4, step: 0.001 }));
-    envCtrl.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.01, max: 4, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "release", label: "Release", min: 0.01, max: 5, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "gate", label: "Gate", min: 0.1, max: 16, step: 0.05, scale: "log" }));
+    envCtrl.appendChild(mkSlider("attack"));
+    envCtrl.appendChild(mkSlider("decay"));
+    envCtrl.appendChild(mkSlider("sustain"));
+    envCtrl.appendChild(mkSlider("release"));
+    envCtrl.appendChild(mkSlider("gate"));
     controls.appendChild(envEl);
 
     // ---- Filter ----
     const { el: filterEl, controls: filterCtrl } = createSection("Filter");
     filterCtrl.appendChild(this._makeFilterTypeSelect());
     filterCtrl.appendChild(
-      mkSlider({ param: "filterFreq", label: "Cutoff", min: 20, max: 12000, step: 1, scale: "log" }),
+      mkSlider("filterFreq"),
     );
-    filterCtrl.appendChild(mkSlider({ param: "filterQ", label: "Res", min: 0.5, max: 20, step: 0.1 }));
-    filterCtrl.appendChild(mkSlider({ param: "filterEnvAmt", label: "Env Amt", min: -6, max: 6, step: 0.1 }));
+    filterCtrl.appendChild(mkSlider("filterQ"));
+    filterCtrl.appendChild(mkSlider("filterEnvAmt"));
     controls.appendChild(filterEl);
 
     // ---- Filter Envelope ----
     const { el: fenvEl, controls: fenvCtrl } = createSection("Filter Env");
-    fenvCtrl.appendChild(mkSlider({ param: "filterAttack", label: "F.Atk", min: 0.001, max: 4, step: 0.001 }));
-    fenvCtrl.appendChild(mkSlider({ param: "filterDecay", label: "F.Dec", min: 0.01, max: 4, step: 0.01 }));
-    fenvCtrl.appendChild(mkSlider({ param: "filterSustain", label: "F.Sus", min: 0, max: 1, step: 0.01 }));
-    fenvCtrl.appendChild(mkSlider({ param: "filterRelease", label: "F.Rel", min: 0.01, max: 5, step: 0.01 }));
+    fenvCtrl.appendChild(mkSlider("filterAttack"));
+    fenvCtrl.appendChild(mkSlider("filterDecay"));
+    fenvCtrl.appendChild(mkSlider("filterSustain"));
+    fenvCtrl.appendChild(mkSlider("filterRelease"));
     controls.appendChild(fenvEl);
 
     // ---- LFO ----
     const { el: lfoEl, controls: lfoCtrl } = createSection("LFO");
-    lfoCtrl.appendChild(mkSlider({ param: "lfoRate", label: "Rate", min: 0.01, max: 20, step: 0.01 }));
-    lfoCtrl.appendChild(mkSlider({ param: "lfoDepth", label: "Depth", min: 0, max: 1, step: 0.01 }));
+    lfoCtrl.appendChild(mkSlider("lfoRate", { label: "Rate" }));
+    lfoCtrl.appendChild(mkSlider("lfoDepth", { label: "Depth" }));
     lfoCtrl.appendChild(this._makeLfoShapeSelect());
     lfoCtrl.appendChild(this._makeLfoDestSelect());
     controls.appendChild(lfoEl);
 
     // ---- Octave ----
     const { el: octEl, controls: octCtrl } = createSection("Octave");
-    octCtrl.appendChild(mkSlider({ param: "octaveOffset", label: "Offset", min: -2, max: 2, step: 1 }));
-    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0, max: 1, step: 0.01 }));
+    octCtrl.appendChild(mkSlider("octaveOffset", { label: "Offset" }));
+    octCtrl.appendChild(mkSlider("octaveJumpProb", { label: "Jump Prob" }));
     controls.appendChild(octEl);
 
     // ---- Sequencer ----

@@ -332,6 +332,7 @@ export class WebAudioControlsBase extends HTMLElement {
     // seqControls is passed as `expanded` for the step sequencer.
     this._buildPresetSection(this._topControls, instrument);
     this._buildControls(this._topControls, this._seqControls, mkSlider, ctx, options);
+    this._attachSectionLocks(this._topControls);
 
     // Delegated slider-input / knob-input listener
     const handleInput = (e) => {
@@ -1449,6 +1450,54 @@ export class WebAudioControlsBase extends HTMLElement {
     this._syncExtraControls();
   }
 
+  /**
+   * Give each control section that holds randomizable params a lock button.
+   * A locked section's params are passed to randomize/mutate as `locks`, so
+   * you can keep (say) the envelope while rolling the filter.
+   */
+  _attachSectionLocks(root) {
+    const schema = this._paramSchema;
+    if (!schema) return;
+    const randomizable = new Set(schema.filter((d) => d.rand !== false).map((d) => d.param));
+    this._soundLocks ??= new Set();
+    this._lockButtons = [];
+    for (const section of root.querySelectorAll(".wam-section:not([data-fx-section])")) {
+      const params = [
+        ...Object.entries(this._sliders).filter(([, el]) => section.contains(el)).map(([p]) => p),
+        ...Object.entries(this._selects).filter(([, { el }]) => section.contains(el)).map(([p]) => p),
+        ...Object.entries(this._toggles).filter(([, { el }]) => section.contains(el)).map(([p]) => p),
+      ].filter((p) => randomizable.has(p));
+      if (!params.length) continue;
+      const title = section.querySelector(".wam-title");
+      if (!title) continue;
+      const btn = document.createElement("button");
+      btn.className = "wam-lock-btn";
+      btn.type = "button";
+      const paint = () => {
+        const locked = params.every((p) => this._soundLocks.has(p));
+        btn.textContent = locked ? "🔒" : "🔓";
+        btn.title = locked ? "Locked: Rand/Mutate leave this section alone" : "Lock this section from Rand/Mutate";
+        btn.toggleAttribute("data-locked", locked);
+        section.toggleAttribute("data-locked", locked);
+      };
+      btn.addEventListener("click", () => {
+        const lock = !params.every((p) => this._soundLocks.has(p));
+        for (const p of params) lock ? this._soundLocks.add(p) : this._soundLocks.delete(p);
+        paint();
+        this._emitChange();
+      });
+      title.classList.add("wam-title-lockable");
+      title.appendChild(btn);
+      this._lockButtons.push(paint);
+      paint();
+    }
+  }
+
+  /** Repaint lock buttons after locks change programmatically (e.g. fromJSON). */
+  _paintSectionLocks() {
+    for (const paint of this._lockButtons ?? []) paint();
+  }
+
   /** Run a sound change: record undo, compute new values, apply, notify. */
   _changeSound(compute) {
     const Cls = this._instrument.constructor;
@@ -1804,6 +1853,7 @@ export class WebAudioControlsBase extends HTMLElement {
       jamBinding: this._jamBinding ?? null,
       midiParamBindings: { ...this._paramBindings },
       speedMultiplier: this._speedMultiplier,
+      ...(this._soundLocks?.size ? { soundLocks: [...this._soundLocks] } : {}),
       patternParams: this._seq?.getPatternParams(),
       sections: {
         ctrl: !this._topSection?.hasAttribute("data-hide-ctrl"),
@@ -1891,6 +1941,8 @@ export class WebAudioControlsBase extends HTMLElement {
     }
     this._restoreExtra(obj);
     this._restoreSequencer(obj);
+    this._soundLocks = new Set(obj.soundLocks ?? []);
+    this._paintSectionLocks();
     if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
     if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
     if (obj.soloed != null) {

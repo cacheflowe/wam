@@ -2,6 +2,7 @@ import WebAudioInstrumentBase from "../global/instrument-base.js";
 import "../ui/step-seq.js";
 import { STEP_WEIGHTS } from "../global/scales.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
+import { sliderDefs } from "../global/param-schema.js";
 
 /**
  * WebAudioPercHihat — 909-style hi-hat with metallic oscillators + noise.
@@ -30,6 +31,39 @@ export default class WebAudioPercHihat extends WebAudioInstrumentBase {
     Shaker: { tone: 280, metalMix: 0.1, filterFreq: 6000, filterQ: 0.5, decay: 0.12, openDecay: 0.2, volume: 0.7 },
     Metallic: { tone: 360, metalMix: 0.9, filterFreq: 10000, filterQ: 1.5, decay: 0.05, openDecay: 0.4, volume: 0.9 },
   };
+
+  /**
+   * Param schema (see global/param-schema.js). Single source of truth for the
+   * UI, serialization, randomize/mutate, and hardware mapping. Open/closed is
+   * per-step sequencer data, not a sound param.
+   */
+  static PARAMS = [
+    { param: "tone", label: "Tone", min: 150, max: 600, step: 1,
+      group: "body", role: "pitch", priority: 1, rand: { min: 250, max: 450 },
+      tooltip: "Base frequency for metallic oscillators. Tunes the hat's pitch." },
+    { param: "metalMix", label: "Metal", min: 0, max: 1, step: 0.01,
+      group: "body", role: "tone", priority: 1, rand: { min: 0.15, max: 0.8 },
+      tooltip: "Balance between metallic oscillators (1) and noise (0)." },
+    { param: "filterFreq", label: "Freq", min: 2000, max: 16000, step: 1, scale: "log",
+      group: "filter", role: "cutoff", priority: 1, rand: { min: 5500, max: 12000 },
+      tooltip: "Highpass filter frequency. Higher = brighter, thinner." },
+    { param: "filterQ", label: "Q", min: 0.1, max: 5, step: 0.1,
+      group: "filter", role: "resonance", priority: 2, rand: { min: 0.4, max: 1.6 },
+      tooltip: "Filter resonance. Higher = more ringing, focused." },
+    { param: "decay", label: "Closed", min: 0.01, max: 0.2, step: 0.01,
+      group: "amp-env", role: "decay", priority: 1, rand: { min: 0.03, max: 0.1 },
+      tooltip: "Closed hat decay time." },
+    { param: "openDecay", label: "Open", min: 0.05, max: 0.8, step: 0.01,
+      group: "amp-env", role: "release", priority: 2, rand: { min: 0.18, max: 0.45 },
+      tooltip: "Open hat decay time. Open hats are choked by closed hits." },
+  ];
+
+  /** Cross-param rules applied after randomize/mutate (see sound-design.js). */
+  static constrain(v) {
+    // Open hats must ring clearly longer than closed ones.
+    if (v.openDecay < v.decay * 2.5) v.openDecay = Math.min(0.8, Math.round(v.decay * 3 * 100) / 100);
+    return v;
+  }
 
   constructor(ctx, preset = "Default") {
     super(ctx, null);
@@ -129,51 +163,7 @@ export default class WebAudioPercHihat extends WebAudioInstrumentBase {
 // ---- Controls companion component ----
 
 export class WebAudioPercHihatControls extends WebAudioControlsBase {
-  static SLIDER_DEFS = [
-    {
-      param: "tone",
-      label: "Tone",
-      min: 150,
-      max: 600,
-      step: 1,
-      tooltip: "Base frequency for metallic oscillators. Tunes the hat's pitch.",
-    },
-    {
-      param: "metalMix",
-      label: "Metal",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Balance between metallic oscillators (1) and noise (0).",
-    },
-    {
-      param: "filterFreq",
-      label: "Freq",
-      min: 2000,
-      max: 16000,
-      step: 1,
-      scale: "log",
-      tooltip: "Highpass filter frequency. Higher = brighter, thinner.",
-    },
-    {
-      param: "filterQ",
-      label: "Q",
-      min: 0.1,
-      max: 5,
-      step: 0.1,
-      tooltip: "Filter resonance. Higher = more ringing, focused.",
-    },
-    { param: "decay", label: "Closed", min: 0.01, max: 0.2, step: 0.01, tooltip: "Closed hat decay time." },
-    {
-      param: "openDecay",
-      label: "Open",
-      min: 0.05,
-      max: 0.8,
-      step: 0.01,
-      tooltip: "Open hat decay time. Open hats are choked by closed hits.",
-    },
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
-  ];
+  static SLIDER_DEFS = sliderDefs(WebAudioPercHihat.PARAMS);
 
   static DEFAULT_PATTERN() {
     return Array.from({ length: 16 }, (_, i) => ({
@@ -204,12 +194,12 @@ export class WebAudioPercHihatControls extends WebAudioControlsBase {
 
     const { el, controls: sec } = createSection("Hi-Hat");
 
-    sec.appendChild(mkSlider({ param: "tone", label: "Tone", min: 150, max: 600, step: 1 }));
-    sec.appendChild(mkSlider({ param: "metalMix", label: "Metal", min: 0, max: 1, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "filterFreq", label: "Freq", min: 2000, max: 16000, step: 1, scale: "log" }));
-    sec.appendChild(mkSlider({ param: "filterQ", label: "Q", min: 0.1, max: 5, step: 0.1 }));
-    sec.appendChild(mkSlider({ param: "decay", label: "Closed", min: 0.01, max: 0.2, step: 0.01 }));
-    sec.appendChild(mkSlider({ param: "openDecay", label: "Open", min: 0.05, max: 0.8, step: 0.01 }));
+    sec.appendChild(mkSlider("tone"));
+    sec.appendChild(mkSlider("metalMix"));
+    sec.appendChild(mkSlider("filterFreq"));
+    sec.appendChild(mkSlider("filterQ"));
+    sec.appendChild(mkSlider("decay"));
+    sec.appendChild(mkSlider("openDecay"));
     controls.appendChild(el);
 
     // ---- Sequencer ----

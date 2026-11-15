@@ -4,6 +4,7 @@ import { createUnisonOscBank } from "../global/dsp/oscillator.js";
 import "../ui/step-seq.js";
 import { scaleNoteOptions, scaleNotesInRange, buildChordFromScale } from "../global/scales.js";
 import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
+import { sliderDefs } from "../global/param-schema.js";
 
 /**
  * WebAudioSynthPoly — robust polyphonic subtractive synthesizer.
@@ -42,6 +43,168 @@ export default class WebAudioSynthPoly extends WebAudioInstrumentBase {
     { label: "1/8T", beats: 1 / 3 },
     { label: "1/16", beats: 0.25 },
   ];
+
+  /**
+   * Param schema (see global/param-schema.js). Single source of truth for the
+   * UI, serialization, randomize/mutate, and hardware mapping. `rand` ranges
+   * are the musically useful sub-ranges a randomize/mutate may land in.
+   * Waveform option order: saw, square, triangle, sine.
+   */
+  static PARAMS = [
+    // ---- Osc A ----
+    { param: "oscAType", label: "A Wave", type: "enum", options: ["sawtooth", "square", "triangle", "sine"],
+      group: "osc", role: "wave", priority: 1, rand: { weights: [4, 2, 2, 1] },
+      tooltip: "Oscillator A waveform." },
+    { param: "oscASemi", label: "A Semi", min: -24, max: 24, step: 1,
+      group: "osc", role: "pitch", priority: 3, rand: false,
+      tooltip: "Oscillator A pitch offset in semitones." },
+    { param: "oscADetune", label: "A Fine", min: -50, max: 50, step: 1,
+      group: "osc", role: "detune", priority: 3, rand: { min: -10, max: 10 },
+      tooltip: "Oscillator A fine detune in cents." },
+    { param: "oscALevel", label: "A Level", min: 0, max: 1, step: 0.01,
+      group: "osc", role: "level", priority: 3, rand: { min: 0.4, max: 0.8 },
+      tooltip: "Oscillator A mix level." },
+    // ---- Osc B ----
+    { param: "oscBType", label: "B Wave", type: "enum", options: ["sawtooth", "square", "triangle", "sine"],
+      group: "osc", role: "wave", priority: 2, rand: { weights: [4, 2, 2, 1] },
+      tooltip: "Oscillator B waveform." },
+    { param: "oscBSemi", label: "B Semi", min: -24, max: 24, step: 1,
+      group: "osc", role: "pitch", priority: 2, rand: false,
+      tooltip: "Oscillator B pitch offset in semitones." },
+    { param: "oscBDetune", label: "B Fine", min: -50, max: 50, step: 1,
+      group: "osc", role: "detune", priority: 2, rand: { min: -25, max: 25 },
+      tooltip: "Oscillator B fine detune in cents." },
+    { param: "oscBLevel", label: "B Level", min: 0, max: 1, step: 0.01,
+      group: "osc", role: "level", priority: 2, rand: { min: 0, max: 0.7 },
+      tooltip: "Oscillator B mix level." },
+    // ---- Mix ----
+    { param: "subLevel", label: "Sub", min: 0, max: 1, step: 0.01,
+      group: "osc", role: "level", priority: 2, rand: { min: 0, max: 0.5 },
+      tooltip: "Sub oscillator (sine, one octave below) level." },
+    { param: "noiseLevel", label: "Noise", min: 0, max: 1, step: 0.01,
+      group: "osc", role: "noise", priority: 2, rand: { min: 0, max: 0.15, bias: 2 },
+      tooltip: "White-noise level." },
+    { param: "unisonVoices", label: "Unison", min: 1, max: 4, step: 1,
+      group: "osc", role: "unison", priority: 3, rand: { min: 1, max: 3 },
+      tooltip: "Unison voices per oscillator." },
+    { param: "unisonDetune", label: "U.Spread", min: 0, max: 50, step: 1,
+      group: "osc", role: "detune", priority: 2, rand: { min: 0, max: 25 },
+      tooltip: "Unison detune spread in cents." },
+    // ---- Filter ----
+    { param: "filterType", label: "Filter Type", type: "enum", options: ["lowpass", "highpass", "bandpass", "notch"],
+      group: "filter", role: "filterType", priority: 3, rand: { weights: [6, 1, 1, 0] },
+      tooltip: "Filter mode." },
+    { param: "filterFreq", label: "Cutoff", min: 20, max: 16000, step: 1, scale: "log",
+      group: "filter", role: "cutoff", priority: 1, rand: { min: 300, max: 6000 },
+      tooltip: "Filter base cutoff." },
+    { param: "filterQ", label: "Res", min: 0.1, max: 20, step: 0.1,
+      group: "filter", role: "resonance", priority: 1, rand: { min: 0.5, max: 10 },
+      tooltip: "Filter resonance." },
+    { param: "filterEnvAmt", label: "Env Amt", min: -6, max: 6, step: 0.1,
+      group: "filter", role: "envAmt", priority: 1, rand: { min: -1.5, max: 4 },
+      tooltip: "Filter envelope depth in octaves." },
+    { param: "filterKeytrack", label: "Key Trk", min: 0, max: 1, step: 0.01,
+      group: "filter", role: "keytrack", priority: 3, rand: { min: 0, max: 0.7 },
+      tooltip: "Filter cutoff tracking of note pitch." },
+    // ---- Filter envelope ----
+    { param: "filterAttack", label: "F.Atk", min: 0.001, max: 8, step: 0.001,
+      group: "filter-env", role: "filterAttack", priority: 2, rand: { min: 0.001, max: 0.4, bias: 2 },
+      tooltip: "Filter envelope attack." },
+    { param: "filterDecay", label: "F.Dec", min: 0.01, max: 4, step: 0.01,
+      group: "filter-env", role: "filterDecay", priority: 1, rand: { min: 0.05, max: 1.2 },
+      tooltip: "Filter envelope decay." },
+    { param: "filterSustain", label: "F.Sus", min: 0, max: 1, step: 0.01,
+      group: "filter-env", role: "filterSustain", priority: 2, rand: { min: 0, max: 0.8 },
+      tooltip: "Filter envelope sustain." },
+    { param: "filterRelease", label: "F.Rel", min: 0.01, max: 8, step: 0.01,
+      group: "filter-env", role: "filterRelease", priority: 2, rand: { min: 0.05, max: 1.5 },
+      tooltip: "Filter envelope release." },
+    // ---- Amp envelope ----
+    { param: "attack", label: "Attack", min: 0.001, max: 8, step: 0.001,
+      group: "amp-env", role: "attack", priority: 1, rand: { min: 0.001, max: 0.5, bias: 2 },
+      tooltip: "Amplitude attack." },
+    { param: "decay", label: "Decay", min: 0.01, max: 4, step: 0.01,
+      group: "amp-env", role: "decay", priority: 1, rand: { min: 0.05, max: 1.5 },
+      tooltip: "Amplitude decay." },
+    { param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01,
+      group: "amp-env", role: "sustain", priority: 1, rand: { min: 0, max: 1 },
+      tooltip: "Amplitude sustain." },
+    { param: "release", label: "Release", min: 0.01, max: 8, step: 0.01,
+      group: "amp-env", role: "release", priority: 1, rand: { min: 0.05, max: 1.5 },
+      tooltip: "Amplitude release." },
+    { param: "gate", label: "Gate", min: 0.1, max: 16, step: 0.05, scale: "log",
+      group: "amp-env", role: "gate", priority: 2, rand: false,
+      tooltip: "Sequenced note length, in steps. Long attacks need a long gate to bloom." },
+    { param: "glide", label: "Glide", min: 0, max: 2, step: 0.01,
+      group: "pitch", role: "glide", priority: 2, rand: { min: 0, max: 0.1, bias: 2 },
+      tooltip: "Portamento glide time." },
+    // ---- LFO 1 ----
+    { param: "lfo1Sync", label: "L1 Sync", type: "enum", options: [0, 4, 2, 1, 0.5, 1 / 3, 0.25],
+      group: "mod", role: "lfoRate", priority: 3, rand: { weights: [3, 1, 1, 1, 1, 1, 1] },
+      tooltip: "LFO 1 tempo sync (beats per cycle; Free = use Rate)." },
+    { param: "lfo1Rate", label: "L1 Rate", min: 0.01, max: 20, step: 0.01,
+      group: "mod", role: "lfoRate", priority: 2, rand: { min: 0.1, max: 8 },
+      tooltip: "LFO 1 free rate (Hz). Used when Sync = Free." },
+    { param: "lfo1Depth", label: "L1 Depth", min: 0, max: 1, step: 0.01,
+      group: "mod", role: "lfoDepth", priority: 2, rand: { min: 0, max: 0.4, bias: 2 },
+      tooltip: "LFO 1 depth (0 = off)." },
+    { param: "lfo1Shape", label: "L1 Shape", type: "enum", options: ["sawtooth", "square", "triangle", "sine"],
+      group: "mod", role: "lfoShape", priority: 3, rand: { weights: [1, 1, 2, 3] },
+      tooltip: "LFO 1 waveform." },
+    { param: "lfo1Dest", label: "L1 Dest", type: "enum", options: ["off", "filter", "pitch", "amp"],
+      group: "mod", role: "lfoTarget", priority: 3, rand: { weights: [1, 4, 1, 1] },
+      tooltip: "LFO 1 destination." },
+    // ---- LFO 2 ----
+    { param: "lfo2Sync", label: "L2 Sync", type: "enum", options: [0, 4, 2, 1, 0.5, 1 / 3, 0.25],
+      group: "mod", role: "lfoRate", priority: 3, rand: { weights: [3, 1, 1, 1, 1, 1, 1] },
+      tooltip: "LFO 2 tempo sync (beats per cycle; Free = use Rate)." },
+    { param: "lfo2Rate", label: "L2 Rate", min: 0.01, max: 20, step: 0.01,
+      group: "mod", role: "lfoRate", priority: 3, rand: { min: 0.1, max: 8 },
+      tooltip: "LFO 2 free rate (Hz). Used when Sync = Free." },
+    { param: "lfo2Depth", label: "L2 Depth", min: 0, max: 1, step: 0.01,
+      group: "mod", role: "lfoDepth", priority: 3, rand: { min: 0, max: 0.4, bias: 2 },
+      tooltip: "LFO 2 depth (0 = off)." },
+    { param: "lfo2Shape", label: "L2 Shape", type: "enum", options: ["sawtooth", "square", "triangle", "sine"],
+      group: "mod", role: "lfoShape", priority: 3, rand: { weights: [1, 1, 2, 3] },
+      tooltip: "LFO 2 waveform." },
+    { param: "lfo2Dest", label: "L2 Dest", type: "enum", options: ["off", "filter", "pitch", "amp"],
+      group: "mod", role: "lfoTarget", priority: 3, rand: { weights: [2, 1, 2, 1] },
+      tooltip: "LFO 2 destination." },
+    // ---- Voice / sequencing (part-level: excluded from randomize) ----
+    { param: "octaveOffset", label: "Octave", min: -2, max: 2, step: 1,
+      group: "pitch", role: "octave", priority: 3, rand: false,
+      tooltip: "Shift all notes by octaves." },
+    { param: "octaveJumpProb", label: "Oct Jump", min: 0, max: 1, step: 0.01,
+      group: "seq", role: "octaveJump", priority: 3, rand: false,
+      tooltip: "Chance of an octave jump per note." },
+    { param: "voiceLimit", label: "V.Limit", min: 0, max: 16, step: 1,
+      group: "seq", role: "voices", priority: 3, rand: false,
+      tooltip: "Max simultaneous voices (0 = unlimited)." },
+  ];
+
+  /**
+   * Cross-param rules applied after randomize/mutate (see sound-design.js).
+   * Keeps rolled sounds out of harsh, seasick, or silent corners.
+   */
+  static constrain(v) {
+    for (const n of [1, 2]) {
+      // Pitch LFO depth is ×1200 cents — cap at ~±1 semitone of vibrato.
+      if (v[`lfo${n}Dest`] === "pitch" && v[`lfo${n}Depth`] > 0.08) v[`lfo${n}Depth`] = 0.08;
+      // Deep tremolo chops the sound to silence.
+      if (v[`lfo${n}Dest`] === "amp" && v[`lfo${n}Depth`] > 0.5) v[`lfo${n}Depth`] = 0.5;
+    }
+    // A highpass with a high cutoff leaves nothing but fizz.
+    if (v.filterType === "highpass" && v.filterFreq > 1500) v.filterFreq = 1500;
+    // A closed lowpass with little envelope sweep is near-silent mud.
+    if (v.filterType === "lowpass" && v.filterFreq < 400 && v.filterEnvAmt < 1) v.filterEnvAmt = 1;
+    // High resonance + a big upward sweep screams.
+    if (v.filterQ > 12 && v.filterEnvAmt > 3) v.filterEnvAmt = 3;
+    // Keep the oscillators audible.
+    if (v.oscALevel + v.oscBLevel + v.subLevel < 0.4) v.oscALevel = 0.6;
+    // Spread does nothing on a single voice; keep it at 0 so the knob reads honestly.
+    if (v.unisonVoices <= 1) v.unisonDetune = 0;
+    return v;
+  }
 
   static PRESETS = {
     Default: {
@@ -499,40 +662,7 @@ export default class WebAudioSynthPoly extends WebAudioInstrumentBase {
 // ---- Controls companion component ----
 
 export class WebAudioSynthPolyControls extends WebAudioControlsBase {
-  static SLIDER_DEFS = [
-    { param: "oscASemi", label: "A Semi", min: -24, max: 24, step: 1, tooltip: "Oscillator A pitch offset in semitones." },
-    { param: "oscADetune", label: "A Fine", min: -50, max: 50, step: 1, tooltip: "Oscillator A fine detune in cents." },
-    { param: "oscALevel", label: "A Level", min: 0, max: 1, step: 0.01, tooltip: "Oscillator A mix level." },
-    { param: "oscBSemi", label: "B Semi", min: -24, max: 24, step: 1, tooltip: "Oscillator B pitch offset in semitones." },
-    { param: "oscBDetune", label: "B Fine", min: -50, max: 50, step: 1, tooltip: "Oscillator B fine detune in cents." },
-    { param: "oscBLevel", label: "B Level", min: 0, max: 1, step: 0.01, tooltip: "Oscillator B mix level." },
-    { param: "subLevel", label: "Sub", min: 0, max: 1, step: 0.01, tooltip: "Sub oscillator (sine, one octave below) level." },
-    { param: "noiseLevel", label: "Noise", min: 0, max: 1, step: 0.01, tooltip: "White-noise level." },
-    { param: "unisonVoices", label: "Unison", min: 1, max: 4, step: 1, tooltip: "Unison voices per oscillator." },
-    { param: "unisonDetune", label: "U.Spread", min: 0, max: 50, step: 1, tooltip: "Unison detune spread in cents." },
-    { param: "filterFreq", label: "Cutoff", min: 20, max: 16000, step: 1, scale: "log", tooltip: "Filter base cutoff." },
-    { param: "filterQ", label: "Res", min: 0.1, max: 20, step: 0.1, tooltip: "Filter resonance." },
-    { param: "filterEnvAmt", label: "Env Amt", min: -6, max: 6, step: 0.1, tooltip: "Filter envelope depth in octaves." },
-    { param: "filterKeytrack", label: "Key Trk", min: 0, max: 1, step: 0.01, tooltip: "Filter cutoff tracking of note pitch." },
-    { param: "filterAttack", label: "F.Atk", min: 0.001, max: 8, step: 0.001, tooltip: "Filter envelope attack." },
-    { param: "filterDecay", label: "F.Dec", min: 0.01, max: 4, step: 0.01, tooltip: "Filter envelope decay." },
-    { param: "filterSustain", label: "F.Sus", min: 0, max: 1, step: 0.01, tooltip: "Filter envelope sustain." },
-    { param: "filterRelease", label: "F.Rel", min: 0.01, max: 8, step: 0.01, tooltip: "Filter envelope release." },
-    { param: "attack", label: "Attack", min: 0.001, max: 8, step: 0.001, tooltip: "Amplitude attack." },
-    { param: "decay", label: "Decay", min: 0.01, max: 4, step: 0.01, tooltip: "Amplitude decay." },
-    { param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01, tooltip: "Amplitude sustain." },
-    { param: "release", label: "Release", min: 0.01, max: 8, step: 0.01, tooltip: "Amplitude release." },
-    { param: "gate", label: "Gate", min: 0.1, max: 16, step: 0.05, scale: "log", tooltip: "Sequenced note length, in steps. Long attacks need a long gate to bloom." },
-    { param: "glide", label: "Glide", min: 0, max: 2, step: 0.01, tooltip: "Portamento glide time." },
-    { param: "lfo1Rate", label: "L1 Rate", min: 0.01, max: 20, step: 0.01, tooltip: "LFO 1 free rate (Hz). Used when Sync = Free." },
-    { param: "lfo1Depth", label: "L1 Depth", min: 0, max: 1, step: 0.01, tooltip: "LFO 1 depth (0 = off)." },
-    { param: "lfo2Rate", label: "L2 Rate", min: 0.01, max: 20, step: 0.01, tooltip: "LFO 2 free rate (Hz). Used when Sync = Free." },
-    { param: "lfo2Depth", label: "L2 Depth", min: 0, max: 1, step: 0.01, tooltip: "LFO 2 depth (0 = off)." },
-    { param: "octaveOffset", label: "Octave", min: -2, max: 2, step: 1, tooltip: "Shift all notes by octaves." },
-    { param: "octaveJumpProb", label: "Oct Jump", min: 0, max: 1, step: 0.01, tooltip: "Chance of an octave jump per note." },
-    { param: "voiceLimit", label: "V.Limit", min: 0, max: 16, step: 1, tooltip: "Max simultaneous voices (0 = unlimited)." },
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
-  ];
+  static SLIDER_DEFS = sliderDefs(WebAudioSynthPoly.PARAMS);
 
   static DEFAULT_PATTERN() {
     const active = new Set([0, 4, 8, 12]);
@@ -612,25 +742,25 @@ export class WebAudioSynthPolyControls extends WebAudioControlsBase {
     // ---- Osc A ----
     const { el: aEl, controls: aCtrl } = createSection("Osc A");
     aCtrl.appendChild(this._select("Wave", "oscAType", WAVES));
-    aCtrl.appendChild(mkSlider({ param: "oscASemi", label: "Semi", min: -24, max: 24, step: 1 }));
-    aCtrl.appendChild(mkSlider({ param: "oscADetune", label: "Fine", min: -50, max: 50, step: 1 }));
-    aCtrl.appendChild(mkSlider({ param: "oscALevel", label: "Level", min: 0, max: 1, step: 0.01 }));
+    aCtrl.appendChild(mkSlider("oscASemi", { label: "Semi" }));
+    aCtrl.appendChild(mkSlider("oscADetune", { label: "Fine" }));
+    aCtrl.appendChild(mkSlider("oscALevel", { label: "Level" }));
     controls.appendChild(aEl);
 
     // ---- Osc B ----
     const { el: bEl, controls: bCtrl } = createSection("Osc B");
     bCtrl.appendChild(this._select("Wave", "oscBType", WAVES));
-    bCtrl.appendChild(mkSlider({ param: "oscBSemi", label: "Semi", min: -24, max: 24, step: 1 }));
-    bCtrl.appendChild(mkSlider({ param: "oscBDetune", label: "Fine", min: -50, max: 50, step: 1 }));
-    bCtrl.appendChild(mkSlider({ param: "oscBLevel", label: "Level", min: 0, max: 1, step: 0.01 }));
+    bCtrl.appendChild(mkSlider("oscBSemi", { label: "Semi" }));
+    bCtrl.appendChild(mkSlider("oscBDetune", { label: "Fine" }));
+    bCtrl.appendChild(mkSlider("oscBLevel", { label: "Level" }));
     controls.appendChild(bEl);
 
     // ---- Mix ----
     const { el: mixEl, controls: mixCtrl } = createSection("Mix");
-    mixCtrl.appendChild(mkSlider({ param: "subLevel", label: "Sub", min: 0, max: 1, step: 0.01 }));
-    mixCtrl.appendChild(mkSlider({ param: "noiseLevel", label: "Noise", min: 0, max: 1, step: 0.01 }));
-    mixCtrl.appendChild(mkSlider({ param: "unisonVoices", label: "Unison", min: 1, max: 4, step: 1 }));
-    mixCtrl.appendChild(mkSlider({ param: "unisonDetune", label: "Spread", min: 0, max: 50, step: 1 }));
+    mixCtrl.appendChild(mkSlider("subLevel"));
+    mixCtrl.appendChild(mkSlider("noiseLevel"));
+    mixCtrl.appendChild(mkSlider("unisonVoices"));
+    mixCtrl.appendChild(mkSlider("unisonDetune", { label: "Spread" }));
     controls.appendChild(mixEl);
 
     // ---- Filter ----
@@ -643,36 +773,36 @@ export class WebAudioSynthPolyControls extends WebAudioControlsBase {
         ["notch", "Notch"],
       ]),
     );
-    fCtrl.appendChild(mkSlider({ param: "filterFreq", label: "Cutoff", min: 20, max: 16000, step: 1, scale: "log" }));
-    fCtrl.appendChild(mkSlider({ param: "filterQ", label: "Res", min: 0.1, max: 20, step: 0.1 }));
-    fCtrl.appendChild(mkSlider({ param: "filterEnvAmt", label: "Env Amt", min: -6, max: 6, step: 0.1 }));
-    fCtrl.appendChild(mkSlider({ param: "filterKeytrack", label: "Key Trk", min: 0, max: 1, step: 0.01 }));
+    fCtrl.appendChild(mkSlider("filterFreq"));
+    fCtrl.appendChild(mkSlider("filterQ"));
+    fCtrl.appendChild(mkSlider("filterEnvAmt"));
+    fCtrl.appendChild(mkSlider("filterKeytrack"));
     controls.appendChild(fEl);
 
     // ---- Filter Envelope ----
     const { el: feEl, controls: feCtrl } = createSection("Filter Env");
-    feCtrl.appendChild(mkSlider({ param: "filterAttack", label: "F.Atk", min: 0.001, max: 8, step: 0.001 }));
-    feCtrl.appendChild(mkSlider({ param: "filterDecay", label: "F.Dec", min: 0.01, max: 4, step: 0.01 }));
-    feCtrl.appendChild(mkSlider({ param: "filterSustain", label: "F.Sus", min: 0, max: 1, step: 0.01 }));
-    feCtrl.appendChild(mkSlider({ param: "filterRelease", label: "F.Rel", min: 0.01, max: 8, step: 0.01 }));
+    feCtrl.appendChild(mkSlider("filterAttack"));
+    feCtrl.appendChild(mkSlider("filterDecay"));
+    feCtrl.appendChild(mkSlider("filterSustain"));
+    feCtrl.appendChild(mkSlider("filterRelease"));
     controls.appendChild(feEl);
 
     // ---- Amp Envelope ----
     const { el: envEl, controls: envCtrl } = createSection("Envelope");
-    envCtrl.appendChild(mkSlider({ param: "attack", label: "Attack", min: 0.001, max: 8, step: 0.001 }));
-    envCtrl.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.01, max: 4, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "release", label: "Release", min: 0.01, max: 8, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "gate", label: "Gate", min: 0.1, max: 16, step: 0.05, scale: "log" }));
-    envCtrl.appendChild(mkSlider({ param: "glide", label: "Glide", min: 0, max: 2, step: 0.01 }));
+    envCtrl.appendChild(mkSlider("attack"));
+    envCtrl.appendChild(mkSlider("decay"));
+    envCtrl.appendChild(mkSlider("sustain"));
+    envCtrl.appendChild(mkSlider("release"));
+    envCtrl.appendChild(mkSlider("gate"));
+    envCtrl.appendChild(mkSlider("glide"));
     controls.appendChild(envEl);
 
     // ---- LFO 1 & 2 ----
     for (const n of [1, 2]) {
       const { el, controls: lc } = createSection(`LFO ${n}`);
       lc.appendChild(this._select("Sync", `lfo${n}Sync`, SYNC, { parse: parseFloat }));
-      lc.appendChild(mkSlider({ param: `lfo${n}Rate`, label: "Rate", min: 0.01, max: 20, step: 0.01 }));
-      lc.appendChild(mkSlider({ param: `lfo${n}Depth`, label: "Depth", min: 0, max: 1, step: 0.01 }));
+      lc.appendChild(mkSlider(`lfo${n}Rate`, { label: "Rate" }));
+      lc.appendChild(mkSlider(`lfo${n}Depth`, { label: "Depth" }));
       lc.appendChild(this._select("Shape", `lfo${n}Shape`, WAVES));
       lc.appendChild(this._select("Dest", `lfo${n}Dest`, DESTS));
       controls.appendChild(el);
@@ -680,9 +810,9 @@ export class WebAudioSynthPolyControls extends WebAudioControlsBase {
 
     // ---- Voice ----
     const { el: vEl, controls: vCtrl } = createSection("Voice");
-    vCtrl.appendChild(mkSlider({ param: "octaveOffset", label: "Octave", min: -2, max: 2, step: 1 }));
-    vCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump", min: 0, max: 1, step: 0.01 }));
-    vCtrl.appendChild(mkSlider({ param: "voiceLimit", label: "V.Limit", min: 0, max: 16, step: 1 }));
+    vCtrl.appendChild(mkSlider("octaveOffset"));
+    vCtrl.appendChild(mkSlider("octaveJumpProb", { label: "Jump" }));
+    vCtrl.appendChild(mkSlider("voiceLimit"));
     controls.appendChild(vEl);
 
     // ---- Sequencer ----

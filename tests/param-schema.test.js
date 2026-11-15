@@ -8,10 +8,25 @@ import {
   validateParams,
   VOLUME_DEF,
 } from "../src/web-audio/global/param-schema.js";
+import { randomizeInstrument, mutateInstrument, MUTATE_AMOUNTS } from "../src/web-audio/global/sound-design.js";
 import WebAudioSynthAcid, { WebAudioSynthAcidControls } from "../src/web-audio/instruments/synth-acid.js";
+import WebAudioSynthPoly, { WebAudioSynthPolyControls } from "../src/web-audio/instruments/synth-poly.js";
+import WebAudioSynthMono, { WebAudioSynthMonoControls } from "../src/web-audio/instruments/synth-mono.js";
+import WebAudioSynthPad, { WebAudioSynthPadControls } from "../src/web-audio/instruments/synth-pad.js";
+import WebAudioPercKick, { WebAudioPercKickControls } from "../src/web-audio/instruments/perc-kick.js";
+import WebAudioPercSnare, { WebAudioPercSnareControls } from "../src/web-audio/instruments/perc-snare.js";
+import WebAudioPercHihat, { WebAudioPercHihatControls } from "../src/web-audio/instruments/perc-hihat.js";
 
-// Instruments migrated to the schema. Add each one here as it moves over.
-const MIGRATED = [["WebAudioSynthAcid", WebAudioSynthAcid]];
+// Instruments migrated to the schema: [name, Instrument, Controls]. Add each one as it moves over.
+const MIGRATED = [
+  ["WebAudioSynthAcid", WebAudioSynthAcid, WebAudioSynthAcidControls],
+  ["WebAudioSynthPoly", WebAudioSynthPoly, WebAudioSynthPolyControls],
+  ["WebAudioSynthMono", WebAudioSynthMono, WebAudioSynthMonoControls],
+  ["WebAudioSynthPad", WebAudioSynthPad, WebAudioSynthPadControls],
+  ["WebAudioPercKick", WebAudioPercKick, WebAudioPercKickControls],
+  ["WebAudioPercSnare", WebAudioPercSnare, WebAudioPercSnareControls],
+  ["WebAudioPercHihat", WebAudioPercHihat, WebAudioPercHihatControls],
+];
 
 describe("param-schema helpers", () => {
   const lin = { param: "x", min: 0, max: 10, step: 0.5 };
@@ -53,7 +68,32 @@ describe("param-schema helpers", () => {
   });
 });
 
-describe.each(MIGRATED)("%s schema", (name, Cls) => {
+describe.each(MIGRATED)("%s schema", (name, Cls, Controls) => {
+  it("Controls SLIDER_DEFS derive from PARAMS", () => {
+    expect(Controls.SLIDER_DEFS).toEqual(sliderDefs(Cls.PARAMS));
+  });
+
+  it("randomize/mutate stay in rand ranges and never touch rand:false params", () => {
+    const inst = new Cls(new AudioContext());
+    const fixed = Object.fromEntries(Cls.PARAMS.filter((d) => d.rand === false).map((d) => [d.param, inst[d.param]]));
+    for (let i = 0; i < 100; i++) {
+      const v = i % 2 ? mutateInstrument(inst, MUTATE_AMOUNTS.wild) : randomizeInstrument(inst);
+      for (const def of Cls.PARAMS) {
+        if (def.rand === false) {
+          expect(v[def.param], def.param).toEqual(fixed[def.param]);
+          continue;
+        }
+        if ((def.type ?? "number") === "number") {
+          // constrain() may pull a value tighter, never outside the param's own range.
+          expect(v[def.param], def.param).toBeGreaterThanOrEqual(def.min);
+          expect(v[def.param], def.param).toBeLessThanOrEqual(def.max);
+        } else if (def.type === "enum") {
+          expect(def.options, def.param).toContain(v[def.param]);
+        }
+      }
+    }
+  });
+
   it("is valid", () => {
     expect(validateParams(Cls.PARAMS, name)).toEqual([]);
   });
@@ -74,8 +114,3 @@ describe.each(MIGRATED)("%s schema", (name, Cls) => {
   });
 });
 
-describe("acid controls derive from the schema", () => {
-  it("SLIDER_DEFS is volume + the instrument's numeric params", () => {
-    expect(WebAudioSynthAcidControls.SLIDER_DEFS).toEqual(sliderDefs(WebAudioSynthAcid.PARAMS));
-  });
-});

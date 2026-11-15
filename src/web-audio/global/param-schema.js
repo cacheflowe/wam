@@ -42,7 +42,7 @@ export const GROUPS = Object.freeze([
  */
 export const ROLES = Object.freeze([
   // tone
-  "cutoff", "resonance", "envAmt", "drive", "wave", "tone", "noise", "filterType",
+  "cutoff", "resonance", "envAmt", "drive", "wave", "tone", "noise", "filterType", "keytrack",
   // envelopes
   "attack", "decay", "sustain", "release", "gate",
   "filterAttack", "filterDecay", "filterSustain", "filterRelease",
@@ -50,7 +50,7 @@ export const ROLES = Object.freeze([
   "detune", "unison", "lfoRate", "lfoDepth", "lfoShape", "lfoTarget", "lfoLow", "lfoHigh", "lfoPhase", "lfoOn",
   "glide", "octave", "octaveJump", "pitch", "pitchDecay", "pitchAmt",
   // fm / misc
-  "ratio", "index", "feedback", "click", "snap", "body", "level",
+  "ratio", "index", "feedback", "click", "snap", "body", "level", "voices",
 ]);
 
 const ROLE_SET = new Set(ROLES);
