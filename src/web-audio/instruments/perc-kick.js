@@ -35,6 +35,7 @@ export default class WebAudioPercKick extends WebAudioInstrumentBase {
       decay: 0.43,
       click: 0.02,
       drive: 0.6,
+      volume: 1,
     },
   };
 

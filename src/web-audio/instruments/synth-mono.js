@@ -314,6 +314,7 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
     this.lfoDest = "filter";
     this.octaveOffset = 0;
     this.octaveJumpProb = 0;
+    this.gate = 1; // note length in steps (sequencer)
     this.applyPreset(preset);
   }
 
@@ -479,6 +480,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
       tooltip: "Amplitude sustain level during held notes.",
     },
     { param: "release", label: "Release", min: 0.01, max: 5, step: 0.01, tooltip: "Amplitude release time." },
+    { param: "gate", label: "Gate", min: 0.1, max: 16, step: 0.05, scale: "log", tooltip: "Sequenced note length, in steps. Long attacks need a long gate to bloom." },
     {
       param: "filterFreq",
       label: "Cutoff",
@@ -593,6 +595,7 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     envCtrl.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.01, max: 4, step: 0.01 }));
     envCtrl.appendChild(mkSlider({ param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01 }));
     envCtrl.appendChild(mkSlider({ param: "release", label: "Release", min: 0.01, max: 5, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "gate", label: "Gate", min: 0.1, max: 16, step: 0.05, scale: "log" }));
     controls.appendChild(envEl);
 
     // ---- Filter ----

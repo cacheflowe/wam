@@ -208,6 +208,7 @@ export default class WebAudioSynthPad extends WebAudioInstrumentBase {
     this.velToFilter = 0;
     this.octaveOffset = 0;
     this.octaveJumpProb = 0;
+    this.gate = 4; // note length in steps (sequencer)
     // Chord context for sequenced steps (mirrored from Controls on change)
     this._scaleName = "Minor";
     this._chordSize = 3;
@@ -375,6 +376,7 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
       tooltip: "Amplitude sustain level during held notes.",
     },
     { param: "release", label: "Release", min: 0.01, max: 10, step: 0.01, tooltip: "Amplitude release time." },
+    { param: "gate", label: "Gate", min: 0.1, max: 16, step: 0.05, scale: "log", tooltip: "Sequenced note length, in steps. Long attacks need a long gate to bloom." },
     {
       param: "filterFreq",
       label: "Cutoff",
@@ -500,6 +502,7 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     envCtrl.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.01, max: 2, step: 0.01 }));
     envCtrl.appendChild(mkSlider({ param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01 }));
     envCtrl.appendChild(mkSlider({ param: "release", label: "Release", min: 0.01, max: 10, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "gate", label: "Gate", min: 0.1, max: 16, step: 0.05, scale: "log" }));
     controls.appendChild(envEl);
 
     // ---- Filter ----

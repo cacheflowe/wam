@@ -77,7 +77,8 @@ Common per-voice DSP is factored into standalone functions that **schedule on ex
 
 | File | Export | Used by | Purpose |
 |---|---|---|---|
-| `dsp/envelope.js` | `applyADSR` | mono, pad, poly | Linear ADSR contour on a VCA gain param. |
+| `dsp/envelope.js` | `scheduleEnvelope` | acid (VCA), via wrappers below | Gated A→D→S→R core, linear or exponential decay/release. If note-off lands mid-attack/decay, releases from the level actually reached. |
+| `dsp/envelope.js` | `applyADSR` | mono, pad, poly, FM (mod env) | Linear ADSR contour on a VCA gain param. |
 | `dsp/envelope.js` | `applyFilterEnv` | mono, poly | Octave-based ADSR filter sweep (`base·2^envAmt`). |
 | `dsp/oscillator.js` | `createUnisonOscBank` | mono, poly | Detuned unison oscillators with optional portamento glide. |
 | `dsp/distortion.js` | `makeSoftClipCurve` | acid, 808 | Soft-clip waveshaper curve. |
@@ -85,6 +86,8 @@ Common per-voice DSP is factored into standalone functions that **schedule on ex
 `WebAudioSynthPoly` (the flagship subtractive synth) is built entirely on these primitives — it's the proof that the foundation supports new instruments.
 
 These are intentionally not forced onto every synth: acid's unison (per-voice gain + cleanup), pad's shared-filter envelope, and FM's exponential operator envelopes are genuinely distinct and stay bespoke. The primitives are also the foundation for future synths.
+
+**Gated envelopes & note length:** never schedule attack/decay ramps that end after note-off. Web Audio sorts events by time and a ramp starts from the *previous* event, so a note shorter than attack+decay used to sit silent, jump at note-off, release, then swell back up. `scheduleEnvelope` only schedules segments that occur before `releaseAt`; [tests/envelope.test.js](tests/envelope.test.js) evaluates the timeline to prove it. Note length on sequenced notes comes from the instrument's `gate` param (steps; mono/poly default 1, pad 4), applied in `_triggerRatcheted` — instruments without `gate` are unaffected.
 
 **Regression guard:** [tests/synth-dsp-snapshot.test.js](tests/synth-dsp-snapshot.test.js) records each synth's exact `trigger()` automation (via [tests/helpers/recording-context.js](tests/helpers/recording-context.js)) so any change to the scheduled sound shows up as a snapshot diff. The refactor above is byte-identical against these snapshots.
 

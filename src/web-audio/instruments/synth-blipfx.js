@@ -200,6 +200,7 @@ export default class WebAudioSynthBlipFX extends WebAudioInstrumentBase {
       hpfFreq: 80,
       lpfResonance: 1,
       shape: 4,
+      volume: 0.55,
     },
   };
 

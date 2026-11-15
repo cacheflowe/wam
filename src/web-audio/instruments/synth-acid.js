@@ -5,6 +5,7 @@ import WebAudioInstrumentBase from "../global/instrument-base.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 import { createCtrl } from "../ui/controls-factory.js";
 import { makeSoftClipCurve } from "../global/dsp/distortion.js";
+import { scheduleEnvelope } from "../global/dsp/envelope.js";
 
 /**
  * WebAudioSynthAcid — TB-303-style monophonic acid bass synthesizer.
@@ -215,10 +216,19 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
     const vel = accent ? 1.0 : 0.65;
     const hold = stepDurSec * 0.7;
     const release = 0.05;
-    vca.gain.setValueAtTime(0.0001, atTime);
-    vca.gain.linearRampToValueAtTime(vel, atTime + this.attack);
-    vca.gain.setValueAtTime(vel, atTime + hold);
-    vca.gain.exponentialRampToValueAtTime(0.0001, atTime + hold + release);
+    // Attack → hold → release. If the attack outlasts the hold, the release
+    // starts from wherever the attack got to (see scheduleEnvelope).
+    scheduleEnvelope(vca.gain, {
+      start: atTime,
+      releaseAt: atTime + hold,
+      from: 0.0001,
+      peak: vel,
+      sustain: vel,
+      attack: this.attack,
+      decay: 0,
+      release,
+      curve: "exponential",
+    });
 
     // Create oscillator(s) — unison voices with symmetric detune spread
     const numVoices = Math.max(1, Math.round(this.unisonVoices));

@@ -301,6 +301,7 @@ export default class WebAudioSynthPoly extends WebAudioInstrumentBase {
     this.voiceLimit = 12;
     this.octaveOffset = 0;
     this.octaveJumpProb = 0;
+    this.gate = 1; // note length in steps (sequencer)
 
     this.applyPreset(preset);
   }
@@ -521,6 +522,7 @@ export class WebAudioSynthPolyControls extends WebAudioControlsBase {
     { param: "decay", label: "Decay", min: 0.01, max: 4, step: 0.01, tooltip: "Amplitude decay." },
     { param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01, tooltip: "Amplitude sustain." },
     { param: "release", label: "Release", min: 0.01, max: 8, step: 0.01, tooltip: "Amplitude release." },
+    { param: "gate", label: "Gate", min: 0.1, max: 16, step: 0.05, scale: "log", tooltip: "Sequenced note length, in steps. Long attacks need a long gate to bloom." },
     { param: "glide", label: "Glide", min: 0, max: 2, step: 0.01, tooltip: "Portamento glide time." },
     { param: "lfo1Rate", label: "L1 Rate", min: 0.01, max: 20, step: 0.01, tooltip: "LFO 1 free rate (Hz). Used when Sync = Free." },
     { param: "lfo1Depth", label: "L1 Depth", min: 0, max: 1, step: 0.01, tooltip: "LFO 1 depth (0 = off)." },
@@ -661,6 +663,7 @@ export class WebAudioSynthPolyControls extends WebAudioControlsBase {
     envCtrl.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.01, max: 4, step: 0.01 }));
     envCtrl.appendChild(mkSlider({ param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01 }));
     envCtrl.appendChild(mkSlider({ param: "release", label: "Release", min: 0.01, max: 8, step: 0.01 }));
+    envCtrl.appendChild(mkSlider({ param: "gate", label: "Gate", min: 0.1, max: 16, step: 0.05, scale: "log" }));
     envCtrl.appendChild(mkSlider({ param: "glide", label: "Glide", min: 0, max: 2, step: 0.01 }));
     controls.appendChild(envEl);
 

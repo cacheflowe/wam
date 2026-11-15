@@ -91,14 +91,17 @@ export default class WebAudioInstrumentBase extends EventTarget {
    * @param {(time: number, dur: number, i: number) => void} hit - Called per subdivision.
    */
   _triggerRatcheted(s, subTime, subStepDur, hit) {
+    // Instruments with a `gate` param (note length in steps) hold notes for
+    // gate × the (sub)step; others keep the plain step length.
+    const gate = this.gate ?? 1;
     const ratchet = s.ratchet ?? 1;
     if (ratchet > 1) {
       const ratchetDuration = subStepDur / ratchet;
       for (let i = 0; i < ratchet; i++) {
-        hit(subTime + i * ratchetDuration, ratchetDuration * 0.9, i);
+        hit(subTime + i * ratchetDuration, ratchetDuration * 0.9 * gate, i);
       }
     } else {
-      hit(subTime, subStepDur, 0);
+      hit(subTime, subStepDur * gate, 0);
     }
   }
 }
