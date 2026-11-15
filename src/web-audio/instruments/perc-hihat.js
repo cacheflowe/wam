@@ -3,6 +3,8 @@ import "../ui/step-seq.js";
 import { STEP_WEIGHTS } from "../global/scales.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 import { sliderDefs } from "../global/param-schema.js";
+import presetData from "../presets/perc-hihat.json" with { type: "json" };
+import { presetMap } from "../global/presets.js";
 
 /**
  * WebAudioPercHihat — 909-style hi-hat with metallic oscillators + noise.
@@ -22,15 +24,9 @@ export default class WebAudioPercHihat extends WebAudioInstrumentBase {
   // Metallic oscillator frequency ratios (909-inspired, relative to base tone)
   static METAL_RATIOS = [1, 1.4471, 1.617, 1.9265, 2.5028, 2.6637];
 
-  static PRESETS = {
-    Default: { tone: 320, metalMix: 0.5, filterFreq: 8000, filterQ: 0.8, decay: 0.06, openDecay: 0.3, volume: 1 },
-    909: { tone: 330, metalMix: 0.7, filterFreq: 9000, filterQ: 1.0, decay: 0.05, openDecay: 0.35, volume: 1 },
-    808: { tone: 280, metalMix: 0.2, filterFreq: 7000, filterQ: 0.6, decay: 0.06, openDecay: 0.28, volume: 0.9 },
-    Bright: { tone: 400, metalMix: 0.6, filterFreq: 12000, filterQ: 0.5, decay: 0.04, openDecay: 0.25, volume: 1 },
-    Dark: { tone: 250, metalMix: 0.4, filterFreq: 5000, filterQ: 1.2, decay: 0.08, openDecay: 0.35, volume: 0.8 },
-    Shaker: { tone: 280, metalMix: 0.1, filterFreq: 6000, filterQ: 0.5, decay: 0.12, openDecay: 0.2, volume: 0.7 },
-    Metallic: { tone: 360, metalMix: 0.9, filterFreq: 10000, filterQ: 1.5, decay: 0.05, openDecay: 0.4, volume: 0.9 },
-  };
+  /** Presets live in ../presets/perc-hihat.json (written by the dev preset store). */
+  static PRESET_DATA = presetData;
+  static PRESETS = presetMap(presetData);
 
   /**
    * Param schema (see global/param-schema.js). Single source of truth for the

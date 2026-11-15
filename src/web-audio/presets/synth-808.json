@@ -1,0 +1,89 @@
+{
+  "instrument": "synth-808",
+  "presets": [
+    {
+      "name": "Default",
+      "tags": [],
+      "params": {
+        "tone": 3000,
+        "decay": 0.8,
+        "pitchSweepSemitones": 24,
+        "pitchDecay": 0.1,
+        "distortion": 0,
+        "click": 0.4,
+        "subOscMix": 0,
+        "volume": 1
+      }
+    },
+    {
+      "name": "Boom",
+      "tags": [],
+      "params": {
+        "tone": 2000,
+        "decay": 3,
+        "pitchSweepSemitones": 12,
+        "pitchDecay": 0.2,
+        "distortion": 0,
+        "click": 0.2,
+        "subOscMix": 0.5,
+        "volume": 0.9
+      }
+    },
+    {
+      "name": "Tight",
+      "tags": [],
+      "params": {
+        "tone": 4000,
+        "decay": 0.4,
+        "pitchSweepSemitones": 24,
+        "pitchDecay": 0.06,
+        "distortion": 0,
+        "click": 0.6,
+        "subOscMix": 0,
+        "volume": 1
+      }
+    },
+    {
+      "name": "Dirty",
+      "tags": [],
+      "params": {
+        "tone": 2500,
+        "decay": 0.7,
+        "pitchSweepSemitones": 24,
+        "pitchDecay": 0.1,
+        "distortion": 0.5,
+        "click": 0.4,
+        "subOscMix": 0,
+        "volume": 0.85
+      }
+    },
+    {
+      "name": "Deep",
+      "tags": [],
+      "params": {
+        "tone": 1500,
+        "decay": 2,
+        "pitchSweepSemitones": 8,
+        "pitchDecay": 0.25,
+        "distortion": 0,
+        "click": 0.1,
+        "subOscMix": 0.7,
+        "volume": 0.9
+      }
+    },
+    {
+      "name": "Trap",
+      "tags": [],
+      "params": {
+        "tone": 5000,
+        "decay": 0.6,
+        "pitchSweepSemitones": 36,
+        "pitchDecay": 0.04,
+        "distortion": 0,
+        "click": 0.8,
+        "subOscMix": 0.2,
+        "volume": 0.95
+      }
+    }
+  ]
+}

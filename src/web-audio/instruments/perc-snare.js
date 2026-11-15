@@ -3,6 +3,8 @@ import "../ui/step-seq.js";
 import { STEP_WEIGHTS } from "../global/scales.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 import { sliderDefs } from "../global/param-schema.js";
+import presetData from "../presets/perc-snare.json" with { type: "json" };
+import { presetMap } from "../global/presets.js";
 
 /**
  * WebAudioPercSnare — layered snare drum with tone body, noise snap, and snare buzz.
@@ -24,124 +26,9 @@ import { sliderDefs } from "../global/param-schema.js";
  *   snare.trigger(0.8, time);
  */
 export default class WebAudioPercSnare extends WebAudioInstrumentBase {
-  static PRESETS = {
-    Default: {
-      toneFreq: 200,
-      toneSweep: 80,
-      toneDecay: 0.08,
-      toneWave: "sine",
-      noiseFreq: 1500,
-      noiseDecay: 0.15,
-      noiseSweep: 0,
-      noiseMix: 0.6,
-      buzz: 0.2,
-      clapMode: false,
-      volume: 1,
-    },
-    808: {
-      toneFreq: 180,
-      toneSweep: 60,
-      toneDecay: 0.12,
-      toneWave: "sine",
-      noiseFreq: 1200,
-      noiseDecay: 0.2,
-      noiseSweep: 0,
-      noiseMix: 0.5,
-      buzz: 0.15,
-      clapMode: false,
-      volume: 1,
-    },
-    909: {
-      toneFreq: 220,
-      toneSweep: 100,
-      toneDecay: 0.06,
-      toneWave: "triangle",
-      noiseFreq: 2000,
-      noiseDecay: 0.12,
-      noiseSweep: 0.4,
-      noiseMix: 0.65,
-      buzz: 0.3,
-      clapMode: false,
-      volume: 1,
-    },
-    Tight: {
-      toneFreq: 250,
-      toneSweep: 100,
-      toneDecay: 0.04,
-      toneWave: "triangle",
-      noiseFreq: 2500,
-      noiseDecay: 0.08,
-      noiseSweep: 0.2,
-      noiseMix: 0.7,
-      buzz: 0.1,
-      clapMode: false,
-      volume: 1,
-    },
-    Clap: {
-      toneFreq: 200,
-      toneSweep: 50,
-      toneDecay: 0.02,
-      toneWave: "sine",
-      noiseFreq: 1800,
-      noiseDecay: 0.18,
-      noiseSweep: 0,
-      noiseMix: 0.95,
-      buzz: 0,
-      clapMode: true,
-      volume: 0.9,
-    },
-    Rim: {
-      toneFreq: 400,
-      toneSweep: 150,
-      toneDecay: 0.03,
-      toneWave: "square",
-      noiseFreq: 4000,
-      noiseDecay: 0.04,
-      noiseSweep: 0,
-      noiseMix: 0.3,
-      buzz: 0,
-      clapMode: false,
-      volume: 1,
-    },
-    Industrial: {
-      toneFreq: 150,
-      toneSweep: 40,
-      toneDecay: 0.15,
-      toneWave: "square",
-      noiseFreq: 800,
-      noiseDecay: 0.25,
-      noiseSweep: 0.6,
-      noiseMix: 0.4,
-      buzz: 0.4,
-      clapMode: false,
-      volume: 0.9,
-    },
-    Brush: {
-      toneFreq: 180,
-      toneSweep: 30,
-      toneDecay: 0.03,
-      toneWave: "sine",
-      noiseFreq: 3000,
-      noiseDecay: 0.35,
-      noiseSweep: 0.3,
-      noiseMix: 0.85,
-      buzz: 0.5,
-      clapMode: false,
-      volume: 0.6,
-    },
-    Snappy: {
-      toneFreq: 302,
-      toneSweep: 74,
-      toneDecay: 0.13,
-      noiseFreq: 1022,
-      noiseDecay: 0.15,
-      noiseSweep: 0.13,
-      noiseMix: 0.53,
-      buzz: 0.02,
-      toneWave: "triangle",
-      clapMode: false,
-    },
-  };
+  /** Presets live in ../presets/perc-snare.json (written by the dev preset store). */
+  static PRESET_DATA = presetData;
+  static PRESETS = presetMap(presetData);
 
   /**
    * Param schema (see global/param-schema.js). Single source of truth for the

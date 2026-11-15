@@ -1,7 +1,8 @@
 import basicSsl from "@vitejs/plugin-basic-ssl";
+import wamPresetStore from "./vite-plugins/wam-preset-store.js";
 
 export default {
-  plugins: [basicSsl()],
+  plugins: [basicSsl(), wamPresetStore()],
   server: {
     host: true,
     port: "8005",

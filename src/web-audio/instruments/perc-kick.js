@@ -3,6 +3,8 @@ import "../ui/step-seq.js";
 import { STEP_WEIGHTS } from "../global/scales.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 import { sliderDefs } from "../global/param-schema.js";
+import presetData from "../presets/perc-kick.json" with { type: "json" };
+import { presetMap } from "../global/presets.js";
 
 /**
  * WebAudioPercKick — Enhanced kick drum with pitch sweep, click transient, and drive.
@@ -18,27 +20,9 @@ import { sliderDefs } from "../global/param-schema.js";
  *   kick.trigger(0.9, time);
  */
 export default class WebAudioPercKick extends WebAudioInstrumentBase {
-  static PRESETS = {
-    Default: { startFreq: 150, endFreq: 40, sweepTime: 0.08, decay: 0.35, click: 0.3, drive: 0, volume: 1 },
-    808: { startFreq: 140, endFreq: 35, sweepTime: 0.1, decay: 0.45, click: 0.1, drive: 0, volume: 1 },
-    909: { startFreq: 200, endFreq: 50, sweepTime: 0.05, decay: 0.28, click: 0.7, drive: 0.2, volume: 1 },
-    Punchy: { startFreq: 200, endFreq: 50, sweepTime: 0.05, decay: 0.25, click: 0.5, drive: 0.1, volume: 1 },
-    Boomy: { startFreq: 100, endFreq: 30, sweepTime: 0.15, decay: 0.6, click: 0.1, drive: 0, volume: 0.9 },
-    Hard: { startFreq: 250, endFreq: 45, sweepTime: 0.04, decay: 0.3, click: 0.8, drive: 0.5, volume: 1 },
-    Distorted: { startFreq: 180, endFreq: 40, sweepTime: 0.06, decay: 0.35, click: 0.4, drive: 0.8, volume: 0.9 },
-    Sub: { startFreq: 80, endFreq: 30, sweepTime: 0.2, decay: 0.7, click: 0, drive: 0, volume: 1 },
-    Punch: { startFreq: 401, endFreq: 51, sweepTime: 0.15, decay: 1.09, click: 0.65, drive: 0.38, volume: 1 },
-    Disthump: { startFreq: 279, endFreq: 26, sweepTime: 0.15, decay: 0.94, click: 0.26, drive: 0.51, volume: 1 },
-    TomUp: {
-      startFreq: 110,
-      endFreq: 171,
-      sweepTime: 0.46,
-      decay: 0.43,
-      click: 0.02,
-      drive: 0.6,
-      volume: 1,
-    },
-  };
+  /** Presets live in ../presets/perc-kick.json (written by the dev preset store). */
+  static PRESET_DATA = presetData;
+  static PRESETS = presetMap(presetData);
 
   /**
    * Param schema (see global/param-schema.js). Single source of truth for the

@@ -1,0 +1,159 @@
+{
+  "instrument": "synth-acid",
+  "presets": [
+    {
+      "name": "Default",
+      "tags": [],
+      "params": {
+        "cutoff": 600,
+        "resonance": 18,
+        "envMod": 0.6,
+        "decay": 0.25,
+        "attack": 0.005,
+        "distortion": 0,
+        "portamento": 0,
+        "oscType": "sawtooth",
+        "unisonVoices": 1,
+        "unisonDetune": 0,
+        "filterLfoActive": false,
+        "filterLfoLow": 100,
+        "filterLfoHigh": 4000,
+        "filterLfoInterval": 4,
+        "filterLfoOffset": 0,
+        "volume": 1
+      }
+    },
+    {
+      "name": "Squelch",
+      "tags": [],
+      "params": {
+        "cutoff": 400,
+        "resonance": 24,
+        "envMod": 0.9,
+        "decay": 0.18,
+        "attack": 0.003,
+        "distortion": 0,
+        "portamento": 0,
+        "oscType": "sawtooth",
+        "unisonVoices": 1,
+        "unisonDetune": 0,
+        "filterLfoActive": false,
+        "filterLfoLow": 100,
+        "filterLfoHigh": 4000,
+        "filterLfoInterval": 4,
+        "filterLfoOffset": 0,
+        "volume": 0.9
+      }
+    },
+    {
+      "name": "Growl",
+      "tags": [],
+      "params": {
+        "cutoff": 300,
+        "resonance": 16,
+        "envMod": 0.7,
+        "decay": 0.35,
+        "attack": 0.008,
+        "distortion": 0.4,
+        "portamento": 0,
+        "oscType": "sawtooth",
+        "unisonVoices": 1,
+        "unisonDetune": 0,
+        "filterLfoActive": false,
+        "filterLfoLow": 100,
+        "filterLfoHigh": 4000,
+        "filterLfoInterval": 4,
+        "filterLfoOffset": 0,
+        "volume": 0.85
+      }
+    },
+    {
+      "name": "Smooth",
+      "tags": [],
+      "params": {
+        "cutoff": 800,
+        "resonance": 8,
+        "envMod": 0.4,
+        "decay": 0.4,
+        "attack": 0.015,
+        "distortion": 0,
+        "portamento": 0.05,
+        "oscType": "sawtooth",
+        "unisonVoices": 1,
+        "unisonDetune": 0,
+        "filterLfoActive": false,
+        "filterLfoLow": 100,
+        "filterLfoHigh": 4000,
+        "filterLfoInterval": 4,
+        "filterLfoOffset": 0,
+        "volume": 1
+      }
+    },
+    {
+      "name": "Square",
+      "tags": [],
+      "params": {
+        "cutoff": 500,
+        "resonance": 20,
+        "envMod": 0.75,
+        "decay": 0.2,
+        "attack": 0.004,
+        "distortion": 0,
+        "portamento": 0,
+        "oscType": "square",
+        "unisonVoices": 1,
+        "unisonDetune": 0,
+        "filterLfoActive": false,
+        "filterLfoLow": 100,
+        "filterLfoHigh": 4000,
+        "filterLfoInterval": 4,
+        "filterLfoOffset": 0,
+        "volume": 0.8
+      }
+    },
+    {
+      "name": "Fat",
+      "tags": [],
+      "params": {
+        "cutoff": 500,
+        "resonance": 14,
+        "envMod": 0.5,
+        "decay": 0.3,
+        "attack": 0.005,
+        "distortion": 0.2,
+        "portamento": 0,
+        "oscType": "sawtooth",
+        "unisonVoices": 3,
+        "unisonDetune": 15,
+        "filterLfoActive": false,
+        "filterLfoLow": 100,
+        "filterLfoHigh": 4000,
+        "filterLfoInterval": 4,
+        "filterLfoOffset": 0,
+        "volume": 0.9
+      }
+    },
+    {
+      "name": "Hoover",
+      "tags": [],
+      "params": {
+        "cutoff": 600,
+        "resonance": 10,
+        "envMod": 0.5,
+        "decay": 0.4,
+        "attack": 0.01,
+        "distortion": 0.3,
+        "portamento": 0.08,
+        "oscType": "sawtooth",
+        "unisonVoices": 4,
+        "unisonDetune": 30,
+        "filterLfoActive": false,
+        "filterLfoLow": 100,
+        "filterLfoHigh": 4000,
+        "filterLfoInterval": 4,
+        "filterLfoOffset": 0,
+        "volume": 0.85
+      }
+    }
+  ]
+}

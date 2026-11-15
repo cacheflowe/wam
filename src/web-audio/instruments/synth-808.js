@@ -5,6 +5,8 @@ import WebAudioInstrumentBase from "../global/instrument-base.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 import { makeSoftClipCurve } from "../global/dsp/distortion.js";
 import { sliderDefs } from "../global/param-schema.js";
+import presetData from "../presets/synth-808.json" with { type: "json" };
+import { presetMap } from "../global/presets.js";
 
 /**
  * WebAudioSynth808 — pitched 808-style sub-bass synthesizer.
@@ -25,68 +27,9 @@ import { sliderDefs } from "../global/param-schema.js";
  *   bass.trigger(36, stepDurSec, atTime); // C2
  */
 export default class WebAudioSynth808 extends WebAudioInstrumentBase {
-  static PRESETS = {
-    Default: {
-      pitchSweepSemitones: 24,
-      pitchDecay: 0.1,
-      decay: 0.8,
-      distortion: 0,
-      click: 0.4,
-      subOscMix: 0,
-      tone: 3000,
-      volume: 1.0,
-    },
-    Boom: {
-      pitchSweepSemitones: 12,
-      pitchDecay: 0.2,
-      decay: 3.0,
-      distortion: 0,
-      click: 0.2,
-      subOscMix: 0.5,
-      tone: 2000,
-      volume: 0.9,
-    },
-    Tight: {
-      pitchSweepSemitones: 24,
-      pitchDecay: 0.06,
-      decay: 0.4,
-      distortion: 0,
-      click: 0.6,
-      subOscMix: 0,
-      tone: 4000,
-      volume: 1.0,
-    },
-    Dirty: {
-      pitchSweepSemitones: 24,
-      pitchDecay: 0.1,
-      decay: 0.7,
-      distortion: 0.5,
-      click: 0.4,
-      subOscMix: 0,
-      tone: 2500,
-      volume: 0.85,
-    },
-    Deep: {
-      pitchSweepSemitones: 8,
-      pitchDecay: 0.25,
-      decay: 2.0,
-      distortion: 0,
-      click: 0.1,
-      subOscMix: 0.7,
-      tone: 1500,
-      volume: 0.9,
-    },
-    Trap: {
-      pitchSweepSemitones: 36,
-      pitchDecay: 0.04,
-      decay: 0.6,
-      distortion: 0,
-      click: 0.8,
-      subOscMix: 0.2,
-      tone: 5000,
-      volume: 0.95,
-    },
-  };
+  /** Presets live in ../presets/synth-808.json (written by the dev preset store). */
+  static PRESET_DATA = presetData;
+  static PRESETS = presetMap(presetData);
 
   /**
    * Param schema (see global/param-schema.js). Single source of truth for the

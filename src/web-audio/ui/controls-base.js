@@ -16,6 +16,16 @@ import {
   mutateValues,
   randomizeValues,
 } from "../global/sound-design.js";
+import { quantize } from "../global/param-schema.js";
+import {
+  canWritePresets,
+  deletePresetFromRepo,
+  presetParamDefs,
+  presetTags,
+  removePreset,
+  savePresetToRepo,
+  upsertPreset,
+} from "../global/presets.js";
 
 /**
  * WebAudioControlsBase — shared foundation for all instrument control panels.
@@ -1259,20 +1269,26 @@ export class WebAudioControlsBase extends HTMLElement {
 
     const { el: presetEl, controls: presetCtrl } = createSection("Presets");
 
-    // Dropdown
-    const wrap = createCtrl("Preset", { tooltip: "Load a sound preset." });
+    // Dropdown with ◀ ▶ stepping
+    const wrap = createCtrl("Preset", { tooltip: "Load a sound preset. ◀ ▶ step through them." });
     this._presetSelect = document.createElement("select");
     this._presetSelect.className = "wam-select";
+    this._refreshPresetOptions();
 
-    // Built-in presets
-    for (const name of Object.keys(PresetsObj)) {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name.replace(/_/g, " ");
-      this._presetSelect.appendChild(opt);
-    }
-    // User presets (from localStorage)
-    this._refreshUserPresetOptions();
+    const presetRow = document.createElement("div");
+    presetRow.className = "wam-preset-row";
+    presetRow.style.cssText = "display:flex;gap:.25rem;align-items:stretch;";
+    const mkStep = (label, dir, title) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.className = "wam-action-btn wam-preset-step";
+      b.title = title;
+      b.style.cssText = "flex:0 0 auto;padding:0 .4rem;";
+      b.addEventListener("click", () => this.stepPreset(dir));
+      return b;
+    };
+    this._presetSelect.style.cssText = "flex:1 1 auto;min-width:0;";
+    presetRow.append(mkStep("◀", -1, "Previous preset"), this._presetSelect, mkStep("▶", 1, "Next preset"));
 
     this._presetSelect.addEventListener("change", () => {
       this._recordSound(); // preset loads are undoable
@@ -1294,7 +1310,7 @@ export class WebAudioControlsBase extends HTMLElement {
       }
       this._emitChange();
     });
-    wrap.appendChild(this._presetSelect);
+    wrap.appendChild(presetRow);
     presetCtrl.appendChild(wrap);
 
     // Action buttons row
@@ -1355,7 +1371,7 @@ export class WebAudioControlsBase extends HTMLElement {
     const saveBtn = document.createElement("button");
     saveBtn.textContent = "\uD83D\uDCBE Save";
     saveBtn.className = "wam-action-btn";
-    saveBtn.title = "Save current sound as a user preset";
+    saveBtn.title = "Save the current sound as a preset. Under the dev server it is written to src/web-audio/presets/ in the repo.";
     saveBtn.addEventListener("click", () => this._saveCurrentAsPreset());
     actionWrap.appendChild(saveBtn);
 
@@ -1363,7 +1379,7 @@ export class WebAudioControlsBase extends HTMLElement {
     const delBtn = document.createElement("button");
     delBtn.textContent = "\uD83D\uDDD1 Del";
     delBtn.className = "wam-action-btn";
-    delBtn.title = "Delete the selected user preset";
+    delBtn.title = "Delete the selected preset (built-ins only under the dev server).";
     delBtn.addEventListener("click", () => this._deleteSelectedPreset());
     actionWrap.appendChild(delBtn);
 
@@ -1574,11 +1590,113 @@ export class WebAudioControlsBase extends HTMLElement {
   }
 
   /** Prompt for a name and save the current sound as a user preset. */
-  _saveCurrentAsPreset() {
-    const name = prompt("Preset name:");
-    if (!name || !name.trim()) return;
-    const key = name.trim();
-    const params = this._capturePresetParams();
+  /**
+   * Rebuild the preset dropdown: built-ins (grouped by first tag when any
+   * preset is tagged), then user presets. Keeps the current selection.
+   */
+  _refreshPresetOptions() {
+    const select = this._presetSelect;
+    if (!select) return;
+    const prev = select.value;
+    const Cls = this._instrument.constructor;
+    const entries = Cls.PRESET_DATA?.presets ?? Object.keys(Cls.PRESETS ?? {}).map((name) => ({ name, tags: [] }));
+    select.replaceChildren();
+    const mkOpt = (name) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name.replace(/_/g, " ");
+      return opt;
+    };
+    if (entries.some((e) => e.tags?.length)) {
+      const groups = new Map();
+      for (const e of entries) {
+        const tag = e.tags?.[0] ?? "other";
+        if (!groups.has(tag)) groups.set(tag, []);
+        groups.get(tag).push(e.name);
+      }
+      for (const [tag, names] of groups) {
+        const og = document.createElement("optgroup");
+        og.label = tag;
+        for (const n of names) og.appendChild(mkOpt(n));
+        select.appendChild(og);
+      }
+    } else {
+      for (const e of entries) select.appendChild(mkOpt(e.name));
+    }
+    this._refreshUserPresetOptions();
+    if (prev && [...select.options].some((o) => o.value === prev)) select.value = prev;
+  }
+
+  /** Step to the previous (-1) / next (+1) preset, wrapping. Applies it like a dropdown change. */
+  stepPreset(dir = 1) {
+    const select = this._presetSelect;
+    if (!select) return;
+    const opts = [...select.options].filter((o) => !o.disabled);
+    if (!opts.length) return;
+    const i = opts.findIndex((o) => o.value === select.value);
+    const next = opts[(i + dir + opts.length) % opts.length];
+    select.value = next.value;
+    select.dispatchEvent(new Event("change"));
+  }
+
+  /**
+   * Capture the current sound as preset params: every sound (non-part) schema
+   * param — so presets are complete and never leak values — plus the
+   * instrument's output volume. Legacy instruments fall back to SLIDER_DEFS.
+   */
+  _captureSoundPreset() {
+    const schema = this._paramSchema;
+    let params;
+    if (schema) {
+      params = {};
+      for (const def of presetParamDefs(schema)) {
+        const v = this._instrument[def.param];
+        if (v === undefined) continue;
+        params[def.param] = (def.type ?? "number") === "number" && typeof v === "number" ? quantize(def, v) : v;
+      }
+    } else {
+      params = this._capturePresetParams();
+    }
+    params.volume = Math.round((this._instrument.volume ?? 1) * 100) / 100;
+    return params;
+  }
+
+  /**
+   * Save the current sound. Under the dev server it's written straight into
+   * the instrument's preset JSON in the repo; otherwise it's stored as a
+   * localStorage user preset (and copied to the clipboard).
+   */
+  async _saveCurrentAsPreset() {
+    const Cls = this._instrument.constructor;
+    const current = this._presetSelect?.value ?? "";
+    const name = prompt("Preset name:", current)?.trim();
+    if (!name) return;
+    const params = this._captureSoundPreset();
+
+    if (canWritePresets() && Cls.PRESET_DATA) {
+      const exists = !!Cls.PRESETS[name];
+      if (exists && !confirm(`Overwrite preset "${name}" in the repo?`)) return;
+      const tagInput = prompt("Tags (comma-separated, optional — e.g. bass, acid):", presetTags(Cls.PRESET_DATA, name).join(", "));
+      if (tagInput === null) return;
+      const tags = tagInput.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+      try {
+        await savePresetToRepo(Cls.PRESET_DATA.instrument, { name, tags, params });
+        upsertPreset(Cls, { name, tags, params });
+        this._refreshPresetOptions();
+        this._presetSelect.value = name;
+        console.log(`[WAM] Preset "${name}" written to src/web-audio/presets/${Cls.PRESET_DATA.instrument}.json`);
+        return;
+      } catch (err) {
+        console.error(err);
+        alert(`Couldn't write to the repo (${err.message}). Saving as a local user preset instead.`);
+      }
+    }
+    this._saveUserPreset(name, params);
+  }
+
+  /** localStorage user preset (production builds, or when the repo write fails). */
+  _saveUserPreset(name, params) {
+    const key = name;
     const userPresets = this._loadUserPresets();
     userPresets[key] = params;
     this._saveUserPresets(userPresets);
@@ -1592,12 +1710,30 @@ export class WebAudioControlsBase extends HTMLElement {
   }
 
   /** Delete the currently selected user preset (with confirmation). */
-  _deleteSelectedPreset() {
+  async _deleteSelectedPreset() {
     const name = this._presetSelect?.value;
     if (!name) return;
     const userPresets = this._loadUserPresets();
     if (!userPresets[name]) {
-      alert(`"${name}" is a built-in preset. Remove it from the source code if needed.`);
+      const Cls = this._instrument.constructor;
+      if (!canWritePresets() || !Cls.PRESET_DATA) {
+        alert(`"${name}" is a built-in preset. Delete it under the dev server, or edit src/web-audio/presets/.`);
+        return;
+      }
+      if (Object.keys(Cls.PRESETS).length <= 1) {
+        alert("Can't delete the last preset.");
+        return;
+      }
+      if (!confirm(`Delete built-in preset "${name}" from the repo?`)) return;
+      try {
+        await deletePresetFromRepo(Cls.PRESET_DATA.instrument, name);
+        removePreset(Cls, name);
+        this._refreshPresetOptions();
+        console.log(`[WAM] Preset "${name}" removed from src/web-audio/presets/${Cls.PRESET_DATA.instrument}.json`);
+      } catch (err) {
+        console.error(err);
+        alert(`Couldn't delete from the repo: ${err.message}`);
+      }
       return;
     }
     if (!confirm(`Delete user preset "${name}"?`)) return;

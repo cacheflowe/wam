@@ -118,11 +118,12 @@ Placement is by `role` (fixed knob per role), then unfilled slots in a row get t
 - [x] Tests: [tests/sound-design.test.js](../../../tests/sound-design.test.js) — ranges, log-uniform draws, locks, constrain, mutate scaling/identity/no-wander, history, acid end-to-end. Verified in-browser: Rand/Mutate/Undo/Redo keep knobs and instrument in sync.
 
 ### Phase 3 — Preset store
-- [ ] Migration script: `static PRESETS` → `src/data/presets/<instrument>.json` (full param sets, tags).
-- [ ] `applyPreset` fills missing params from schema defaults.
-- [ ] Dev-only Vite plugin writes presets; Save button posts there in dev, localStorage/Export in prod.
-- [ ] Preset dropdown grouped/filterable by tag; prev/next preset actions.
-- [ ] Validation test over all preset files.
+- [x] All 11 instruments with presets moved to `src/web-audio/presets/<id>.json` (kept inside the library so instruments stay self-contained). Migrated in-browser so missing values were filled from real constructor defaults: acid (filter LFO ×5) and FM (unison ×2) presets were leaking those values between presets.
+- [x] Presets are complete for sound params instead (enforced by tests); part-level params excluded so presets never change the part.
+- [x] Dev-only Vite plugin `vite-plugins/wam-preset-store.js` (POST/DELETE, self-writes skip HMR). Save prompts name + tags and writes to the repo in dev; Del removes built-ins in dev; prod falls back to localStorage. Verified in-browser end to end.
+- [x] Dropdown groups by first tag (once anything is tagged); ◀ ▶ buttons + `stepPreset(±1)` for hardware.
+- [x] [tests/presets.test.js](../../../tests/presets.test.js): file shape, wiring, completeness, helpers, plugin (temp dir).
+- [ ] Tag the existing presets (part of Phase 5 curation).
 
 ### Phase 4 — LCXL performance layout
 - [ ] Role-based auto-map (rows by role, paging for overflow); drop volume/pan from knob candidates.

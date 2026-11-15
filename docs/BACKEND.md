@@ -54,22 +54,21 @@ osc.onended = () => { osc.disconnect(); vca.disconnect(); };
 
 The browser's GC reclaims nodes after `stop()` completes. This gives unlimited polyphony at the cost of node creation per trigger; at typical BPMs this is negligible.
 
-### Static PRESETS + applyPreset()
+### Presets (JSON data + applyPreset())
+
+Presets live in JSON data files, one per instrument: `src/web-audio/presets/<instrument-id>.json`. The instrument module imports its file, so importing one instrument still gets you its presets:
 
 ```js
-static PRESETS = {
-  Default: { cutoff: 600, resonance: 18, ... },
-  Squelch: { cutoff: 400, resonance: 24, ... },
-};
+import presetData from "../presets/synth-acid.json" with { type: "json" };
+import { presetMap } from "../global/presets.js";
 
-applyPreset(name) {
-  const p = WebAudioSynthAcid.PRESETS[name];
-  if (!p) return;
-  if (p.cutoff != null) this.cutoff = p.cutoff; // != null allows 0
-}
+static PRESET_DATA = presetData;          // { instrument, presets: [{ name, tags, params }] }
+static PRESETS = presetMap(presetData);   // { name: params } — the shape applyPreset() reads
 ```
 
-The `!= null` guard allows partial presets; new parameters can be added without invalidating existing preset objects.
+`applyPreset(name)` (in `instrument-base.js`) sets every key in the preset's `params` on the instrument. Presets are **complete** for every *sound* param in the instrument's `PARAMS` schema, so switching presets never leaves values behind from the previous sound. *Part-level* params (octave, octave jump, gate, voice limit — see `isPartParam` in `global/presets.js`) are deliberately left out, so changing the sound doesn't change the part. `volume` is the instrument's own output gain (not the channel-strip fader). [tests/presets.test.js](tests/presets.test.js) enforces both rules.
+
+**Saving presets.** Under `npm run dev`, the Presets panel's Save/Del buttons write straight to the JSON file through a dev-only Vite plugin ([vite-plugins/wam-preset-store.js](vite-plugins/wam-preset-store.js), `POST`/`DELETE /__wam/presets/<id>`). Its own writes skip HMR so saving mid-jam doesn't reload the page. Production builds have no endpoint and fall back to localStorage user presets. Presets can carry `tags`; when any preset is tagged, the dropdown groups by first tag. ◀ ▶ (and `controls.stepPreset(±1)`) step through presets.
 
 ### Param schema (`global/param-schema.js`)
 

@@ -1,0 +1,158 @@
+{
+  "instrument": "perc-snare",
+  "presets": [
+    {
+      "name": "808",
+      "tags": [],
+      "params": {
+        "toneWave": "sine",
+        "clapMode": false,
+        "toneFreq": 180,
+        "toneSweep": 60,
+        "toneDecay": 0.12,
+        "noiseFreq": 1200,
+        "noiseDecay": 0.2,
+        "noiseSweep": 0,
+        "noiseMix": 0.5,
+        "buzz": 0.15,
+        "volume": 1
+      }
+    },
+    {
+      "name": "909",
+      "tags": [],
+      "params": {
+        "toneWave": "triangle",
+        "clapMode": false,
+        "toneFreq": 220,
+        "toneSweep": 100,
+        "toneDecay": 0.06,
+        "noiseFreq": 2000,
+        "noiseDecay": 0.12,
+        "noiseSweep": 0.4,
+        "noiseMix": 0.65,
+        "buzz": 0.3,
+        "volume": 1
+      }
+    },
+    {
+      "name": "Default",
+      "tags": [],
+      "params": {
+        "toneWave": "sine",
+        "clapMode": false,
+        "toneFreq": 200,
+        "toneSweep": 80,
+        "toneDecay": 0.08,
+        "noiseFreq": 1500,
+        "noiseDecay": 0.15,
+        "noiseSweep": 0,
+        "noiseMix": 0.6,
+        "buzz": 0.2,
+        "volume": 1
+      }
+    },
+    {
+      "name": "Tight",
+      "tags": [],
+      "params": {
+        "toneWave": "triangle",
+        "clapMode": false,
+        "toneFreq": 250,
+        "toneSweep": 100,
+        "toneDecay": 0.04,
+        "noiseFreq": 2500,
+        "noiseDecay": 0.08,
+        "noiseSweep": 0.2,
+        "noiseMix": 0.7,
+        "buzz": 0.1,
+        "volume": 1
+      }
+    },
+    {
+      "name": "Clap",
+      "tags": [],
+      "params": {
+        "toneWave": "sine",
+        "clapMode": true,
+        "toneFreq": 200,
+        "toneSweep": 50,
+        "toneDecay": 0.02,
+        "noiseFreq": 1800,
+        "noiseDecay": 0.18,
+        "noiseSweep": 0,
+        "noiseMix": 0.95,
+        "buzz": 0,
+        "volume": 0.9
+      }
+    },
+    {
+      "name": "Rim",
+      "tags": [],
+      "params": {
+        "toneWave": "square",
+        "clapMode": false,
+        "toneFreq": 400,
+        "toneSweep": 150,
+        "toneDecay": 0.03,
+        "noiseFreq": 4000,
+        "noiseDecay": 0.04,
+        "noiseSweep": 0,
+        "noiseMix": 0.3,
+        "buzz": 0,
+        "volume": 1
+      }
+    },
+    {
+      "name": "Industrial",
+      "tags": [],
+      "params": {
+        "toneWave": "square",
+        "clapMode": false,
+        "toneFreq": 150,
+        "toneSweep": 40,
+        "toneDecay": 0.15,
+        "noiseFreq": 800,
+        "noiseDecay": 0.25,
+        "noiseSweep": 0.6,
+        "noiseMix": 0.4,
+        "buzz": 0.4,
+        "volume": 0.9
+      }
+    },
+    {
+      "name": "Brush",
+      "tags": [],
+      "params": {
+        "toneWave": "sine",
+        "clapMode": false,
+        "toneFreq": 180,
+        "toneSweep": 30,
+        "toneDecay": 0.03,
+        "noiseFreq": 3000,
+        "noiseDecay": 0.35,
+        "noiseSweep": 0.3,
+        "noiseMix": 0.85,
+        "buzz": 0.5,
+        "volume": 0.6
+      }
+    },
+    {
+      "name": "Snappy",
+      "tags": [],
+      "params": {
+        "toneWave": "triangle",
+        "clapMode": false,
+        "toneFreq": 302,
+        "toneSweep": 74,
+        "toneDecay": 0.13,
+        "noiseFreq": 1022,
+        "noiseDecay": 0.15,
+        "noiseSweep": 0.13,
+        "noiseMix": 0.53,
+        "buzz": 0.02,
+        "volume": 1
+      }
+    }
+  ]
+}

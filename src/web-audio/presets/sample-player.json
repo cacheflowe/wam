@@ -1,0 +1,85 @@
+{
+  "instrument": "sample-player",
+  "presets": [
+    {
+      "name": "Default",
+      "tags": [],
+      "params": {
+        "attack": 0.002,
+        "decay": 0.1,
+        "sustain": 1,
+        "release": 0.05,
+        "useEnvelope": false,
+        "rootMidi": 60,
+        "octaveOffset": 0,
+        "octaveJumpProb": 0,
+        "reverseChance": 0,
+        "volume": 1
+      }
+    },
+    {
+      "name": "Snappy",
+      "tags": [],
+      "params": {
+        "attack": 0.001,
+        "decay": 0.05,
+        "sustain": 0.8,
+        "release": 0.02,
+        "useEnvelope": true,
+        "rootMidi": 60,
+        "octaveOffset": 0,
+        "octaveJumpProb": 0,
+        "reverseChance": 0,
+        "volume": 1
+      }
+    },
+    {
+      "name": "Pad",
+      "tags": [],
+      "params": {
+        "attack": 0.05,
+        "decay": 0.3,
+        "sustain": 0.8,
+        "release": 0.4,
+        "useEnvelope": true,
+        "rootMidi": 60,
+        "octaveOffset": 0,
+        "octaveJumpProb": 0,
+        "reverseChance": 0,
+        "volume": 0.8
+      }
+    },
+    {
+      "name": "Long",
+      "tags": [],
+      "params": {
+        "attack": 0.01,
+        "decay": 0.5,
+        "sustain": 1,
+        "release": 1,
+        "useEnvelope": true,
+        "rootMidi": 60,
+        "octaveOffset": 0,
+        "octaveJumpProb": 0,
+        "reverseChance": 0,
+        "volume": 0.9
+      }
+    },
+    {
+      "name": "Glitch",
+      "tags": [],
+      "params": {
+        "attack": 0.001,
+        "decay": 0.02,
+        "sustain": 0.5,
+        "release": 0.01,
+        "useEnvelope": true,
+        "rootMidi": 60,
+        "octaveOffset": 0,
+        "octaveJumpProb": 0.3,
+        "reverseChance": 0.3,
+        "volume": 1
+      }
+    }
+  ]
+}

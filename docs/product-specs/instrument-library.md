@@ -13,7 +13,7 @@ Every instrument in the library must:
 1. **Construct with an AudioContext**: `new WebAudioSynthX(ctx, preset?)`
 2. **Trigger notes**: `trigger(midiNote, durationSec, velocity, scheduledTime)`
 3. **Route audio**: `connect(node)` and `get input()`
-4. **Apply presets**: `static PRESETS` + `applyPreset(name)`
+4. **Apply presets**: JSON preset data → `static PRESETS` + `applyPreset(name)`
 5. **Expose parameters as setters**: so `instrument.cutoff = 800` works live
 6. **Pair with a Controls Web Component**: `*Controls` with `bind()`, `toJSON()`, `fromJSON()`
 
@@ -34,7 +34,7 @@ Every instrument ships with:
 - **Default**: a musically neutral starting point
 - At least **2 additional named presets** that are musically distinct
 
-Presets are partial: only override parameters that define the character. New parameters added to an instrument should have sensible defaults that make existing presets sound the same.
+Presets live in `src/web-audio/presets/<instrument-id>.json` and are **complete**: each defines every sound param in the instrument's `PARAMS` schema (part-level params like octave and gate are excluded), so switching presets is deterministic. When adding a param, give every existing preset a value that keeps it sounding the same. Under the dev server, the Save button writes new presets straight to the file.
 
 ## Flows
 

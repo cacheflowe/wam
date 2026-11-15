@@ -7,6 +7,8 @@ import { createCtrl } from "../ui/controls-factory.js";
 import { makeSoftClipCurve } from "../global/dsp/distortion.js";
 import { scheduleEnvelope } from "../global/dsp/envelope.js";
 import { sliderDefs } from "../global/param-schema.js";
+import presetData from "../presets/synth-acid.json" with { type: "json" };
+import { presetMap } from "../global/presets.js";
 
 /**
  * WebAudioSynthAcid — TB-303-style monophonic acid bass synthesizer.
@@ -26,99 +28,9 @@ import { sliderDefs } from "../global/param-schema.js";
  *   acid.reset(); // clear portamento tracking (call on stop/restart)
  */
 export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
-  static PRESETS = {
-    Default: {
-      cutoff: 600,
-      resonance: 18,
-      envMod: 0.6,
-      decay: 0.25,
-      attack: 0.005,
-      distortion: 0,
-      portamento: 0,
-      oscType: "sawtooth",
-      volume: 1.0,
-      unisonVoices: 1,
-      unisonDetune: 0,
-    },
-    Squelch: {
-      cutoff: 400,
-      resonance: 24,
-      envMod: 0.9,
-      decay: 0.18,
-      attack: 0.003,
-      distortion: 0,
-      portamento: 0,
-      oscType: "sawtooth",
-      volume: 0.9,
-      unisonVoices: 1,
-      unisonDetune: 0,
-    },
-    Growl: {
-      cutoff: 300,
-      resonance: 16,
-      envMod: 0.7,
-      decay: 0.35,
-      attack: 0.008,
-      distortion: 0.4,
-      portamento: 0,
-      oscType: "sawtooth",
-      volume: 0.85,
-      unisonVoices: 1,
-      unisonDetune: 0,
-    },
-    Smooth: {
-      cutoff: 800,
-      resonance: 8,
-      envMod: 0.4,
-      decay: 0.4,
-      attack: 0.015,
-      distortion: 0,
-      portamento: 0.05,
-      oscType: "sawtooth",
-      volume: 1.0,
-      unisonVoices: 1,
-      unisonDetune: 0,
-    },
-    Square: {
-      cutoff: 500,
-      resonance: 20,
-      envMod: 0.75,
-      decay: 0.2,
-      attack: 0.004,
-      distortion: 0,
-      portamento: 0,
-      oscType: "square",
-      volume: 0.8,
-      unisonVoices: 1,
-      unisonDetune: 0,
-    },
-    Fat: {
-      cutoff: 500,
-      resonance: 14,
-      envMod: 0.5,
-      decay: 0.3,
-      attack: 0.005,
-      distortion: 0.2,
-      portamento: 0,
-      oscType: "sawtooth",
-      volume: 0.9,
-      unisonVoices: 3,
-      unisonDetune: 15,
-    },
-    Hoover: {
-      cutoff: 600,
-      resonance: 10,
-      envMod: 0.5,
-      decay: 0.4,
-      attack: 0.01,
-      distortion: 0.3,
-      portamento: 0.08,
-      oscType: "sawtooth",
-      volume: 0.85,
-      unisonVoices: 4,
-      unisonDetune: 30,
-    },
-  };
+  /** Presets live in ../presets/synth-acid.json (written by the dev preset store). */
+  static PRESET_DATA = presetData;
+  static PRESETS = presetMap(presetData);
 
   /** Beat-fraction intervals for the filter LFO rate. */
   static LFO_INTERVALS = [

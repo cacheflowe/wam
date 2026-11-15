@@ -3,6 +3,8 @@ import { loadSample, buildReverseBuffer } from "../global/sample-utils.js";
 import { STEP_WEIGHTS, scaleNoteOptions, buildChordFromScale } from "../global/scales.js";
 import "../ui/step-seq.js";
 import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
+import presetData from "../presets/sample-player.json" with { type: "json" };
+import { presetMap } from "../global/presets.js";
 
 /**
  * WebAudioSamplePlayer — one-shot sample player with ADSR, pitch, and reverse.
@@ -22,68 +24,9 @@ import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-
  *   sampler.trigger(60, 0.5, 0.9, ctx.currentTime);   // melodic mode (C4)
  */
 export default class WebAudioSamplePlayer extends WebAudioInstrumentBase {
-  static PRESETS = {
-    Default: {
-      attack: 0.002,
-      decay: 0.1,
-      sustain: 1.0,
-      release: 0.05,
-      useEnvelope: false,
-      rootMidi: 60,
-      octaveOffset: 0,
-      octaveJumpProb: 0,
-      reverseChance: 0,
-      volume: 1.0,
-    },
-    Snappy: {
-      attack: 0.001,
-      decay: 0.05,
-      sustain: 0.8,
-      release: 0.02,
-      useEnvelope: true,
-      rootMidi: 60,
-      octaveOffset: 0,
-      octaveJumpProb: 0,
-      reverseChance: 0,
-      volume: 1.0,
-    },
-    Pad: {
-      attack: 0.05,
-      decay: 0.3,
-      sustain: 0.8,
-      release: 0.4,
-      useEnvelope: true,
-      rootMidi: 60,
-      octaveOffset: 0,
-      octaveJumpProb: 0,
-      reverseChance: 0,
-      volume: 0.8,
-    },
-    Long: {
-      attack: 0.01,
-      decay: 0.5,
-      sustain: 1.0,
-      release: 1.0,
-      useEnvelope: true,
-      rootMidi: 60,
-      octaveOffset: 0,
-      octaveJumpProb: 0,
-      reverseChance: 0,
-      volume: 0.9,
-    },
-    Glitch: {
-      attack: 0.001,
-      decay: 0.02,
-      sustain: 0.5,
-      release: 0.01,
-      useEnvelope: true,
-      rootMidi: 60,
-      octaveOffset: 0,
-      octaveJumpProb: 0.3,
-      reverseChance: 0.3,
-      volume: 1.0,
-    },
-  };
+  /** Presets live in ../presets/sample-player.json (written by the dev preset store). */
+  static PRESET_DATA = presetData;
+  static PRESETS = presetMap(presetData);
 
   constructor(ctx, preset = "Default") {
     super(ctx, null);

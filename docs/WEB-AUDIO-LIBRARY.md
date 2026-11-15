@@ -132,30 +132,21 @@ trigger(midi, durationSec, velocity, atTime) {
 
 This is the standard Web Audio pattern -- the browser's garbage collector handles node cleanup after `stop()`. No manual voice allocation, no polyphony limits.
 
-### 3. Static PRESETS + applyPreset()
+### 3. Presets (JSON data + applyPreset())
 
-Every instrument has a static `PRESETS` object and an `applyPreset(name)` method:
+Presets live in JSON data files, one per instrument: `src/web-audio/presets/<instrument-id>.json`. The instrument module imports its file, so importing one instrument still gets you its presets:
 
 ```js
-static PRESETS = {
-  Default: { cutoff: 600, resonance: 10, decay: 0.3, ... },
-  Squelch: { cutoff: 300, resonance: 20, decay: 0.2, ... },
-};
+import presetData from "../presets/synth-acid.json" with { type: "json" };
+import { presetMap } from "../global/presets.js";
 
-constructor(ctx, preset = "Default") {
-  // ... create audio nodes ...
-  this.applyPreset(preset);
-}
-
-applyPreset(name) {
-  const p = WebAudioSynthAcid.PRESETS[name];
-  if (!p) return;
-  if (p.cutoff != null) this.cutoff = p.cutoff;
-  // ... each param checked individually for null safety
-}
+static PRESET_DATA = presetData;          // { instrument, presets: [{ name, tags, params }] }
+static PRESETS = presetMap(presetData);   // { name: params } — the shape applyPreset() reads
 ```
 
-The `!= null` guard allows presets to be partial -- you only need to specify the params you want to override.
+`applyPreset(name)` (in `instrument-base.js`) sets every key in the preset's `params` on the instrument. Presets are **complete** for every *sound* param in the instrument's `PARAMS` schema, so switching presets never leaves values behind from the previous sound. *Part-level* params (octave, octave jump, gate, voice limit — see `isPartParam` in `global/presets.js`) are deliberately left out, so changing the sound doesn't change the part. `volume` is the instrument's own output gain (not the channel-strip fader). [tests/presets.test.js](tests/presets.test.js) enforces both rules.
+
+**Saving presets.** Under `npm run dev`, the Presets panel's Save/Del buttons write straight to the JSON file through a dev-only Vite plugin ([vite-plugins/wam-preset-store.js](vite-plugins/wam-preset-store.js), `POST`/`DELETE /__wam/presets/<id>`). Its own writes skip HMR so saving mid-jam doesn't reload the page. Production builds have no endpoint and fall back to localStorage user presets. Presets can carry `tags`; when any preset is tagged, the dropdown groups by first tag. ◀ ▶ (and `controls.stepPreset(±1)`) step through presets.
 
 ### 4. The Controls companion pattern
 
@@ -234,7 +225,7 @@ this.addEventListener("slider-input", (e) => {
 });
 ```
 
-The `param` attribute on the slider matches the property name on the instrument class. This means adding a new parameter to an instrument requires only: (1) add a getter/setter on the class, (2) add an entry to `SLIDER_DEFS`, (3) add it to the preset objects.
+The `param` attribute on the slider matches the property name on the instrument class. Adding a new parameter to an instrument means: (1) add a getter/setter on the instrument class, (2) add an entry to its `static PARAMS` schema (Controls derive `SLIDER_DEFS` from it), (3) add a value for it to every preset in its JSON file — the preset tests fail until you do.
 
 ### 6. Logarithmic slider scale
 
