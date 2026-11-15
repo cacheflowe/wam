@@ -192,6 +192,20 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
       tooltip: "Probability of randomly jumping an octave on each note." },
   ];
 
+  /**
+   * Cross-param rules applied after randomize/mutate (see sound-design.js).
+   * Keeps rolled sounds from landing in harsh or pointless corners.
+   */
+  static constrain(v) {
+    // Screaming resonance + heavy drive gets harsh and loud fast.
+    if (v.resonance > 18 && v.distortion > 0.3) v.distortion = 0.3;
+    // A closed filter with no envelope sweep is near-silent mud.
+    if (v.cutoff < 300 && v.envMod < 0.4) v.envMod = 0.4;
+    // Detune does nothing on a single voice; keep it at 0 so the knob reads honestly.
+    if (v.unisonVoices <= 1) v.unisonDetune = 0;
+    return v;
+  }
+
   constructor(ctx, preset = "Default") {
     super(ctx, null); // creates ctx + _out but skips preset
     this._distortion = 0;

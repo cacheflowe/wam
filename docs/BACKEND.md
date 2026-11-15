@@ -75,6 +75,10 @@ The `!= null` guard allows partial presets; new parameters can be added without 
 
 Instruments declare their parameters as `static PARAMS` on the **instrument** class (not the Controls class), so the engine knows its own params headless. Each entry carries range/scale/step plus `group` (UI section + randomize-lock unit), `role` (shared vocabulary that drives hardware mapping — the same role lands on the same knob on every instrument), `priority`, and `rand` (the curated, musically useful sub-range for randomize/mutate, or `false`). Enum and bool params are included. Controls derive `SLIDER_DEFS = sliderDefs(Instrument.PARAMS)` and build each knob with `mkSlider("param", overrides?)`, so a param is declared exactly once. Migration status and the role list: [exec-plans/active/jammable-playground.md](exec-plans/active/jammable-playground.md). Validation: [tests/param-schema.test.js](tests/param-schema.test.js).
 
+### Sound design engine (`global/sound-design.js`)
+
+Randomize / mutate / undo for any instrument with `static PARAMS`, no DOM required. `randomizeValues` draws each param inside its curated `rand` range (log params log-uniformly; enums by `rand.weights`); `mutateValues(amount)` takes a gaussian step sized to `amount` × the rand range in normalized space (values already outside the range never wander further out). Both skip `rand: false` and locked params/groups and run the instrument's optional `static constrain(values)` for cross-param rules. `SoundHistory` provides undo/redo. Headless helpers `randomizeInstrument` / `mutateInstrument` let generative apps use it directly; the Controls UI wraps the pure functions and applies results through the `knob-input` event path.
+
 ### Shared DSP primitives (`global/dsp/`)
 
 Common per-voice DSP is factored into standalone functions that **schedule on existing AudioParams or create nodes at a caller-controlled point** — keeping the fire-and-forget model (no stateful classes, synths still own their node graph and creation order).

@@ -108,11 +108,12 @@ Placement is by `role` (fixed knob per role), then unfilled slots in a row get t
 - [ ] Migrate: ~~acid (pilot)~~ ✅ → poly → mono → pad → fm → 808 → kick/snare/hihat → blipfx → sample player/looper.
 
 ### Phase 2 — Sound-design engine
-- [ ] `global/sound-design.js`: `randomize`, `mutate`, `constrain` hook, sound history (undo/redo).
-- [ ] Curated `rand` ranges per instrument (by ear, with Justin).
-- [ ] Controls: Rand uses the engine; add **Mutate** (+ amount) and **Undo/Redo**; group locks.
+- [x] `global/sound-design.js`: pure `randomizeValues`/`mutateValues` (locks, `constrain` hook, seeded rng), headless `randomizeInstrument`/`mutateInstrument`, `SoundHistory` (undo/redo, capped, collapses no-ops).
+- [ ] Curated `rand` ranges per instrument (by ear, with Justin). Acid: first pass + `static constrain` done — needs a listening pass.
+- [x] Controls: Rand uses the engine (legacy full-range fallback for unmigrated instruments); **Mutate** + Subtle/Medium/Wild; **Undo/Redo** (preset loads are undoable too). All applied via the `knob-input` event path.
+- [ ] Group-lock UI (engine supports `locks`; controls read `this._soundLocks`). Proposed: click a section title to lock it.
 - [ ] Level safety: per-instrument gain trim after randomize — investigate rendering a test note in an `OfflineAudioContext` to measure RMS.
-- [ ] Tests: ranges respected, locks respected, mutate(0) is identity, undo restores.
+- [x] Tests: [tests/sound-design.test.js](../../../tests/sound-design.test.js) — ranges, log-uniform draws, locks, constrain, mutate scaling/identity/no-wander, history, acid end-to-end. Verified in-browser: Rand/Mutate/Undo/Redo keep knobs and instrument in sync.
 
 ### Phase 3 — Preset store
 - [ ] Migration script: `static PRESETS` → `src/data/presets/<instrument>.json` (full param sets, tags).

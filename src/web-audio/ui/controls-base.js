@@ -9,6 +9,13 @@ import {
 } from "./controls-factory.js";
 import { injectInputLearnCSS, InputLearnMixin, applyInputLearnMixin } from "./input-learn.js";
 import { meetsBarCondition } from "../global/sequencer-conditions.js";
+import {
+  MUTATE_AMOUNTS,
+  SoundHistory,
+  captureValues,
+  mutateValues,
+  randomizeValues,
+} from "../global/sound-design.js";
 
 /**
  * WebAudioControlsBase — shared foundation for all instrument control panels.
@@ -1267,6 +1274,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._refreshUserPresetOptions();
 
     this._presetSelect.addEventListener("change", () => {
+      this._recordSound(); // preset loads are undoable
       const name = this._presetSelect.value;
       const userPresets = this._loadUserPresets();
       if (userPresets[name]) {
@@ -1295,12 +1303,52 @@ export class WebAudioControlsBase extends HTMLElement {
     const randBtn = document.createElement("button");
     randBtn.textContent = "\u2684 Rand";
     randBtn.className = "wam-action-btn";
-    randBtn.title = "Randomize all synthesis parameters";
+    randBtn.title = "Randomize the sound within musically useful ranges";
     randBtn.addEventListener("click", () => {
       this._randomizeAllParams();
       this._emitChange();
     });
     actionWrap.appendChild(randBtn);
+
+    // Mutate + Undo/Redo — need the engine-level param schema.
+    if (this._paramSchema) {
+      const mutateRow = document.createElement("div");
+      mutateRow.className = "wam-mutate-row";
+      mutateRow.style.cssText = "display:flex;gap:.25rem;align-items:stretch;";
+      const mutateBtn = document.createElement("button");
+      mutateBtn.textContent = "≈ Mutate";
+      mutateBtn.className = "wam-action-btn";
+      mutateBtn.title = "Nudge the current sound. Amount set by the selector.";
+      this._mutateAmountSelect = document.createElement("select");
+      this._mutateAmountSelect.className = "wam-select";
+      this._mutateAmountSelect.title = "Mutation amount";
+      for (const [name, amt] of Object.entries(MUTATE_AMOUNTS)) {
+        const opt = document.createElement("option");
+        opt.value = amt;
+        opt.textContent = name[0].toUpperCase() + name.slice(1);
+        if (name === "medium") opt.selected = true;
+        this._mutateAmountSelect.appendChild(opt);
+      }
+      mutateBtn.addEventListener("click", () => this.mutate(parseFloat(this._mutateAmountSelect.value)));
+      mutateRow.append(mutateBtn, this._mutateAmountSelect);
+      actionWrap.appendChild(mutateRow);
+
+      const histRow = document.createElement("div");
+      histRow.style.cssText = "display:flex;gap:.25rem;";
+      this._undoBtn = document.createElement("button");
+      this._undoBtn.textContent = "↶ Undo";
+      this._undoBtn.className = "wam-action-btn";
+      this._undoBtn.title = "Undo the last randomize / mutate / preset load";
+      this._undoBtn.addEventListener("click", () => this.undoSound());
+      this._redoBtn = document.createElement("button");
+      this._redoBtn.textContent = "↷ Redo";
+      this._redoBtn.className = "wam-action-btn";
+      this._redoBtn.title = "Redo";
+      this._redoBtn.addEventListener("click", () => this.redoSound());
+      histRow.append(this._undoBtn, this._redoBtn);
+      actionWrap.appendChild(histRow);
+      this._updateHistoryButtons();
+    }
 
     // Save
     const saveBtn = document.createElement("button");
@@ -1353,8 +1401,96 @@ export class WebAudioControlsBase extends HTMLElement {
     }
   }
 
-  /** Randomize all synthesis parameters within their slider min/max ranges. */
+  // ---- Sound design: randomize / mutate / undo (see global/sound-design.js) ----
+
+  /** The instrument's engine-level param schema, or null for unmigrated instruments. */
+  get _paramSchema() {
+    return this._instrument?.constructor.PARAMS ?? null;
+  }
+
+  get _soundHistory() {
+    return (this.__soundHistory ??= new SoundHistory());
+  }
+
+  /** Snapshot the current sound onto the undo stack. */
+  _recordSound() {
+    if (!this._paramSchema) return;
+    this._soundHistory.record(captureValues(this._instrument));
+    this._updateHistoryButtons();
+  }
+
+  _updateHistoryButtons() {
+    if (this._undoBtn) this._undoBtn.disabled = !this._soundHistory.canUndo;
+    if (this._redoBtn) this._redoBtn.disabled = !this._soundHistory.canRedo;
+  }
+
+  /**
+   * Apply a values object through the standard control event path
+   * (`knob-input`), so UI, MIDI/LED feedback and the instrument stay in sync.
+   * Params without a control are written to the instrument directly.
+   */
+  _applyParamValues(values) {
+    for (const [param, value] of Object.entries(values)) {
+      const knob = this._sliders[param];
+      const select = this._selects[param]?.el;
+      const toggle = this._toggles[param];
+      if (knob) knob.value = value;
+      if (select) select.value = value;
+      if (toggle) toggle.el.classList.toggle(toggle.activeClass, !!value);
+      const target = knob ?? select ?? toggle?.el;
+      if (target) {
+        target.dispatchEvent(new CustomEvent("knob-input", { bubbles: true, detail: { param, value } }));
+      } else {
+        this._instrument[param] = value;
+      }
+    }
+    this._instrument._rebake?.();
+    this._instrument._markDirty?.();
+    this._syncExtraControls();
+  }
+
+  /** Run a sound change: record undo, compute new values, apply, notify. */
+  _changeSound(compute) {
+    const Cls = this._instrument.constructor;
+    const current = captureValues(this._instrument);
+    this._soundHistory.record(current);
+    const opts = { locks: this._soundLocks ?? null, constrain: Cls.constrain?.bind(Cls) };
+    this._applyParamValues(compute(Cls.PARAMS, current, opts));
+    this._updateHistoryButtons();
+    this._emitChange();
+  }
+
+  /** Nudge the current sound by `amount` (0..1; see MUTATE_AMOUNTS). */
+  mutate(amount = MUTATE_AMOUNTS.medium) {
+    if (!this._paramSchema) return;
+    this._changeSound((params, current, opts) => mutateValues(params, current, amount, opts));
+  }
+
+  undoSound() {
+    if (!this._paramSchema) return;
+    const prev = this._soundHistory.undo(captureValues(this._instrument));
+    if (prev) this._applyParamValues(prev);
+    this._updateHistoryButtons();
+    if (prev) this._emitChange();
+  }
+
+  redoSound() {
+    if (!this._paramSchema) return;
+    const next = this._soundHistory.redo(captureValues(this._instrument));
+    if (next) this._applyParamValues(next);
+    this._updateHistoryButtons();
+    if (next) this._emitChange();
+  }
+
+  /**
+   * Randomize the sound. Instruments with a param schema use curated ranges
+   * (and are undoable); legacy instruments fall back to full slider ranges.
+   */
   _randomizeAllParams() {
+    if (this._paramSchema) {
+      this._changeSound((params, current, opts) => randomizeValues(params, current, opts));
+      return;
+    }
     for (const def of this.constructor.SLIDER_DEFS || []) {
       if (def.param === "volume" || def.param === "chance") continue;
       const min = parseFloat(def.min);
