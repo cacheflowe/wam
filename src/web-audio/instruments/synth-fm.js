@@ -4,6 +4,7 @@ import { buildChordFromScale, scaleNotesInRange, scaleNoteOptions } from "../glo
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
 import { applyADSR } from "../global/dsp/envelope.js";
+import { sliderDefs } from "../global/param-schema.js";
 
 /**
  * WebAudioSynthFM — polyphonic 2-operator FM synthesizer.
@@ -68,6 +69,107 @@ export default class WebAudioSynthFM extends WebAudioInstrumentBase {
     { label: "1/8", beats: 0.5 },
     { label: "1/16", beats: 0.25 },
   ];
+
+  /** Musical carrier/modulator ratios randomize/mutate snap to (incl. classic inharmonic 1.41 / 3.14). */
+  static CARRIER_RATIOS = [0.5, 1, 2, 3];
+  static MOD_RATIOS = [0.5, 1, 1.41, 1.5, 2, 2.5, 3, 3.14, 3.5, 4, 5, 6, 7];
+
+  /**
+   * Param schema (see global/param-schema.js). Single source of truth for the
+   * UI, serialization, randomize/mutate, and hardware mapping. The modulator
+   * envelope uses the filter-env roles: in FM it is the brightness envelope.
+   */
+  static PARAMS = [
+    // ---- FM operators ----
+    { param: "carrierRatio", label: "Carrier", min: 0.5, max: 4, step: 0.01,
+      group: "osc", role: "ratio", priority: 2, rand: { min: 0.5, max: 2 },
+      tooltip: "Carrier frequency as a ratio to the note pitch. Affects tuning character." },
+    { param: "modRatio", label: "Mod Ratio", min: 0.5, max: 8, step: 0.01,
+      group: "osc", role: "ratio", priority: 1, rand: { min: 0.5, max: 7 },
+      tooltip: "Modulator frequency ratio. Shapes the harmonic timbre." },
+    { param: "modIndex", label: "Mod Index", min: 0, max: 10, step: 0.1,
+      group: "osc", role: "index", priority: 1, rand: { min: 0.4, max: 5 },
+      tooltip: "FM modulation depth. Higher = more harmonics and brightness." },
+    { param: "modWaveform", label: "Wave", type: "enum", options: ["sine", "square", "sawtooth", "triangle"],
+      group: "osc", role: "wave", priority: 2, rand: { weights: [6, 1, 1, 2] },
+      tooltip: "Modulator waveform. Sine = classic FM; others add buzz." },
+    { param: "feedback", label: "Feedback", min: 0, max: 1000, step: 1,
+      group: "osc", role: "feedback", priority: 2, rand: { min: 0, max: 60, bias: 2 },
+      tooltip: "Modulator feedback amount." },
+    // ---- Modulator (brightness) envelope ----
+    { param: "modAttack", label: "Mod Attack", min: 0.001, max: 2, step: 0.001,
+      group: "filter-env", role: "filterAttack", priority: 3, rand: { min: 0.001, max: 0.1, bias: 2 },
+      tooltip: "How quickly the FM modulation reaches peak intensity." },
+    { param: "modDecay", label: "Mod Decay", min: 0.01, max: 4, step: 0.01,
+      group: "filter-env", role: "filterDecay", priority: 1, rand: { min: 0.04, max: 1.2 },
+      tooltip: "How quickly the FM modulation fades. Short = percussive attack." },
+    { param: "modSustain", label: "Mod Sustain", min: 0, max: 1, step: 0.01,
+      group: "filter-env", role: "filterSustain", priority: 3, rand: { min: 0, max: 0.6 },
+      tooltip: "Modulation depth held after the mod decay (0–1 of peak)." },
+    { param: "modRelease", label: "Mod Release", min: 0.01, max: 4, step: 0.01,
+      group: "filter-env", role: "filterRelease", priority: 3, rand: { min: 0.1, max: 1.5 },
+      tooltip: "How quickly the modulation fades after note off." },
+    // ---- Unison ----
+    { param: "unison", label: "Unison", type: "bool",
+      group: "osc", role: "unison", priority: 3,
+      tooltip: "Stack three detuned voices per note." },
+    { param: "unisonSpread", label: "Unison Spread", min: 0, max: 50, step: 1,
+      group: "osc", role: "detune", priority: 3, rand: { min: 3, max: 20 },
+      tooltip: "Detune spread for unison voices." },
+    // ---- Amp envelope ----
+    { param: "attack", label: "Attack", min: 0.001, max: 2, step: 0.001,
+      group: "amp-env", role: "attack", priority: 1, rand: { min: 0.001, max: 0.3, bias: 2.5 },
+      tooltip: "Amplitude envelope attack time." },
+    { param: "decay", label: "Decay", min: 0.01, max: 2, step: 0.01,
+      group: "amp-env", role: "decay", priority: 1, rand: { min: 0.1, max: 1.5 },
+      tooltip: "Amplitude envelope decay time." },
+    { param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01,
+      group: "amp-env", role: "sustain", priority: 2, rand: { min: 0, max: 0.7 },
+      tooltip: "Amplitude sustain level (0–1) during held notes." },
+    { param: "release", label: "Release", min: 0.01, max: 4, step: 0.01,
+      group: "amp-env", role: "release", priority: 2, rand: { min: 0.1, max: 1.5 },
+      tooltip: "Amplitude envelope release time after note off." },
+    // ---- Filter ----
+    { param: "filterFreq", label: "Filter", min: 100, max: 12000, step: 1, scale: "log",
+      group: "filter", role: "cutoff", priority: 1, rand: { min: 1500, max: 12000 },
+      tooltip: "Lowpass filter cutoff frequency." },
+    { param: "filterQ", label: "Filter Q", min: 0.5, max: 20, step: 0.1,
+      group: "filter", role: "resonance", priority: 2, rand: { min: 0.5, max: 6 },
+      tooltip: "Filter resonance. Emphasizes the cutoff frequency." },
+    { param: "detune", label: "Detune", min: -50, max: 50, step: 1,
+      group: "pitch", role: "pitch", priority: 3, rand: { min: 0, max: 6 },
+      tooltip: "Global pitch detune in cents." },
+    // ---- Filter LFO ----
+    { param: "lfoInterval", label: "Rate", type: "enum", options: [0, 16, 8, 4, 2, 1, 0.5, 0.25],
+      group: "mod", role: "lfoRate", priority: 3, rand: { weights: [6, 1, 1, 2, 1, 1, 0, 0] },
+      tooltip: "Filter LFO cycle length, synced to BPM. Off = no LFO." },
+    { param: "lfoShape", label: "Shape", type: "enum", options: ["sine", "triangle", "sawtooth", "square"],
+      group: "mod", role: "lfoShape", priority: 3, rand: { weights: [3, 2, 1, 1] },
+      tooltip: "Filter LFO waveform." },
+    { param: "lfoDepth", label: "LFO Depth", min: 0, max: 3000, step: 10,
+      group: "mod", role: "lfoDepth", priority: 3, rand: { min: 0, max: 1200, bias: 1.5 },
+      tooltip: "Filter LFO depth in Hz. 0 = no movement." },
+    // ---- Pitch / sequencing (part-level: excluded from randomize) ----
+    { param: "octaveOffset", label: "Octave", min: -2, max: 2, step: 1,
+      group: "pitch", role: "octave", priority: 3, rand: false,
+      tooltip: "Shift all notes up or down by octaves." },
+    { param: "octaveJumpProb", label: "Oct Jump", min: 0, max: 1, step: 0.01,
+      group: "seq", role: "octaveJump", priority: 3, rand: false,
+      tooltip: "Probability of randomly jumping an octave each step." },
+  ];
+
+  /** Cross-param rules applied after randomize/mutate (see sound-design.js). */
+  static constrain(v) {
+    const snap = (x, set) => set.reduce((best, r) => (Math.abs(r - x) < Math.abs(best - x) ? r : best), set[0]);
+    // Continuous ratios mostly sound inharmonic/out of tune — snap to musical ones.
+    if (typeof v.carrierRatio === "number") v.carrierRatio = snap(v.carrierRatio, WebAudioSynthFM.CARRIER_RATIOS);
+    if (typeof v.modRatio === "number") v.modRatio = snap(v.modRatio, WebAudioSynthFM.MOD_RATIOS);
+    // Feedback with a deep index turns into screech/noise.
+    if (v.modIndex > 3.5 && v.feedback > 20) v.feedback = 20;
+    // Non-sine modulators are already harmonically dense; keep the index moderate.
+    if (v.modWaveform !== "sine" && v.modIndex > 3) v.modIndex = 3;
+    return v;
+  }
 
   static PRESETS = {
     E_Piano: {
@@ -635,113 +737,7 @@ export default class WebAudioSynthFM extends WebAudioInstrumentBase {
 // ---- Controls companion component ----
 
 export class WebAudioSynthFMControls extends WebAudioControlsBase {
-  static SLIDER_DEFS = [
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
-    {
-      param: "octaveOffset",
-      label: "Octave",
-      min: -2,
-      max: 2,
-      step: 1,
-      tooltip: "Shift all notes up or down by octaves.",
-    },
-    {
-      param: "octaveJumpProb",
-      label: "Oct Jump",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Probability of randomly jumping an octave each step.",
-    },
-    {
-      param: "carrierRatio",
-      label: "Carrier",
-      min: 0.5,
-      max: 4,
-      step: 0.01,
-      tooltip: "Carrier frequency as a ratio to the note pitch. Affects tuning character.",
-    },
-    {
-      param: "modRatio",
-      label: "Mod Ratio",
-      min: 0.5,
-      max: 8,
-      step: 0.01,
-      tooltip: "Modulator frequency ratio. Shapes the harmonic timbre.",
-    },
-    {
-      param: "modIndex",
-      label: "Mod Index",
-      min: 0,
-      max: 10,
-      step: 0.1,
-      tooltip: "FM modulation depth. Higher = more harmonics and brightness.",
-    },
-    {
-      param: "modAttack",
-      label: "Mod Attack",
-      min: 0.001,
-      max: 1,
-      step: 0.001,
-      tooltip: "How quickly the FM modulation reaches peak intensity.",
-    },
-    {
-      param: "modDecay",
-      label: "Mod Decay",
-      min: 0.01,
-      max: 2,
-      step: 0.01,
-      tooltip: "How quickly the FM modulation fades. Short = percussive attack.",
-    },
-
-
-    { param: "feedback", label: "Feedback", min: 0, max: 1000, step: 1, tooltip: "Modulator feedback amount." },
-    { param: "unisonSpread", label: "Unison Spread", min: 0, max: 50, step: 1, tooltip: "Detune spread for unison voices." },
-    { param: "attack", label: "Attack", min: 0.001, max: 1, step: 0.001, tooltip: "Amplitude envelope attack time." },
-    { param: "decay", label: "Decay", min: 0.01, max: 2, step: 0.01, tooltip: "Amplitude envelope decay time." },
-    {
-      param: "sustain",
-      label: "Sustain",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Amplitude sustain level (0–1) during held notes.",
-    },
-    {
-      param: "release",
-      label: "Release",
-      min: 0.01,
-      max: 3,
-      step: 0.01,
-      tooltip: "Amplitude envelope release time after note off.",
-    },
-    {
-      param: "filterFreq",
-      label: "Filter",
-      min: 100,
-      max: 12000,
-      step: 1,
-      scale: "log",
-      tooltip: "Lowpass filter cutoff frequency.",
-    },
-    {
-      param: "filterQ",
-      label: "Filter Q",
-      min: 0.5,
-      max: 20,
-      step: 0.1,
-      tooltip: "Filter resonance. Emphasizes the cutoff frequency.",
-    },
-    { param: "detune", label: "Detune", min: -50, max: 50, step: 1, tooltip: "Global pitch detune in cents." },
-    {
-      param: "lfoDepth",
-      label: "LFO Depth",
-      min: 0,
-      max: 3000,
-      step: 10,
-      tooltip: "LFO vibrato depth in cents. 0 = no vibrato.",
-    },
-  ];
+  static SLIDER_DEFS = sliderDefs(WebAudioSynthFM.PARAMS);
 
   static DEFAULT_PATTERN() {
     const active = new Set([0, 8]);
@@ -833,9 +829,9 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
 
     // ---- FM ----
     const { el: fmEl, controls: fmCtrl } = createSection("FM");
-    fmCtrl.appendChild(mkSlider({ param: "carrierRatio", label: "Carrier", min: 0.5, max: 4, step: 0.01 }));
-    fmCtrl.appendChild(mkSlider({ param: "modRatio", label: "Mod Ratio", min: 0.5, max: 8, step: 0.01 }));
-    fmCtrl.appendChild(mkSlider({ param: "modIndex", label: "Mod Index", min: 0, max: 10, step: 0.1 }));
+    fmCtrl.appendChild(mkSlider("carrierRatio"));
+    fmCtrl.appendChild(mkSlider("modRatio"));
+    fmCtrl.appendChild(mkSlider("modIndex"));
     
     const modWaveSelect = mkSelect("Wave", fmCtrl);
     for (const shape of ["sine", "square", "sawtooth", "triangle"]) {
@@ -847,8 +843,8 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     }
     this._registerSelect("modWaveform", modWaveSelect);
     
-    fmCtrl.appendChild(mkSlider({ param: "feedback", label: "Feedback", min: 0, max: 1000, step: 1 }));
-    fmCtrl.appendChild(mkSlider({ param: "modDecay", label: "Mod Decay", min: 0.01, max: 2, step: 0.01 }));
+    fmCtrl.appendChild(mkSlider("feedback"));
+    fmCtrl.appendChild(mkSlider("modDecay"));
     controls.appendChild(fmEl);
 
     // ---- Unison ----
@@ -861,24 +857,24 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     this._registerToggle("unison", uniToggle);
     this._unisonToggle = uniToggle;
 
-    uniCtrl.appendChild(mkSlider({ param: "unisonSpread", label: "Spread", min: 0, max: 50, step: 1 }));
+    uniCtrl.appendChild(mkSlider("unisonSpread", { label: "Spread" }));
     controls.appendChild(uniEl);
 
     // ---- Envelope ----
     const { el: envEl, controls: envCtrl } = createSection("Envelope");
-    envCtrl.appendChild(mkSlider({ param: "attack", label: "Attack", min: 0.001, max: 1, step: 0.001 }));
-    envCtrl.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.01, max: 2, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01 }));
-    envCtrl.appendChild(mkSlider({ param: "release", label: "Release", min: 0.01, max: 3, step: 0.01 }));
+    envCtrl.appendChild(mkSlider("attack"));
+    envCtrl.appendChild(mkSlider("decay"));
+    envCtrl.appendChild(mkSlider("sustain"));
+    envCtrl.appendChild(mkSlider("release"));
     controls.appendChild(envEl);
 
     // ---- Filter ----
     const { el: filtEl, controls: filtCtrl } = createSection("Filter");
     filtCtrl.appendChild(
-      mkSlider({ param: "filterFreq", label: "Cutoff", min: 100, max: 12000, step: 1, scale: "log" }),
+      mkSlider("filterFreq", { label: "Cutoff" }),
     );
-    filtCtrl.appendChild(mkSlider({ param: "filterQ", label: "Resonance", min: 0.5, max: 20, step: 0.1 }));
-    filtCtrl.appendChild(mkSlider({ param: "detune", label: "Detune", min: -50, max: 50, step: 1 }));
+    filtCtrl.appendChild(mkSlider("filterQ", { label: "Resonance" }));
+    filtCtrl.appendChild(mkSlider("detune"));
     controls.appendChild(filtEl);
 
     // ---- LFO ----
@@ -901,13 +897,13 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
       this._lfoShapeSelect.appendChild(opt);
     }
     this._registerSelect("lfoShape", this._lfoShapeSelect);
-    lfoCtrl.appendChild(mkSlider({ param: "lfoDepth", label: "Depth", min: 0, max: 3000, step: 10 }));
+    lfoCtrl.appendChild(mkSlider("lfoDepth", { label: "Depth" }));
     controls.appendChild(lfoEl);
 
     // ---- Octave ----
     const { el: octEl, controls: octCtrl } = createSection("Octave");
-    octCtrl.appendChild(mkSlider({ param: "octaveOffset", label: "Offset", min: -2, max: 2, step: 1 }));
-    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0, max: 1, step: 0.01 }));
+    octCtrl.appendChild(mkSlider("octaveOffset", { label: "Offset" }));
+    octCtrl.appendChild(mkSlider("octaveJumpProb", { label: "Jump Prob" }));
     controls.appendChild(octEl);
 
     // ---- Sequencer ----

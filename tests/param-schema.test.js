@@ -16,6 +16,8 @@ import WebAudioSynthPad, { WebAudioSynthPadControls } from "../src/web-audio/ins
 import WebAudioPercKick, { WebAudioPercKickControls } from "../src/web-audio/instruments/perc-kick.js";
 import WebAudioPercSnare, { WebAudioPercSnareControls } from "../src/web-audio/instruments/perc-snare.js";
 import WebAudioPercHihat, { WebAudioPercHihatControls } from "../src/web-audio/instruments/perc-hihat.js";
+import WebAudioSynthFM, { WebAudioSynthFMControls } from "../src/web-audio/instruments/synth-fm.js";
+import WebAudioSynth808, { WebAudioSynth808Controls } from "../src/web-audio/instruments/synth-808.js";
 
 // Instruments migrated to the schema: [name, Instrument, Controls]. Add each one as it moves over.
 const MIGRATED = [
@@ -26,6 +28,8 @@ const MIGRATED = [
   ["WebAudioPercKick", WebAudioPercKick, WebAudioPercKickControls],
   ["WebAudioPercSnare", WebAudioPercSnare, WebAudioPercSnareControls],
   ["WebAudioPercHihat", WebAudioPercHihat, WebAudioPercHihatControls],
+  ["WebAudioSynthFM", WebAudioSynthFM, WebAudioSynthFMControls],
+  ["WebAudioSynth808", WebAudioSynth808, WebAudioSynth808Controls],
 ];
 
 describe("param-schema helpers", () => {

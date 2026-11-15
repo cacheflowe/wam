@@ -4,6 +4,7 @@ import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/sca
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 import { makeSoftClipCurve } from "../global/dsp/distortion.js";
+import { sliderDefs } from "../global/param-schema.js";
 
 /**
  * WebAudioSynth808 — pitched 808-style sub-bass synthesizer.
@@ -86,6 +87,54 @@ export default class WebAudioSynth808 extends WebAudioInstrumentBase {
       volume: 0.95,
     },
   };
+
+  /**
+   * Param schema (see global/param-schema.js). Single source of truth for the
+   * UI, serialization, randomize/mutate, and hardware mapping. `rand` ranges
+   * keep rolled sounds subby and mostly clean.
+   */
+  static PARAMS = [
+    // ---- Tone ----
+    { param: "tone", label: "Tone", min: 50, max: 8000, step: 1, scale: "log",
+      group: "filter", role: "tone", priority: 1, rand: { min: 800, max: 5000 },
+      tooltip: "Tone filter cutoff. Lower = rounder, darker bass." },
+    // ---- Shape ----
+    { param: "decay", label: "Decay", min: 0.1, max: 3, step: 0.01,
+      group: "amp-env", role: "decay", priority: 1, rand: { min: 0.3, max: 2 },
+      tooltip: "Amplitude decay time. Longer = sustained sub-bass thump." },
+    { param: "pitchSweepSemitones", label: "Pitch Sweep", min: 0, max: 36, step: 1,
+      group: "pitch", role: "pitchAmt", priority: 1, rand: { min: 5, max: 30 },
+      tooltip: "Starting pitch above target in semitones — creates the 808 pitch drop." },
+    { param: "pitchDecay", label: "Pitch Decay", min: 0.01, max: 1, step: 0.01,
+      group: "pitch", role: "pitchDecay", priority: 1, rand: { min: 0.03, max: 0.25 },
+      tooltip: "How quickly the pitch drop resolves to the target note." },
+    // ---- Character ----
+    { param: "distortion", label: "Distortion", min: 0, max: 1, step: 0.01,
+      group: "character", role: "drive", priority: 1, rand: { min: 0, max: 0.4, bias: 2 },
+      tooltip: "Adds saturation and harmonic content to the bass." },
+    { param: "click", label: "Click", min: 0, max: 1, step: 0.01,
+      group: "character", role: "click", priority: 2, rand: { min: 0, max: 0.6 },
+      tooltip: "Adds a transient click at note onset for extra punch." },
+    { param: "subOscMix", label: "Sub Mix", min: 0, max: 1, step: 0.01,
+      group: "body", role: "body", priority: 2, rand: { min: 0, max: 0.6 },
+      tooltip: "Blend of a sub-octave oscillator beneath the main tone." },
+    // ---- Pitch / sequencing (part-level: excluded from randomize) ----
+    { param: "octaveOffset", label: "Octave", min: -2, max: 2, step: 1,
+      group: "pitch", role: "octave", priority: 3, rand: false,
+      tooltip: "Shift all notes up or down by octaves." },
+    { param: "octaveJumpProb", label: "Oct Jump", min: 0, max: 1, step: 0.01,
+      group: "seq", role: "octaveJump", priority: 3, rand: false,
+      tooltip: "Probability of randomly jumping an octave on each note." },
+  ];
+
+  /** Cross-param rules applied after randomize/mutate (see sound-design.js). */
+  static constrain(v) {
+    // A big, slow pitch drop reads as a siren rather than a boom.
+    if (v.pitchSweepSemitones > 24 && v.pitchDecay > 0.15) v.pitchDecay = 0.15;
+    // Heavy drive plus a loud click gets harsh; keep the dirt in the body.
+    if (v.distortion > 0.25 && v.click > 0.4) v.click = 0.4;
+    return v;
+  }
 
   /**
    * @param {AudioContext} ctx
@@ -220,82 +269,7 @@ export default class WebAudioSynth808 extends WebAudioInstrumentBase {
 // ---- Controls companion component ----
 
 export class WebAudioSynth808Controls extends WebAudioControlsBase {
-  static SLIDER_DEFS = [
-    { param: "volume", label: "Vol", min: 0, max: 1, step: 0.01 },
-    {
-      param: "decay",
-      label: "Decay",
-      min: 0.1,
-      max: 3,
-      step: 0.01,
-      tooltip: "Amplitude decay time. Longer = sustained sub-bass thump.",
-    },
-    {
-      param: "pitchSweepSemitones",
-      label: "Pitch Sweep",
-      min: 0,
-      max: 36,
-      step: 1,
-      tooltip: "Starting pitch above target in semitones — creates the 808 pitch drop.",
-    },
-    {
-      param: "pitchDecay",
-      label: "Pitch Decay",
-      min: 0.01,
-      max: 1,
-      step: 0.01,
-      tooltip: "How quickly the pitch drop resolves to the target note.",
-    },
-    {
-      param: "distortion",
-      label: "Distortion",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Adds saturation and harmonic content to the bass.",
-    },
-    {
-      param: "click",
-      label: "Click",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Adds a transient click at note onset for extra punch.",
-    },
-    {
-      param: "subOscMix",
-      label: "Sub Mix",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Blend of a sub-octave oscillator beneath the main tone.",
-    },
-    {
-      param: "tone",
-      label: "Tone",
-      min: 50,
-      max: 8000,
-      step: 1,
-      scale: "log",
-      tooltip: "Tone filter cutoff. Lower = rounder, darker bass.",
-    },
-    {
-      param: "octaveOffset",
-      label: "Octave",
-      min: -2,
-      max: 2,
-      step: 1,
-      tooltip: "Shift all notes up or down by octaves.",
-    },
-    {
-      param: "octaveJumpProb",
-      label: "Oct Jump",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      tooltip: "Probability of randomly jumping an octave on each note.",
-    },
-  ];
+  static SLIDER_DEFS = sliderDefs(WebAudioSynth808.PARAMS);
 
   static DEFAULT_PATTERN() {
     return Array.from({ length: 16 }, (_, i) => ({
@@ -341,27 +315,27 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
     // ---- Tone ----
     const { el: toneEl, controls: toneCtrl } = createSection("Tone");
 
-    toneCtrl.appendChild(mkSlider({ param: "tone", label: "Tone", min: 50, max: 8000, step: 1, scale: "log" }));
+    toneCtrl.appendChild(mkSlider("tone"));
     controls.appendChild(toneEl);
 
     // ---- Shape ----
     const { el: shapeEl, controls: shapeCtrl } = createSection("Shape");
-    shapeCtrl.appendChild(mkSlider({ param: "decay", label: "Decay", min: 0.1, max: 3, step: 0.01 }));
-    shapeCtrl.appendChild(mkSlider({ param: "pitchSweepSemitones", label: "Pitch Sweep", min: 0, max: 36, step: 1 }));
-    shapeCtrl.appendChild(mkSlider({ param: "pitchDecay", label: "Pitch Decay", min: 0.01, max: 1, step: 0.01 }));
+    shapeCtrl.appendChild(mkSlider("decay"));
+    shapeCtrl.appendChild(mkSlider("pitchSweepSemitones"));
+    shapeCtrl.appendChild(mkSlider("pitchDecay"));
     controls.appendChild(shapeEl);
 
     // ---- Character ----
     const { el: charEl, controls: charCtrl } = createSection("Character");
-    charCtrl.appendChild(mkSlider({ param: "distortion", label: "Distortion", min: 0, max: 1, step: 0.01 }));
-    charCtrl.appendChild(mkSlider({ param: "click", label: "Click", min: 0, max: 1, step: 0.01 }));
-    charCtrl.appendChild(mkSlider({ param: "subOscMix", label: "Sub Mix", min: 0, max: 1, step: 0.01 }));
+    charCtrl.appendChild(mkSlider("distortion"));
+    charCtrl.appendChild(mkSlider("click"));
+    charCtrl.appendChild(mkSlider("subOscMix"));
     controls.appendChild(charEl);
 
     // ---- Octave ----
     const { el: octEl, controls: octCtrl } = createSection("Octave");
-    octCtrl.appendChild(mkSlider({ param: "octaveOffset", label: "Offset", min: -2, max: 2, step: 1 }));
-    octCtrl.appendChild(mkSlider({ param: "octaveJumpProb", label: "Jump Prob", min: 0, max: 1, step: 0.01 }));
+    octCtrl.appendChild(mkSlider("octaveOffset", { label: "Offset" }));
+    octCtrl.appendChild(mkSlider("octaveJumpProb", { label: "Jump Prob" }));
     controls.appendChild(octEl);
 
     // ---- Sequencer ----

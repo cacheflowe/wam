@@ -105,13 +105,15 @@ Placement is by `role` (fixed knob per role), then unfilled slots in a row get t
 - [ ] Enum params (selects) in the schema; UI registers selects from it.
 - [x] `mkSlider("param", overrides?)` looks up the schema def; acid's duplicated literals removed. Remaining instruments: per migration below.
 - [x] Schema validation test ([tests/param-schema.test.js](../../../tests/param-schema.test.js)) — add each instrument to `MIGRATED` as it moves.
-- [ ] Migrate: ~~acid (pilot)~~ ✅ → poly → mono → pad → fm → 808 → kick/snare/hihat → blipfx → sample player/looper.
+- [x] Migrated: acid, poly, mono, pad, fm, 808, kick, snare, hihat — each with curated `rand` ranges + `constrain()`, covered by the shared `MIGRATED` tests.
+- [ ] Remaining: blipfx (has its own procedural `randomize()` — reconcile), sample player, loop player.
+- [ ] Enum UI still hand-built per instrument (selects/toggles); generate from the schema when convenient.
 
 ### Phase 2 — Sound-design engine
 - [x] `global/sound-design.js`: pure `randomizeValues`/`mutateValues` (locks, `constrain` hook, seeded rng), headless `randomizeInstrument`/`mutateInstrument`, `SoundHistory` (undo/redo, capped, collapses no-ops).
-- [ ] Curated `rand` ranges per instrument (by ear, with Justin). Acid: first pass + `static constrain` done — needs a listening pass.
+- [ ] Curated `rand` ranges per instrument (by ear, with Justin). Acid approved 2026-11-15; the rest have a first pass + `constrain()` and need a listening pass.
 - [x] Controls: Rand uses the engine (legacy full-range fallback for unmigrated instruments); **Mutate** + Subtle/Medium/Wild; **Undo/Redo** (preset loads are undoable too). All applied via the `knob-input` event path.
-- [ ] Group-lock UI (engine supports `locks`; controls read `this._soundLocks`). Proposed: click a section title to lock it.
+- [x] Section locks: 🔓 on each control-section title with randomizable params; locked params are skipped by Rand/Mutate; saved as `soundLocks`.
 - [ ] Level safety: per-instrument gain trim after randomize — investigate rendering a test note in an `OfflineAudioContext` to measure RMS.
 - [x] Tests: [tests/sound-design.test.js](../../../tests/sound-design.test.js) — ranges, log-uniform draws, locks, constrain, mutate scaling/identity/no-wander, history, acid end-to-end. Verified in-browser: Rand/Mutate/Undo/Redo keep knobs and instrument in sync.
 
