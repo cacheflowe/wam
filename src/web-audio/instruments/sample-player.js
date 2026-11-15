@@ -28,6 +28,9 @@ export default class WebAudioSamplePlayer extends WebAudioInstrumentBase {
   static PRESET_DATA = presetData;
   static PRESETS = presetMap(presetData);
 
+  /** trigger() argument layout, for note events (see global/note-event.js). */
+  static TRIGGER_ARGS = { trigger: ["notes", "duration", "velocity", "time"], triggerDrum: ["velocity", "duration", "time"] };
+
   constructor(ctx, preset = "Default") {
     super(ctx, null);
     this._samples = new Map(); // key → { buffer, reverseBuffer, label }

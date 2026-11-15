@@ -177,6 +177,9 @@ export default class WebAudioSynthFM extends WebAudioInstrumentBase {
   static PRESET_DATA = presetData;
   static PRESETS = presetMap(presetData);
 
+  /** trigger() argument layout, for note events (see global/note-event.js). */
+  static TRIGGER_ARGS = { trigger: ["notes", "duration", "time"] };
+
   /**
    * @param {AudioContext} ctx
    * @param {string}  [preset="E_Piano"]

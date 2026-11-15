@@ -12,6 +12,9 @@ export default class WebAudioSynthPad extends WebAudioInstrumentBase {
   static PRESET_DATA = presetData;
   static PRESETS = presetMap(presetData);
 
+  /** trigger() argument layout, for note events (see global/note-event.js). */
+  static TRIGGER_ARGS = { trigger: ["notes", "duration", "velocity", "time"] };
+
   /**
    * Param schema (see global/param-schema.js). Single source of truth for the
    * UI, serialization, randomize/mutate, and hardware mapping. `rand` ranges

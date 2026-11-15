@@ -24,6 +24,9 @@ export default class WebAudioSynthBlipFX extends WebAudioInstrumentBase {
   static PRESET_DATA = presetData;
   static PRESETS = presetMap(presetData);
 
+  /** trigger() argument layout, for note events (see global/note-event.js). */
+  static TRIGGER_ARGS = { trigger: ["time"] };
+
   static SHAPES = ["Sine", "Triangle", "Saw", "Square", "Noise", "Tan"];
 
   /**

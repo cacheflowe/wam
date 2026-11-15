@@ -1,0 +1,128 @@
+/**
+ * PerformanceStream — broadcasts what the music is doing, for external
+ * visualizers (TouchDesigner, p5.js, a second browser…) over AppStore.
+ *
+ * Keys (see docs/references/performance-stream.md for the wire contract):
+ *   trigger           one message per played note         (high rate, not echoed)
+ *   transport.beat    one message per 16th-note tick      (high rate, not echoed)
+ *   instruments.list  slot → instrument / name / color    (low rate, persisted)
+ *
+ * Timing: the sequencer schedules audio ~100ms ahead. Notes are held until
+ * their AudioContext time (plus the device's output latency) so visuals land
+ * with the sound, not before it. Chrome doesn't throttle timers in a tab that
+ * is playing audio, so this holds up even when the wam tab is in the background.
+ *
+ * Works with any AppStore on the page (window._store by default):
+ *   - local AppStore → plain set(); in-page listeners get every message.
+ *   - AppStoreDistributed → sent over the socket with the correct JSON `type`
+ *     ("object"/"array" — the stock set() labels objects "number") and, for the
+ *     high-rate keys, `sendonly` so the server doesn't echo them back. They're
+ *     also delivered to in-page listeners directly (sendonly skips the sender).
+ *
+ * No DOM and no oversite import — the store is duck-typed.
+ */
+
+import { StoreKeys } from "./store-keys.js";
+
+export const STREAM_KEYS = Object.freeze({
+  TRIGGER: StoreKeys.TRIGGER,
+  BEAT: StoreKeys.TRANSPORT_BEAT,
+  INSTRUMENTS: StoreKeys.INSTRUMENTS_LIST,
+});
+
+function jsonType(value) {
+  if (Array.isArray(value)) return "array";
+  if (value === null) return "object";
+  const t = typeof value;
+  return t === "boolean" || t === "string" || t === "number" ? t : "object";
+}
+
+export class PerformanceStream {
+  /**
+   * @param {object} [o]
+   * @param {() => object|null} [o.getStore]     defaults to window._store
+   * @param {() => boolean} [o.canPublish]       e.g. only the "host" role publishes
+   * @param {(fn: Function, ms: number) => any} [o.setTimer]
+   */
+  constructor({
+    getStore = () => globalThis._store ?? null,
+    canPublish = () => true,
+    setTimer = (fn, ms) => setTimeout(fn, ms),
+  } = {}) {
+    this._getStore = getStore;
+    this._canPublish = canPublish;
+    this._setTimer = setTimer;
+    this._ctx = null;
+    this.enabled = true;
+    /** Extra visual delay (ms), + or −, to line visuals up with what you hear. */
+    this.offsetMs = 0;
+  }
+
+  /** AudioContext used to convert scheduled audio times into wall-clock delays. */
+  setContext(ctx) {
+    this._ctx = ctx;
+  }
+
+  /** ms from now until `audioTime` is audible. 0 when unknown or already past. */
+  delayFor(audioTime) {
+    const ctx = this._ctx;
+    if (!ctx || typeof audioTime !== "number") return Math.max(0, this.offsetMs);
+    const latency = (ctx.outputLatency || ctx.baseLatency || 0) * 1000;
+    return Math.max(0, (audioTime - ctx.currentTime) * 1000 + latency + this.offsetMs);
+  }
+
+  /** Publish a note at the moment it's heard. */
+  note(payload, audioTime) {
+    this._at(audioTime, () => this.publish(STREAM_KEYS.TRIGGER, payload, { sendOnly: true }));
+  }
+
+  /** Publish a 16th-note tick at the moment it's heard. */
+  beat(payload, audioTime) {
+    this._at(audioTime, () => this.publish(STREAM_KEYS.BEAT, payload, { sendOnly: true }));
+  }
+
+  /** Publish the slot → instrument table (persisted, so late joiners get it). */
+  instruments(list) {
+    this.publish(STREAM_KEYS.INSTRUMENTS, list, { sendOnly: false });
+  }
+
+  _at(audioTime, fn) {
+    if (!this.enabled || !this._canPublish()) return;
+    const ms = this.delayFor(audioTime);
+    if (ms <= 1) fn();
+    else this._setTimer(fn, ms);
+  }
+
+  /**
+   * Send one key. Distributed stores get a correctly-typed message; sendOnly
+   * messages are also delivered locally because the server won't echo them.
+   */
+  publish(key, value, { sendOnly = false } = {}) {
+    const store = this._getStore();
+    if (!store || !this.enabled || !this._canPublish()) return;
+    const socket = store.solidSocket;
+    if (!socket) {
+      store.set(key, value); // local-only AppStore
+      return;
+    }
+    const msg = { key, value, store: true, type: jsonType(value) };
+    if (store.senderId) msg.sender = store.senderId;
+    if (sendOnly) msg.sendonly = true;
+    socket.sendMessage(JSON.stringify(msg));
+    if (sendOnly) localSet(store, key, value);
+  }
+}
+
+/**
+ * Update local state + in-page listeners without a network send: the base
+ * AppStore.set (AppStoreDistributed.set(k, v) with broadcast=false does the same).
+ */
+function localSet(store, key, value) {
+  store.set(key, value, false);
+}
+
+/** Shared singleton for the app. */
+export const performanceStream = new PerformanceStream({
+  // Only the host (default role) publishes; control/jam/observer clients would duplicate notes.
+  canPublish: () => (globalThis._syncRole ?? "host") === "host",
+});

@@ -17,6 +17,7 @@ import {
   randomizeValues,
 } from "../global/sound-design.js";
 import { quantize } from "../global/param-schema.js";
+import { describeTrigger } from "../global/note-event.js";
 import {
   canWritePresets,
   deletePresetFromRepo,
@@ -511,23 +512,40 @@ export class WebAudioControlsBase extends HTMLElement {
   /**
    * Notify the UI that this instrument fired a note.
    * Dispatches a bubbling "wam-trigger" CustomEvent for visualization.
+   * detail: { velocity, note } — `note` is the uniform note event from
+   * global/note-event.js (notes, velocity, duration, accent, time) or null for
+   * instruments that don't describe their triggers (e.g. the loop player).
+   * NOTE: fires at *schedule* time (the lookahead runs ~100ms ahead of audio);
+   * `note.time` is the AudioContext time the sound actually plays.
    */
-  _notifyTrigger(velocity = 1) {
-    this.dispatchEvent(new CustomEvent("wam-trigger", { bubbles: true, detail: { velocity: Math.min(1, velocity) } }));
+  _notifyTrigger(velocity = 1, note = null) {
+    this.dispatchEvent(
+      new CustomEvent("wam-trigger", { bubbles: true, detail: { velocity: Math.min(1, velocity), note } }),
+    );
   }
 
   /**
    * Wrap the instrument's trigger/triggerDrum methods so _notifyTrigger fires
-   * automatically on every note, keeping instrument code DRY.
+   * automatically on every note, keeping instrument code DRY. Nested calls
+   * (e.g. sample-player's triggerDrum → trigger) notify only once.
    */
   _wrapTrigger(instrument) {
     const self = this;
+    let depth = 0;
     for (const method of ["trigger", "triggerDrum"]) {
       const orig = instrument[method];
       if (typeof orig === "function") {
         instrument[method] = function (...args) {
-          if (!self._muteHandle?.isMuted()) self._notifyTrigger();
-          return orig.apply(this, args);
+          if (depth === 0 && !self._muteHandle?.isMuted()) {
+            const note = describeTrigger(instrument.constructor, method, args);
+            self._notifyTrigger(note?.velocity ?? 1, note);
+          }
+          depth++;
+          try {
+            return orig.apply(this, args);
+          } finally {
+            depth--;
+          }
         };
       }
     }

@@ -37,6 +37,7 @@ import { sequencerHardware } from "../web-audio/midi/sequencer-hardware.js";
 import { ledFeedback } from "../web-audio/midi/led-feedback.js";
 import { autoMap } from "../web-audio/midi/auto-map.js";
 import { performanceSurface } from "../web-audio/midi/performance-surface.js";
+import { performanceStream } from "../web-audio/global/performance-stream.js";
 import "../web-audio/ui/hardware-map.js";
 import {
   bindingFor,
@@ -436,6 +437,43 @@ export default class PlaygroundApp extends HTMLElement {
     );
   }
 
+  // ---- Performance stream (notes / beats / instrument table for external visualizers) ----
+
+  /** Instruments in row order (active + pending) — the same slots the faders use. */
+  _slotEntries() {
+    return [...this._instruments, ...this._pendingInstruments];
+  }
+
+  _streamNote(entry, note) {
+    const slot = this._slotEntries().indexOf(entry) + 1;
+    const payload = {
+      id: entry.instanceId,
+      slot,
+      instrument: entry.def.id,
+      name: entry.def.label,
+      color: entry.def.color,
+      notes: note.notes,
+      note: note.notes[0] ?? null,
+      velocity: Math.round(note.velocity * 1000) / 1000,
+      accent: note.accent,
+      duration: note.duration == null ? null : Math.round(note.duration * 1000) / 1000,
+      step: this._streamPos?.step ?? null,
+      bar: this._streamPos?.bar ?? null,
+    };
+    if ("open" in note) payload.open = note.open;
+    performanceStream.note(payload, note.time);
+  }
+
+  /** Publish slot → instrument (debounced; persisted so late-joining visualizers get it). */
+  _publishInstrumentList() {
+    clearTimeout(this._instrumentListTimer);
+    this._instrumentListTimer = setTimeout(() => {
+      performanceStream.instruments(
+        this._slotEntries().map((e, i) => ({ slot: i + 1, id: e.instanceId, instrument: e.def.id, name: e.def.label, color: e.def.color })),
+      );
+    }, 50);
+  }
+
   /** Scroll an instrument row into view. */
   _scrollInstrumentIntoView(row) {
     if (!row) return;
@@ -722,6 +760,7 @@ export default class PlaygroundApp extends HTMLElement {
       const entry =
         this._instruments.find((ent) => ent.ctrl === ctrl) || this._pendingInstruments.find((ent) => ent.ctrl === ctrl);
       if (entry) this._analysisBus.trigger(entry.analysisKey, e.detail.velocity);
+      if (entry && e.detail.note) this._streamNote(entry, e.detail.note);
     });
 
     // Empty state
@@ -747,6 +786,7 @@ export default class PlaygroundApp extends HTMLElement {
   _initAudio() {
     if (this._ctx) return;
     this._ctx = new AudioContext();
+    performanceStream.setContext(this._ctx);
 
     this._seq = new WebAudioSequencer(this._ctx, {
       bpm: 128,
@@ -830,6 +870,9 @@ export default class PlaygroundApp extends HTMLElement {
 
       const dur = this._seq.stepDurationSec();
       const bar = Math.floor(this._globalStep / 16);
+      // Performance stream: remember where we are for note payloads, and tick the beat.
+      this._streamPos = { step, bar };
+      performanceStream.beat({ step, bar, beat: step >> 2, downbeat: step === 0, bpm: this._transportEl.bpm }, time);
       this._analysisBus.setBeat(step, bar, this._transportEl.bpm, dur, time);
       for (const entry of this._instruments) {
         if (entry.def.step) {
@@ -916,6 +959,7 @@ export default class PlaygroundApp extends HTMLElement {
       this._instruments.push(entry);
     }
     performanceSurface.requestRefresh();
+    this._publishInstrumentList();
 
     // Wrapper row
     const row = document.createElement("div");
@@ -969,6 +1013,7 @@ export default class PlaygroundApp extends HTMLElement {
     this._instruments = this._instruments.filter((e) => e !== entry);
     this._pendingInstruments = this._pendingInstruments.filter((e) => e !== entry);
     performanceSurface.requestRefresh();
+    this._publishInstrumentList();
     if (this._instruments.length === 0 && this._pendingInstruments.length === 0) {
       this._emptyMsg.style.display = "";
     }

@@ -24,6 +24,9 @@ export default class WebAudioPercKick extends WebAudioInstrumentBase {
   static PRESET_DATA = presetData;
   static PRESETS = presetMap(presetData);
 
+  /** trigger() argument layout, for note events (see global/note-event.js). */
+  static TRIGGER_ARGS = { trigger: ["velocity", "time"] };
+
   /**
    * Param schema (see global/param-schema.js). Single source of truth for the
    * UI, serialization, randomize/mutate, and hardware mapping.

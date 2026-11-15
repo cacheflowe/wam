@@ -13,4 +13,9 @@ export const StoreKeys = {
   SONG_NAME: "song.name",
   DRAWER_OPEN_ID: "drawer.openId",
   FOCUS_INSTRUMENT_ID: "focus.instrumentId",
+  // Performance stream (global/performance-stream.js) — for external visualizers.
+  // Wire contract: docs/references/performance-stream.md
+  TRIGGER: "trigger",
+  TRANSPORT_BEAT: "transport.beat",
+  INSTRUMENTS_LIST: "instruments.list",
 };

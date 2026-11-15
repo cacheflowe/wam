@@ -156,8 +156,9 @@ together. Musically aligned, not sample-locked. Later phase.
   per-instrument sub-blobs (`params` / `steps` / `patternParams` / `fx`);
   echo-suppressed apply; add/remove/reorder via `instruments.list`.
 - **Phase 3 — Roles + control surface (D).** Role gating, lightweight control UI.
-- **Phase 4 — Performance stream (B).** Broadcast `trigger.*` / `transport.beat`
-  for external consumers; document the wire contract.
+- **Phase 4 — Performance stream (B).** Broadcast `trigger` / `transport.beat` /
+  `instruments.list` for external consumers. *(done 2026-11-15 — wire contract:
+  [performance-stream.md](../references/performance-stream.md))*
 - **Phase 5 (stretch) — Remote co-play.** Shared BPM/downbeat loose sync.
 
 ## First Slice (Phase 0 + 1) — transport play toggle
@@ -193,8 +194,14 @@ own AudioContext will produce sound; a pure control surface may stay silent.)
   jammer wants independent solos.
 - **`transport.playing`** — currently always shared (A). Decide later whether a
   *jammer* follows host stop or only a *control* does.
-- **trigger key shape** — `trigger.<instrument>` (per-instrument subscription)
-  vs. a single `trigger` key with instrument in payload. Leaning per-instrument.
+- ~~**trigger key shape**~~ — **resolved: a single `trigger` key** with `slot` /
+  `instrument` / `color` in the payload. Instrument ids are dynamic, so consumers
+  (TouchDesigner, p5) would otherwise have to discover and subscribe to new keys;
+  one subscription + `instruments.list` for layout is simpler.
+- **Persistence of stream keys** — the Oversite server persists every `store: true`
+  message (even `sendonly`), throttled to one write/sec, last value per key. Kept
+  `store: true` so `trigger` is a normal subscribable key on every client
+  (`store: false` would arrive as `custom_json`); cost is one stale replay on connect.
 - **bridge location** — `playground.js` first; generalize to `app.js` once proven.
 
 ## Related

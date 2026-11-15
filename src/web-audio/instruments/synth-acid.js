@@ -32,6 +32,9 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
   static PRESET_DATA = presetData;
   static PRESETS = presetMap(presetData);
 
+  /** trigger() argument layout, for note events (see global/note-event.js). */
+  static TRIGGER_ARGS = { trigger: ["notes", "duration", "accent", "time"] };
+
   /** Beat-fraction intervals for the filter LFO rate. */
   static LFO_INTERVALS = [
     { label: "1/4", beats: 1 },

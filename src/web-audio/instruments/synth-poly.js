@@ -212,6 +212,9 @@ export default class WebAudioSynthPoly extends WebAudioInstrumentBase {
   static PRESET_DATA = presetData;
   static PRESETS = presetMap(presetData);
 
+  /** trigger() argument layout, for note events (see global/note-event.js). */
+  static TRIGGER_ARGS = { trigger: ["notes", "duration", "velocity", "time"] };
+
   constructor(ctx, preset = "Default") {
     super(ctx, null);
     this._lastFreq = 0;
