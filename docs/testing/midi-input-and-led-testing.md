@@ -95,25 +95,7 @@ In the playground with the LCXL connected + MIDI input selected.
 
 ## 5c. Performance layout 🎛 (jammable-playground Phase 4)
 
-Verified in-browser with simulated MIDI on channel 13; **needs on-device confirmation.** Layout reference: [launch-control-xl.md → Playground performance layout](../references/launch-control-xl.md#playground-performance-layout).
-
-**Knobs (auto-map)**
-- ☐ Focus Poly, then Acid → knob **A1 is cutoff** on both, A2 resonance, B1–B4 attack/decay/sustain/release. Knob LEDs amber.
-- ☐ Focus Poly → **← / → LEDs lit**; → moves to page 2 (different params on the knobs; on-screen map says "page 2/2"); ← back.
-- ☐ Manual MIDI-learn on a knob still wins (red LED) and auto-map fills around it.
-- ☐ Uncheck "Auto-map knobs to focused instrument" → auto knobs clear.
-
-**Faders (mixer)**
-- ☐ Fader 1 controls instrument row 1's volume, fader 2 row 2, … regardless of focus or mode.
-- ☐ **Pickup:** set a volume on screen, then move the fader from far away → nothing changes until the fader passes the current level; then it follows. The on-screen map shows "↕ pick up" until then.
-
-**Modes (Mute / Solo / Record Arm side buttons)**
-- ☐ The current mode's side button is lit yellow; the others are dark. ⚠ Confirm these side buttons transmit on factory template 5 (notes 105–108, channel 13).
-- ☐ **Steps:** 16 buttons toggle steps of the focused instrument (unchanged from 5b).
-- ☐ **Mixer:** top row mutes rows 1–8 (green / red LEDs); bottom row focuses rows 1–8 (focused = bright amber).
-- ☐ **Perform:** top 1–4 launch patterns A–D — while playing, the switch happens on the next bar (amber = queued → green = playing). 5/6 step presets, 7 randomizes the pattern. Bottom 1–3 mutate subtle/medium/wild, 4 randomize sound, 5/6 undo/redo (lit only when available).
-- ☐ Switching back to Steps repaints the step pattern on the buttons.
-- ☐ **Reliability:** hammer buttons/faders for a minute in each mode → the device input never goes dead (LED traffic is batched; see §6).
+Step-by-step session: **[lcxl-performance-walkthrough.md](lcxl-performance-walkthrough.md)** — modes, role-based knobs + paging, fader mixer with pickup, Mixer/Perform buttons, pattern launch, MIDI-learn precedence, stress test.
 
 ## 6. Reliability — no port wedge 🎛
 

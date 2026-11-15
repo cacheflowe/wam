@@ -132,7 +132,7 @@ Placement is by `role` (fixed knob per role), then unfilled slots in a row get t
 - [x] Perform actions via Controls' public performance API (`launchPattern` — bar-quantized, `stepPreset`, `mutate`, `undoSound`, …); new commands `mode-*`, `page-prev/next`; keyboard ←/→ page.
 - [x] `<wam-hardware-map>` in the MIDI drawer (optionally docked to the bottom); clickable — modes, pages and the 16 buttons work without a device.
 - [x] Docs: [launch-control-xl.md](../../references/launch-control-xl.md#playground-performance-layout), manual QA §5c in [midi-input-and-led-testing.md](../../testing/midi-input-and-led-testing.md), note in the old LCXL plan.
-- [ ] **On-device verification** (Justin) — everything above was verified in-browser with simulated channel-13 MIDI only.
+- [ ] **On-device verification** (Justin) — guided session: [lcxl-performance-walkthrough.md](../../testing/lcxl-performance-walkthrough.md). Everything above was verified in-browser with simulated channel-13 MIDI only.
 
 ### Phase 5 — Curation
 - [ ] Per instrument: jam, mutate, save keepers to JSON, delete weak presets, tag everything.
