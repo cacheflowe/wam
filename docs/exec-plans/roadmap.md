@@ -10,6 +10,20 @@ Build a library of browser-based instruments that are:
 2. Fully functional with or without the Controls UI
 3. Well-documented enough that agents and new contributors can add instruments following existing patterns
 
+## TODOs to organize:
+
+- user select: none on sliders
+- Sticky instrument headers
+- Activate instrument and hide panel on new instrument creat
+- Confirm delete instrument
+- Undo (much larger ask)
+- Don't show value preview on automated value (acid freq lfo)
+- Toggle compact sequencer steps for mobile 
+- Make new sequence pattern controls wrap for mobile/responsive layout
+- Make pattern buttons work on mobile (remove pattern is right click)
+- Make fx/ctrl toggle sections of panels
+- Mute/solo could stack on mobile
+
 ## Current State (as of 2026-05-02)
 
 **Instruments (complete)**:
