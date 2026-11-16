@@ -46,15 +46,18 @@ describe("describeTrigger", () => {
 function localStore() {
   return { calls: [], set(k, v, ...rest) { this.calls.push([k, v, ...rest]); } };
 }
+/** AppStoreDistributed stand-in: records set() calls by kind (public API only). */
 function distributedStore() {
   return {
     senderId: "wam_host_x",
     sent: [],
     local: [],
-    solidSocket: { sendMessage(m) { this._s.sent.push(JSON.parse(m)); } },
-    set(k, v, broadcast = false) { if (!broadcast) this.local.push([k, v]); },
-    init() { this.solidSocket._s = this; return this; },
-  }.init();
+    isConnected: () => true,
+    set(k, v, broadcast = false, receiver = null, sendOnly = false) {
+      if (broadcast) this.sent.push({ key: k, value: v, receiver, sendOnly });
+      else this.local.push([k, v]);
+    },
+  };
 }
 
 describe("PerformanceStream", () => {
@@ -65,23 +68,32 @@ describe("PerformanceStream", () => {
     expect(store.calls).toEqual([[STREAM_KEYS.TRIGGER, { note: 60 }]]);
   });
 
-  it("distributed: typed 'object' message, sendonly, and delivered locally too", () => {
+  it("distributed: set(k, v, true, null, sendOnly) and delivered locally too", () => {
     const store = distributedStore();
     const ps = new PerformanceStream({ getStore: () => store });
     ps.note({ note: 60 });
-    expect(store.sent).toEqual([
-      { key: "trigger", value: { note: 60 }, store: true, type: "object", sender: "wam_host_x", sendonly: true },
-    ]);
+    expect(store.sent).toEqual([{ key: "trigger", value: { note: 60 }, receiver: null, sendOnly: true }]);
     expect(store.local).toEqual([["trigger", { note: 60 }]]);
   });
 
-  it("instrument list: typed 'array', persisted (not sendonly), echo updates local", () => {
+  it("instrument list: broadcast, not sendOnly; local copy arrives via the echo", () => {
     const store = distributedStore();
     const ps = new PerformanceStream({ getStore: () => store });
     ps.instruments([{ slot: 1 }]);
-    expect(store.sent[0]).toMatchObject({ key: "instruments.list", type: "array", store: true });
-    expect(store.sent[0].sendonly).toBeUndefined();
-    expect(store.local).toEqual([]); // arrives via the server echo
+    expect(store.sent).toEqual([{ key: "instruments.list", value: [{ slot: 1 }], receiver: null, sendOnly: false }]);
+    expect(store.local).toEqual([]);
+  });
+
+  it("per-key switches", () => {
+    const store = localStore();
+    const ps = new PerformanceStream({ getStore: () => store });
+    ps.setKeyEnabled(STREAM_KEYS.BEAT, false);
+    ps.beat({ step: 0 });
+    ps.note({ a: 1 });
+    expect(store.calls.map((c) => c[0])).toEqual(["trigger"]);
+    ps.setKeyEnabled(STREAM_KEYS.BEAT, true);
+    ps.beat({ step: 1 });
+    expect(store.calls).toHaveLength(2);
   });
 
   it("holds notes until their audio time (+ output latency + offset)", () => {

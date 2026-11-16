@@ -151,7 +151,8 @@ together. Musically aligned, not sample-locked. Later phase.
 - **Phase 0 — Foundation.** Opt into `AppStoreDistributed` behind config
   (`?sync=<ws>&channel=&role=`); local-only `AppStore` remains the default so
   nothing breaks offline. *(done — see First Slice)*
-- **Phase 1 — Transport play/stop.** Bidirectional play toggle. *(done — First Slice)*
+  *Now owned by `src/site/sync-manager.js` + the playground's **⇄ Sync** drawer (server URL, channel, role, name, auth key; saved in localStorage; live reconnect by swapping the store and carrying listeners over). Only AppStoreDistributed's public API is used — remote vs. local updates are told apart with `getData(key).sender`.*
+- **Phase 1 — Transport play/stop.** Bidirectional play toggle. *(The First Slice below was documented but never wired — the transport only set its keys locally. Done for real 2026-11-16: `src/site/sync-bridge.js` `TransportSync`, play/stop + BPM, opt-in from the Sync drawer.)*
 - **Phase 2 — Session state (A).** Bridge publishes transport scalars +
   per-instrument sub-blobs (`params` / `steps` / `patternParams` / `fx`);
   echo-suppressed apply; add/remove/reorder via `instruments.list`.

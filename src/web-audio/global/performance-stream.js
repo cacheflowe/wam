@@ -12,12 +12,11 @@
  * with the sound, not before it. Chrome doesn't throttle timers in a tab that
  * is playing audio, so this holds up even when the wam tab is in the background.
  *
- * Works with any AppStore on the page (window._store by default):
- *   - local AppStore → plain set(); in-page listeners get every message.
- *   - AppStoreDistributed → sent over the socket with the correct JSON `type`
- *     ("object"/"array" — the stock set() labels objects "number") and, for the
- *     high-rate keys, `sendonly` so the server doesn't echo them back. They're
- *     also delivered to in-page listeners directly (sendonly skips the sender).
+ * Works with any AppStore on the page (window._store by default), using only
+ * its public API: local AppStore → set(); AppStoreDistributed →
+ * set(key, value, true, null, sendOnly). High-rate keys are sendOnly (the server
+ * relays them to everyone except us) and are also set() locally so in-page
+ * listeners see them.
  *
  * No DOM and no oversite import — the store is duck-typed.
  */
@@ -29,13 +28,6 @@ export const STREAM_KEYS = Object.freeze({
   BEAT: StoreKeys.TRANSPORT_BEAT,
   INSTRUMENTS: StoreKeys.INSTRUMENTS_LIST,
 });
-
-function jsonType(value) {
-  if (Array.isArray(value)) return "array";
-  if (value === null) return "object";
-  const t = typeof value;
-  return t === "boolean" || t === "string" || t === "number" ? t : "object";
-}
 
 export class PerformanceStream {
   /**
@@ -54,6 +46,8 @@ export class PerformanceStream {
     this._setTimer = setTimer;
     this._ctx = null;
     this.enabled = true;
+    /** Keys switched off individually (e.g. from the Sync drawer). */
+    this.disabledKeys = new Set();
     /** Extra visual delay (ms), + or −, to line visuals up with what you hear. */
     this.offsetMs = 0;
   }
@@ -71,18 +65,27 @@ export class PerformanceStream {
     return Math.max(0, (audioTime - ctx.currentTime) * 1000 + latency + this.offsetMs);
   }
 
+  /** Turn one stream key on/off. */
+  setKeyEnabled(key, on) {
+    if (on) this.disabledKeys.delete(key);
+    else this.disabledKeys.add(key);
+  }
+
   /** Publish a note at the moment it's heard. */
   note(payload, audioTime) {
+    if (this.disabledKeys.has(STREAM_KEYS.TRIGGER)) return;
     this._at(audioTime, () => this.publish(STREAM_KEYS.TRIGGER, payload, { sendOnly: true }));
   }
 
   /** Publish a 16th-note tick at the moment it's heard. */
   beat(payload, audioTime) {
+    if (this.disabledKeys.has(STREAM_KEYS.BEAT)) return;
     this._at(audioTime, () => this.publish(STREAM_KEYS.BEAT, payload, { sendOnly: true }));
   }
 
   /** Publish the slot → instrument table (persisted, so late joiners get it). */
   instruments(list) {
+    if (this.disabledKeys.has(STREAM_KEYS.INSTRUMENTS)) return;
     this.publish(STREAM_KEYS.INSTRUMENTS, list, { sendOnly: false });
   }
 
@@ -94,31 +97,23 @@ export class PerformanceStream {
   }
 
   /**
-   * Send one key. Distributed stores get a correctly-typed message; sendOnly
-   * messages are also delivered locally because the server won't echo them.
+   * Send one key through the store's own API.
+   * - Local AppStore: set(key, value) — in-page listeners get it.
+   * - AppStoreDistributed: set(key, value, true, null, sendOnly). High-rate keys
+   *   are sendOnly (relayed to everyone but us), so we also set() them locally
+   *   for in-page listeners; persisted keys come back to us via the echo.
    */
   publish(key, value, { sendOnly = false } = {}) {
     const store = this._getStore();
     if (!store || !this.enabled || !this._canPublish()) return;
-    const socket = store.solidSocket;
-    if (!socket) {
-      store.set(key, value); // local-only AppStore
+    const distributed = typeof store.isConnected === "function";
+    if (!distributed) {
+      store.set(key, value);
       return;
     }
-    const msg = { key, value, store: true, type: jsonType(value) };
-    if (store.senderId) msg.sender = store.senderId;
-    if (sendOnly) msg.sendonly = true;
-    socket.sendMessage(JSON.stringify(msg));
-    if (sendOnly) localSet(store, key, value);
+    store.set(key, value, true, null, sendOnly);
+    if (sendOnly) store.set(key, value); // broadcast=false → local listeners only
   }
-}
-
-/**
- * Update local state + in-page listeners without a network send: the base
- * AppStore.set (AppStoreDistributed.set(k, v) with broadcast=false does the same).
- */
-function localSet(store, key, value) {
-  store.set(key, value, false);
 }
 
 /** Shared singleton for the app. */

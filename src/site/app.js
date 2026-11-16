@@ -1,29 +1,12 @@
 import PicoTheme from "./pico-theme.js";
-import AppStore from "oversite/src/app-store/app-store-.mjs";
-import AppStoreDistributed from "oversite/src/app-store/app-store-distributed.mjs";
+import { syncManager } from "./sync-manager.js";
 
-// Global shared-state store. Both classes set window._store and fire an
-// "appstore-ready" event; created before any app/component mounts so every
-// component can read/write window._store.
-//
-// Default: local-only AppStore. Opt into multi-client sync by adding a ?sync=
-// WebSocket URL, e.g.
-//   #playground-app?sync=ws://localhost:3003/ws&channel=wam&role=control
-// In sync mode, broadcast set()s go through the Oversite server and echo to all
-// clients. See docs/design-docs/event-migration-plan.md.
-(function initStore() {
-  const params = new URLSearchParams(location.search);
-  const syncUrl = params.get("sync");
-  if (syncUrl) {
-    const channel = params.get("channel") || "wam";
-    const role = params.get("role") || "host";
-    const senderId = `wam_${role}_${Math.random().toString(36).slice(2, 8)}`;
-    window._syncRole = role; // read later for role-aware bridging (bucket D)
-    new AppStoreDistributed(syncUrl, senderId, channel);
-  } else {
-    new AppStore();
-  }
-})();
+// Global shared-state store (window._store), created before any app/component
+// mounts. Local-only AppStore by default; the playground's Sync drawer (or
+// ?sync=<ws-url>&channel=&role= URL params) connects it to an Oversite server.
+// See src/site/sync-manager.js and docs/references/performance-stream.md.
+syncManager.init();
+window._syncManager = syncManager; // console access: _syncManager.settings, .status, .update({...})
 
 // import apps
 import "../app/playground.js";

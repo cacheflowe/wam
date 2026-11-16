@@ -7,16 +7,15 @@ Source: [src/web-audio/global/performance-stream.js](../../src/web-audio/global/
 ## Connecting
 
 1. Run an Oversite server (default `ws://localhost:3003/ws`). The channel you use must be allowed by that server's config — a stock server only allows `default` and `dashboard`.
-2. Open the playground with sync enabled:
+2. In the playground, open **⇄ Sync** (drawer) → set **Server URL**, **Channel**, a client **name** and **Role** → **Connect / Apply**. Settings are saved in localStorage and reconnect on the next visit. The status dot shows connected / connecting (retries every 5 s) / local only.
+   - Changing the server or channel swaps the connection live — subscriptions carry over and the music keeps playing.
+   - **Copy link for another client** copies a URL (`?sync=…&channel=…&role=…`) that opens another tab/machine on the same server; URL params override saved settings for that tab only.
+   - From an `https` page the browser blocks `ws://` to anything but localhost — use `wss://` for remote servers (the panel warns).
+   - Console: `_syncManager.settings`, `_syncManager.status`, `_syncManager.update({ … })`.
+3. Choose what this client shares under **Share over the connection**: notes, beats, instrument slots, and optionally **transport** (play/stop + BPM, both ways). Only the **Host** role publishes notes/beats/slots, so they're never duplicated; **Observer** clients only listen.
+4. Connect your visualizer to the same server + channel. It just listens.
 
-   ```
-   https://localhost:8005/?sync=ws://localhost:3003/ws&channel=wam#playground-app
-   ```
-
-   (`role` defaults to `host`. Only the host publishes the stream; `control` / `jam` / `observer` clients don't, so notes are never duplicated.)
-3. Connect your visualizer to the same server + channel. It just listens.
-
-Without `?sync=`, the playground uses a local AppStore and the same keys are delivered to in-page listeners (`window._store`) — handy for a p5 sketch running inside the page.
+Without a connection the playground uses a local AppStore and the same keys are delivered to in-page listeners (`window._store`) — handy for a p5 sketch running inside the page.
 
 ## Keys
 
@@ -143,6 +142,6 @@ def onReceiveText(dat, rowIndex, message):
 
 ## Known limits
 
-- The stock `AppStoreDistributed.set()` in oversite 1.0.9 labels object/array values as `"type": "number"`. The playground works around this by sending these keys itself with the correct type (`object` / `array`). Worth fixing upstream so other senders get it right too.
+- Everything goes through AppStoreDistributed's public API (`set(key, value, true, null, sendOnly)`). In oversite ≤ 1.0.11, `set()` labels object/array values `"type": "number"` on the wire; JSON-parsing clients (p5, TouchDesigner/Python, browsers) can ignore `type` and read `value` directly. Strongly-typed receivers need the upstream fix (tech-debt #9).
 - Loop players (sample-looper) don't publish notes — their trigger runs every step to stay in sync, which isn't a musical event. Muted instruments don't publish.
 - A server that persists every `store: true` message keeps the last `trigger` / `transport.beat` in its state file. It writes at most once per second and only the latest value per key, so this is cheap.

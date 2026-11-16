@@ -38,6 +38,8 @@ import { ledFeedback } from "../web-audio/midi/led-feedback.js";
 import { autoMap } from "../web-audio/midi/auto-map.js";
 import { performanceSurface } from "../web-audio/midi/performance-surface.js";
 import { performanceStream } from "../web-audio/global/performance-stream.js";
+import "../site/sync-panel.js";
+import { startSyncBridge } from "../site/sync-bridge.js";
 import "../web-audio/ui/hardware-map.js";
 import {
   bindingFor,
@@ -486,6 +488,7 @@ export default class PlaygroundApp extends HTMLElement {
     document.removeEventListener("wam-instrument-focus-change", this._onInstrumentFocus);
     document.removeEventListener("wam-command", this._onCommand);
     performanceSurface.stop();
+    this._stopSyncBridge?.();
     sequencerHardware.stop();
     autoMap.stop();
     focusManager.stop();
@@ -549,6 +552,7 @@ export default class PlaygroundApp extends HTMLElement {
     mkLauncher("add", "+ Add Instrument");
     mkLauncher("songs", "♪ Songs");
     mkLauncher("midi", "🎛 MIDI");
+    mkLauncher("sync", "⇄ Sync");
     mkLauncher("record", "⏺ Record");
     mkLauncher("viz", "◎ Viz");
 
@@ -649,6 +653,11 @@ export default class PlaygroundApp extends HTMLElement {
 
     this._midiPanelEl.appendChild(document.createElement("wam-midi-monitor"));
     this._drawer.addPanel("midi", this._midiPanelEl, "MIDI");
+
+    // ---- Sync panel (drawer): Oversite server connection + what's shared ----
+    this._drawer.addPanel("sync", document.createElement("wam-sync-panel"), "Sync");
+    // Transport sync + performance-stream switches follow the Sync settings.
+    this._stopSyncBridge = startSyncBridge(this._transportEl);
 
     // ---- Record panel (drawer): populated after transport init ----
     this._recordPanelEl = document.createElement("div");
