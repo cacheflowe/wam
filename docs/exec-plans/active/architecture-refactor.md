@@ -88,7 +88,7 @@ Not adopting: static globals, string-prefixed UI keys, clock-message triggering 
 
 ### Phase 1b — Generators, evolve, scale-degree notes
 - [x] `global/pattern-gen.js`: rhythm generators (Interphase interval/sine/noise/random/techno + euclid, weighted, backbeat, offbeat, clave, broken), note schemes (byStep + walk, rootFifth, arp, motif, pedal, random), step decorators (accents, ghosts, ratchets, conditions, open hats), ops for Evolve (rotate, nudge, morph, flip, thin, thicken, fill, reverse, invert, transpose, shuffleNotes, redecorate), role recipes (kick/snare/hat/bass/lead/keys/pad/fx). Instruments declare `PATTERN_ROLE` / `NOTE_RANGE` / `PATTERN_ACCENTS`; one base `Controls.randomize()` replaced 9 copied randomizers (808/FM ones were dropping step fields). Rand tooltip shows the generator ("euclid 5/16 · walk"). Seeded + reproducible from `meta`.
-- [ ] Evolve: per-track (small/big) + staggered global auto-evolve; Perform-mode button.
+- [x] Evolve (`global/evolver.js`): per-track variations with gravity (home/original layers) + permanent evolve/keep/return/undo; `Conductor` with Energy / Drift / Auto / phrase, round-robin staggering, pre-phrase drum fills; ∿ Evolve drawer panel; LCXL C8 = Energy, Mixer bottom row = Jam, Perform Evolve / Keep / Return. Grid round-trip made lossless (hi-hat `open` was dropped).
 - [ ] Scale-degree note storage (+ accidental / absolute escape hatches), song format version + lossless migration, note picker shows degrees in the current key.
 - [ ] Optional per-track generative note scheme.
 

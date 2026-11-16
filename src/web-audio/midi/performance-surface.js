@@ -10,15 +10,16 @@
  *
  *   16 channel buttons, by mode:
  *     STEPS    toggle steps of the focused pattern (sequencer-hardware.js)
- *     MIXER    top: mute slot 1–8 · bottom: focus slot 1–8
- *     PERFORM  top: launch pattern A–D · prev preset · next preset · random pattern
- *              bottom: mutate subtle / medium / wild · randomize sound · undo · redo
+ *     MIXER    top: mute slot 1–8 · bottom: JAM slot 1–8
+ *     PERFORM  top: launch pattern A–D · prev preset · next preset · random pattern · evolve
+ *              bottom: mutate subtle / medium / wild · randomize sound · undo · redo · keep · return
+ *   Knob C8            Energy (global, for Evolve) — reserved from auto-map.
  *
  * Device-agnostic in spirit: everything acts on Controls' public performance
  * API (launchPattern, mutate, setVolume, toggleMute, …). LED output goes through
  * the single shared, batched MidiOutput (see RELIABILITY.md — never flood sysex).
  */
-import { CONTROLS, COMMANDS, LED, findControl } from "./launch-control-xl.js";
+import { CONTROLS, COMMANDS, LED, findControl, ledColorByPercent } from "./launch-control-xl.js";
 import { MUTATE_AMOUNTS } from "../global/sound-design.js";
 import { ledFeedback } from "./led-feedback.js";
 import { sequencerHardware } from "./sequencer-hardware.js";
@@ -45,8 +46,8 @@ const PERFORM_TOP = [
   })),
   { label: "Prev preset", run: (c) => c.stepPreset?.(-1), led: (c) => (c?._presetSelect ? LED.AMBER_LOW : LED.OFF) },
   { label: "Next preset", run: (c) => c.stepPreset?.(1), led: (c) => (c?._presetSelect ? LED.AMBER_LOW : LED.OFF) },
-  { label: "Random pattern", run: (c) => c.randomizePattern?.(), led: (c) => (typeof c?.randomize === "function" ? LED.AMBER_LOW : LED.OFF) },
-  null,
+  { label: "Random pattern", run: (c) => c.randomizePattern?.(), led: (c) => (c?._instrument?.constructor.PATTERN_ROLE ? LED.AMBER_LOW : LED.OFF) },
+  { label: "Evolve", run: (c, s) => c.evolveNow?.(s.energy), led: (c) => (c?.evolver ? LED.GREEN_LOW : LED.OFF) },
 ];
 const hasSchema = (c) => !!c?._paramSchema;
 const PERFORM_BOTTOM = [
@@ -56,8 +57,8 @@ const PERFORM_BOTTOM = [
   { label: "Randomize sound", run: (c) => c._randomizeAllParams?.(), led: (c) => (c?._presetSelect ? LED.RED_FULL : LED.OFF) },
   { label: "Undo sound", run: (c) => c.undoSound?.(), led: (c) => (c?._soundHistory?.canUndo ? LED.AMBER_FULL : LED.OFF) },
   { label: "Redo sound", run: (c) => c.redoSound?.(), led: (c) => (c?._soundHistory?.canRedo ? LED.AMBER_FULL : LED.OFF) },
-  null,
-  null,
+  { label: "Keep variation", run: (c) => c.keepVariation?.(), led: (c) => (c?.evolver?.variation ? LED.AMBER_FULL : LED.OFF) },
+  { label: "Return home", run: (c) => c.returnHome?.(), led: (c) => (c?.evolver?.isAway?.() ? LED.RED_FULL : LED.OFF) },
 ];
 
 /** Labels for the on-screen hardware map, per mode. */
@@ -68,7 +69,7 @@ export const BUTTON_LABELS = {
   },
   [MODES.MIXER]: {
     top: TOP.map((_, i) => `Mute ${i + 1}`),
-    bottom: BOTTOM.map((_, i) => `Focus ${i + 1}`),
+    bottom: BOTTOM.map((_, i) => `Jam ${i + 1}`),
   },
   [MODES.PERFORM]: {
     top: PERFORM_TOP.map((a) => a?.label ?? ""),
@@ -96,10 +97,16 @@ export class PerformanceSurface {
     this._faders = FADERS.map(() => ({ picked: false, last: null, ctrl: null, set: null }));
     this._started = false;
     this._raf = null;
+    this._conductor = null;
+    this._energyFromHw = false;
 
     this._onInput = (e) => this._handleInput(e.detail);
     this._onCommand = (e) => this.handleCommand(e.detail?.command);
     this._onChange = () => this.requestRefresh();
+    // Steps + playhead of the focused pattern, for the on-screen map.
+    this._onStep = (e) => {
+      if (e.target === this._focused?.sequencer) this.requestRefresh();
+    };
   }
 
   start() {
@@ -110,6 +117,8 @@ export class PerformanceSurface {
     for (const ev of ["wam-instrument-focus-change", "wam-automap-change", "controls-change", "pattern-launched", "pattern-queued"]) {
       this._target.addEventListener(ev, this._onChange);
     }
+    this._target.addEventListener("step-change", this._onStep);
+    this._target.addEventListener("step-active", this._onStep);
     this._seqHw?.setEnabled?.(this._mode === MODES.STEPS);
     this.refresh();
   }
@@ -117,10 +126,24 @@ export class PerformanceSurface {
   stop() {
     this._target.removeEventListener("wam-control-input", this._onInput);
     this._target.removeEventListener("wam-command", this._onCommand);
+    this._target.removeEventListener("step-change", this._onStep);
+    this._target.removeEventListener("step-active", this._onStep);
     for (const ev of ["wam-instrument-focus-change", "wam-automap-change", "controls-change", "pattern-launched", "pattern-queued"]) {
       this._target.removeEventListener(ev, this._onChange);
     }
     this._started = false;
+  }
+
+  /** The Evolve conductor: knob C8 drives its energy; its LED mirrors it. */
+  setConductor(conductor) {
+    this._conductor?.removeEventListener("change", this._onChange);
+    this._conductor = conductor;
+    conductor?.addEventListener("change", this._onChange);
+    this.requestRefresh();
+  }
+
+  get energy() {
+    return this._conductor?.energy ?? 0.5;
   }
 
   /** Provide the ordered instrument Controls list (slot 1 = index 0). */
@@ -163,6 +186,10 @@ export class PerformanceSurface {
     const control = findControl(detail.binding);
     if (!control) return;
     if (control.kind === "fader") return this._handleFader(FADERS.indexOf(control.id), detail);
+    if (control.id === "knobC8" && detail.value != null) {
+      if (this._conductor && !this._knobManuallyBound("knobC8")) this._conductor.energy = detail.value;
+      return;
+    }
     if (this._mode === MODES.STEPS) return; // sequencer-hardware owns the buttons
     if (detail.kind !== "trigger" || detail.pressed === false) return;
     const top = TOP.indexOf(control.id);
@@ -194,16 +221,14 @@ export class PerformanceSurface {
   _mixerPress(top, bottom) {
     const list = this._instruments();
     if (top >= 0) list[top]?.toggleMute?.();
-    if (bottom >= 0 && list[bottom]) {
-      list[bottom].dispatchEvent(new CustomEvent("wam-instrument-focus", { bubbles: true, detail: { controls: list[bottom] } }));
-    }
+    if (bottom >= 0) list[bottom]?.jam?.(); // focus moves with ↑/↓ (or a click on screen)
   }
 
   _performPress(top, bottom) {
     const ctrl = this._focused;
     if (!ctrl) return;
     const action = top >= 0 ? PERFORM_TOP[top] : PERFORM_BOTTOM[bottom];
-    action?.run(ctrl);
+    action?.run(ctrl, this);
   }
 
   /** Fader → slot volume with soft takeover. */
@@ -229,6 +254,11 @@ export class PerformanceSurface {
       state.set = v;
     }
     this._emitState();
+  }
+
+  /** Manual MIDI-learn on a control (any instrument) wins over its global role. */
+  _knobManuallyBound(id) {
+    return this._faderManuallyBound(id);
   }
 
   /** A manual MIDI-learn binding on a fader (any instrument) takes it out of the mixer. */
@@ -267,6 +297,7 @@ export class PerformanceSurface {
   }
 
   _paintSide() {
+    if (this._conductor && !this._knobManuallyBound("knobC8")) this._led("knobC8", ledColorByPercent(this.energy));
     for (const [mode, id] of Object.entries(MODE_BUTTONS)) this._led(id, mode === this._mode ? LED.YELLOW_FULL : LED.OFF);
     const pages = this._autoMap?.pageCount ?? 1;
     this._led("left", pages > 1 ? LED.RED_FULL : LED.OFF);
@@ -280,7 +311,7 @@ export class PerformanceSurface {
     const list = this._instruments();
     const focused = this._focused;
     TOP.forEach((id, i) => this._led(id, !list[i] ? LED.OFF : list[i].muted ? LED.RED_FULL : LED.GREEN_LOW));
-    BOTTOM.forEach((id, i) => this._led(id, !list[i] ? LED.OFF : list[i] === focused ? LED.AMBER_FULL : LED.AMBER_LOW));
+    BOTTOM.forEach((id, i) => this._led(id, !list[i] ? LED.OFF : list[i] === focused ? LED.AMBER_FULL : LED.GREEN_LOW));
   }
 
   _paintPerform() {
@@ -297,15 +328,25 @@ export class PerformanceSurface {
       mode: this._mode,
       page: this._autoMap?.page ?? 0,
       pageCount: this._autoMap?.pageCount ?? 1,
-      knobs: this._autoMap?.assignments ?? {},
+      knobs: { ...(this._autoMap?.assignments ?? {}), ...(this._conductor ? { knobC8: { param: "energy", label: "⚡ Energy", value: this.energy, display: `${Math.round(this.energy * 100)}%` } } : {}) },
+      energy: this.energy,
       focusedTitle: focused?._defaultTitle?.() ?? null,
       buttons: BUTTON_LABELS[this._mode],
       faders: FADERS.map((_, i) => {
         const c = list[i];
         return c ? { title: c._defaultTitle?.() ?? `Slot ${i + 1}`, volume: c.volume, muted: c.muted, focused: c === focused, picked: this.faderPicked(i) } : null;
       }),
+      steps: this._stepsState(focused),
       patterns: focused?.patternNames?.map((p) => ({ name: p, playing: focused.playingPattern === p, queued: focused.queuedPattern === p })) ?? [],
     };
+  }
+
+  /** The focused pattern's first 16 steps as { active, playing } (what the step buttons show). */
+  _stepsState(focused) {
+    const seq = focused?.sequencer;
+    if (!seq?.steps) return [];
+    const playhead = seq.activeStep ?? -1;
+    return Array.from({ length: 16 }, (_, i) => ({ active: !!seq.steps[i]?.active, playing: i === playhead }));
   }
 
   _emitState() {

@@ -76,6 +76,11 @@ export class SequencerHardware {
     return this._enabled;
   }
 
+  /** Current playhead step of the focused sequencer (-1 when stopped). */
+  get playhead() {
+    return this._playhead;
+  }
+
   /** Point the buttons at a new sequencer (or null to release them). */
   setSequencer(seq) {
     if (seq === this._seq) return;

@@ -61,14 +61,15 @@ Result key: ✅ works · ⚠️ works but feels off (note why) · ❌ broken
 
 | # | Do | Expect | Result / notes |
 |---|---|---|---|
-| 4.1 | Press **Solo**. Look at the 16 buttons. | Top row: buttons 1–3 **green** (unmuted), 4–8 dark. Bottom row: focused instrument **bright amber**, others dim amber. | |
+| 4.1 | Press **Solo**. Look at the 16 buttons. | Top row: buttons 1–3 **green** (unmuted), 4–8 dark. Bottom row: focused instrument **bright amber**, others dim green. | |
 | 4.2 | Press top button **1**. | Acid mutes (its Mute button lights on screen); button 1 turns **red**. Press again → unmutes, green. | |
-| 4.3 | Press bottom button **3**. | Kick gets focus (panel expands); bottom 3 bright amber. Knobs now drive Kick. | |
-| 4.4 | Press bottom button **2**. | Poly focused. | |
+| 4.3 | While playing, press bottom button **3**. | Kick's **jam** hit plays on the next step. Focus does **not** move. | |
+| 4.4 | Drum on bottom buttons 1–3 in rhythm. | Each press lands on the grid; feels playable? | |
+| 4.5 | Press **↓** / **↑**. | Focus moves between instruments (bottom-row amber follows). | |
 
 ## 5. Perform mode (Rec Arm) — on the focused instrument
 
-Focus **Acid** first (bottom button 1 in Mixer mode, or ↑/↓).
+Focus **Acid** first (↑/↓, or click its panel).
 
 | # | Do | Expect | Result / notes |
 |---|---|---|---|
@@ -82,12 +83,17 @@ Focus **Acid** first (bottom button 1 in Mixer mode, or ↑/↓).
 | 5.8 | While playing, press top **2** (Pattern B) **mid-bar**. | Button turns **amber** (queued), then **green** exactly on the next downbeat; the pattern changes on the bar. Pattern A goes dark green/off. | |
 | 5.9 | Press top **1** (Pattern A). | Switches back on the next bar. | |
 | 5.10 | Focus **Kick**, repeat 5.2 and 5.8. | Same behavior on a drum. | |
+| 5.11 | While playing, top **8** (Evolve) a few times. | The playing pattern changes a little each press (every 4th press: a fresh pattern). Bottom **8** turns **red** (away from home). | |
+| 5.12 | Bottom **8** (Return home). | Back to the original pattern; LED off. | |
+| 5.13 | Open **∿ Evolve** in the drawer, turn on **Auto**. Turn knob **C8** (Energy) low, then high. | Energy slider + C8 LED follow. Low: thinner variations, kick drops; high: fills, ratchets, thicker. Variations last 1–2 bars and snap back. The "Recent" list shows each one. | |
+| 5.14 | While a variation plays (bottom **7** lit amber), press bottom **7** (Keep). | The variation stays as the new home. | |
+| 5.15 | Set **Drift** to ~50%. Let it run for a few minutes. | Some variations stick and the song slowly moves; Drift 0 always comes home. | |
 
 ## 6. Back to Steps
 
 | # | Do | Expect | Result / notes |
 |---|---|---|---|
-| 6.1 | Press **Mute** (Steps mode). | The 16 buttons repaint the focused pattern (active steps green) with a moving playhead. | |
+| 6.1 | Press **Mute** (Steps mode). | The 16 buttons repaint the focused pattern (active steps green) with a moving playhead — on the device **and** in the on-screen map. | |
 | 6.2 | Press a few buttons. | Steps toggle on screen and in the sound. | |
 | 6.3 | Switch Mixer → Steps → Perform → Steps quickly. | LEDs always match the mode; no stale lights. | |
 
@@ -95,8 +101,8 @@ Focus **Acid** first (bottom button 1 in Mixer mode, or ↑/↓).
 
 | # | Do | Expect | Result / notes |
 |---|---|---|---|
-| 7.1 | On Acid, MIDI-learn **Distortion** to knob **C8** (bottom-right). | C8 LED **red**; it drives Distortion. Other knobs stay amber auto-map. | |
-| 7.2 | Focus another instrument, then Acid again. | C8 still yours (red); auto-map fills the rest around it. | |
+| 7.1 | On Acid, MIDI-learn **Distortion** to knob **C7**. | C7 LED **red**; it drives Distortion. Other knobs stay amber auto-map. | |
+| 7.2 | Focus another instrument, then Acid again. | C7 still yours (red); auto-map fills the rest around it. | |
 | 7.3 | MIDI-learn some param to **fader 8**. | Fader 8 drives that param and no longer acts as slot 8's volume. | |
 
 ## 8. Stress / reliability

@@ -2,7 +2,8 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { PerformanceSurface, MODES } from "../src/web-audio/midi/performance-surface.js";
 import { SequencerHardware } from "../src/web-audio/midi/sequencer-hardware.js";
 import { AutoMap } from "../src/web-audio/midi/auto-map.js";
-import { bindingFor, COMMANDS, LED } from "../src/web-audio/midi/launch-control-xl.js";
+import { bindingFor, COMMANDS, LED, ledColorByPercent } from "../src/web-audio/midi/launch-control-xl.js";
+import { Conductor } from "../src/web-audio/global/evolver.js";
 
 /** Records the latest LED value per control id. */
 function fakeOutput() {
@@ -32,6 +33,10 @@ function fakeCtrl(name) {
     undoSound() { this.calls.push(["undo"]); },
     redoSound() { this.calls.push(["redo"]); },
     _randomizeAllParams() { this.calls.push(["rand"]); },
+    jam() { this.calls.push(["jam"]); },
+    evolveNow(e) { this.calls.push(["evolve", e]); },
+    keepVariation() { this.calls.push(["keep"]); },
+    returnHome() { this.calls.push(["home"]); },
     setAutoBindings() {},
     clearAutoBindings() {},
     _defaultTitle: () => name,
@@ -118,14 +123,13 @@ describe("PerformanceSurface", () => {
   describe("MIXER mode buttons", () => {
     beforeEach(() => command(COMMANDS.MODE_MIXER));
 
-    it("top row toggles mute; bottom row focuses the slot", () => {
+    it("top row toggles mute; bottom row jams the slot", () => {
       send(midi("focus2", 1, "trigger"));
       expect(b.muted).toBe(true);
-      let focused = null;
-      target.addEventListener("wam-instrument-focus", (e) => (focused = e.detail.controls));
-      b.addEventListener("wam-instrument-focus", (e) => (focused = e.detail.controls));
       send(midi("control2", 1, "trigger"));
-      expect(focused).toBe(b);
+      expect(b.calls).toEqual([["toggleMute"], ["jam"]]);
+      expect(a.calls).toEqual([]);
+      expect(surface.state.buttons.bottom[0]).toBe("Jam 1");
     });
 
     it("button releases are ignored", () => {
@@ -140,7 +144,7 @@ describe("PerformanceSurface", () => {
       expect(out.leds.focus2).toBe(LED.GREEN_LOW);
       expect(out.leds.focus3).toBe(LED.OFF); // empty slot
       expect(out.leds.control1).toBe(LED.AMBER_FULL); // focused
-      expect(out.leds.control2).toBe(LED.AMBER_LOW);
+      expect(out.leds.control2).toBe(LED.GREEN_LOW);
     });
   });
 
@@ -170,10 +174,40 @@ describe("PerformanceSurface", () => {
       expect(out.leds.focus2).toBe(LED.RED_LOW);
     });
 
+    it("Evolve / Keep / Return buttons; Evolve uses the conductor's energy", () => {
+      const conductor = new Conductor({ tracks: () => [] });
+      conductor.energy = 0.8;
+      surface.setConductor(conductor);
+      ["focus8", "control7", "control8"].forEach((id) => send(midi(id, 1, "trigger")));
+      expect(a.calls).toEqual([["evolve", 0.8], ["keep"], ["home"]]);
+    });
+
     it("pressButton() (on-screen map) uses the same path", () => {
       surface.pressButton("bottom", 4);
       expect(a.calls).toEqual([["undo"]]);
     });
+  });
+
+  it("knob C8 sets the conductor's energy, lights its LED and shows in the map", () => {
+    const conductor = new Conductor({ tracks: () => [] });
+    surface.setConductor(conductor);
+    send(midi("knobC8", 0.9));
+    expect(conductor.energy).toBeCloseTo(0.9);
+    surface.refresh();
+    expect(out.leds.knobC8).toBe(ledColorByPercent(0.9));
+    expect(surface.state.knobs.knobC8).toMatchObject({ label: "⚡ Energy", display: "90%" });
+  });
+
+  it("state mirrors the focused pattern and playhead (for the on-screen step buttons)", () => {
+    const seq = new EventTarget();
+    seq.steps = Array.from({ length: 16 }, (_, i) => ({ active: i % 4 === 0 }));
+    seq.activeStep = 4;
+    a.sequencer = seq;
+    const st = surface.state.steps;
+    expect(st).toHaveLength(16);
+    expect(st[0]).toEqual({ active: true, playing: false });
+    expect(st[4]).toEqual({ active: true, playing: true });
+    expect(st[5]).toEqual({ active: false, playing: false });
   });
 
   it("STEPS mode leaves the buttons to the sequencer mapping", () => {

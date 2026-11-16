@@ -19,7 +19,8 @@ import {
 import { quantize } from "../global/param-schema.js";
 import { describeTrigger } from "../global/note-event.js";
 import { PatternTrack } from "../global/pattern-track.js";
-import { generatePattern, describePattern } from "../global/pattern-gen.js";
+import { generatePattern, describePattern, notePool } from "../global/pattern-gen.js";
+import { TrackEvolver } from "../global/evolver.js";
 import { Channel } from "../global/channel.js";
 import {
   canWritePresets,
@@ -388,7 +389,7 @@ export class WebAudioControlsBase extends HTMLElement {
         const { index, step } = e.detail;
         if (index !== undefined && step) {
           const newSteps = [...this._instrument.steps];
-          newSteps[index] = { ...step };
+          newSteps[index] = { ...(newSteps[index] ?? {}), ...step }; // keep fields the grid doesn't show
           this._instrument.steps = newSteps;
         }
       });
@@ -607,6 +608,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
     this._seq.addEventListener("step-change", () => {
       this._syncPatternEdit();
+      this.__evolver?.userEdited(this._editedPatternName());
       this._emitChange();
     });
     this._seq.addEventListener("pattern-change", () => {
@@ -890,7 +892,11 @@ export class WebAudioControlsBase extends HTMLElement {
           // Deep copy so each pattern owns its own array.
           // Without this, randomize (which assigns a new array to
           // this._seq.steps) would leave old patterns pointing at stale data.
-          this._patterns[name].steps = this._seq.steps.map(s => ({ ...s }));
+          // Merge the grid's values OVER the full step data: the grid only knows
+          // some fields (active/note/accent/probability/ratchet/conditions), so a
+          // plain copy dropped others (e.g. hi-hat `open`).
+          const full = this._instrument?.steps ?? [];
+          this._patterns[name].steps = this._seq.steps.map((s, i) => ({ ...(full[i] ?? {}), ...s }));
           this._refreshMiniStrip(name);
         }
         break;
@@ -1007,6 +1013,71 @@ export class WebAudioControlsBase extends HTMLElement {
     this._emitChange();
   }
 
+  // ---- Evolve (global/evolver.js) ----
+
+  /** Name of the pattern tab being edited. */
+  _editedPatternName() {
+    return Object.entries(this._patternTabs ?? {}).find(([, t]) => t.hasAttribute("data-active"))?.[0] ?? "A";
+  }
+
+  /** This panel's evolver (null for instruments without patterns or a pattern role). */
+  get evolver() {
+    if (!this._patterns || !this._instrument?.constructor.PATTERN_ROLE) return null;
+    return (this.__evolver ??= new TrackEvolver(this._evolveAdapter()));
+  }
+
+  _evolveAdapter() {
+    const Cls = this._instrument.constructor;
+    const role = Cls.PATTERN_ROLE;
+    return {
+      role,
+      get: (name) => (this._patterns?.[name]?.steps ?? []).map((s) => ({ ...s })),
+      set: (name, steps) => this._writePatternSteps(name, steps),
+      playing: (tick) => {
+        this._syncTrack();
+        return tick != null ? this._track.patternAt(tick) : (this._playingPattern ?? "A");
+      },
+      notes: () => notePool(this._rootMidi ?? 36, this._scaleName ?? "Minor", Cls.NOTE_RANGE ?? [24, 60]),
+      regenerate: () =>
+        generatePattern(role, { root: this._rootMidi ?? 36, scale: this._scaleName ?? "Minor", range: Cls.NOTE_RANGE ?? [24, 60], accent: !!Cls.PATTERN_ACCENTS }).steps,
+      onChange: (kind, info) => {
+        if (kind === "home") this._emitChange(); // permanent changes autosave; temporary ones don't need to
+        this.dispatchEvent(new CustomEvent("evolve-change", { bubbles: true, detail: { kind, ...info } }));
+      },
+    };
+  }
+
+  /** Write a pattern's steps from code (Evolve): playback, grid and mini strip stay in sync. */
+  _writePatternSteps(name, steps) {
+    if (!this._patterns?.[name]) return;
+    const copy = steps.map((s) => ({ ...s }));
+    if (this._editedPatternName() === name) {
+      this._instrument.steps = copy; // → grid + lossless _syncPatternEdit
+    }
+    this._patterns[name].steps = copy.map((s) => ({ ...s }));
+    this._refreshMiniStrip(name);
+  }
+
+  /** Performance API: play this instrument's jam hit on the next step. */
+  jam() {
+    this._queueJam();
+  }
+
+  /** Performance API: one permanent evolution step of the playing pattern. */
+  evolveNow(energy = 0.5) {
+    return this.evolver?.evolve({ energy });
+  }
+
+  /** Performance API: adopt the playing variation as the new home. */
+  keepVariation() {
+    this.evolver?.keep();
+  }
+
+  /** Performance API: snap the pattern home back to the original. */
+  returnHome() {
+    this.evolver?.returnHome();
+  }
+
   /** Randomize the step pattern (performance API). */
   randomizePattern() {
     if (this._seq) this.randomize();
@@ -1030,8 +1101,10 @@ export class WebAudioControlsBase extends HTMLElement {
       ...opts,
     });
     this._lastPatternMeta = meta;
+    const evolver = this.__evolver;
     if (this._seqRandBtn) this._seqRandBtn.title = `New pattern. Last: ${describePattern(meta)}`;
     this._instrument.steps = steps;
+    evolver?.userEdited(this._editedPatternName());
     this.dispatchEvent(new CustomEvent("pattern-generated", { bubbles: true, detail: { meta } }));
     this._emitChange();
     return meta;
@@ -2066,6 +2139,7 @@ export class WebAudioControlsBase extends HTMLElement {
       jamBinding: this._jamBinding ?? null,
       midiParamBindings: { ...this._paramBindings },
       speedMultiplier: this._speedMultiplier,
+      ...(this.__evolver && !this.__evolver.enabled ? { evolveEnabled: false } : {}),
       ...(this._soundLocks?.size ? { soundLocks: [...this._soundLocks] } : {}),
       patternParams: this._seq?.getPatternParams(),
       sections: {
@@ -2094,6 +2168,9 @@ export class WebAudioControlsBase extends HTMLElement {
     // If multi-pattern system is active, serialize patterns + chain
     if (this._patterns) {
       obj.patterns = this._patterns;
+      // A temporary Evolve variation is never saved — save its home instead.
+      const v = this.__evolver?.variation;
+      if (v && this._patterns[v.name]) obj.patterns = { ...this._patterns, [v.name]: { ...this._patterns[v.name], steps: this.__evolver.savedSteps(v.name) } };
       obj.chain = this._chain;
     } else {
       // Single pattern (legacy / instruments without multi-pattern)
@@ -2147,6 +2224,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
   fromJSON(obj) {
     if (!obj || !this._instrument) return;
+    this.__evolver?.reset(); // a loaded state is a new original
     if (obj.params) {
       for (const [key, val] of Object.entries(obj.params)) {
         this._restoreParam(key, val);
@@ -2155,6 +2233,7 @@ export class WebAudioControlsBase extends HTMLElement {
     this._restoreExtra(obj);
     this._restoreSequencer(obj);
     this._soundLocks = new Set(obj.soundLocks ?? []);
+    if (obj.evolveEnabled === false && this.evolver) this.evolver.enabled = false;
     this._paintSectionLocks();
     if (obj.fx) this._fxUnit?.fromJSON(obj.fx);
     if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);

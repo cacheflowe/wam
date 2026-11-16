@@ -13,12 +13,15 @@
  *
  * A param claims its role's fixed knob; params without a fixed slot fill the
  * empty knobs of their group's home row, then any empty knob. Whatever doesn't
- * fit spills onto further pages (← / → on the device). Faders are NOT used —
+ * fit spills onto further pages (← / → on the device). Choice params (enums with
+ * a registered <select>, e.g. waveforms, filter type) map too: the knob's travel
+ * is split into one zone per option. Faders are NOT used —
  * they're the mixer (see performance-surface.js); channel buttons belong to
  * the performance surface too.
  */
 import { CONTROLS, bindingFor, findControl } from "./launch-control-xl.js";
 import { ledFeedback } from "./led-feedback.js";
+import { paramPosition } from "../ui/input-learn.js";
 
 const KNOB_ROWS = [1, 2, 3].map((r) =>
   CONTROLS.filter((c) => c.group === `knobsRow${r}`).map((c) => c.id),
@@ -43,6 +46,9 @@ const HOME_ROW = {
   "amp-env": 1, "filter-env": 1,
   mod: 2, pitch: 2, seq: 2, fx: 2,
 };
+
+/** Knobs reserved for global performance controls (never auto-mapped). See performance-surface.js. */
+export const RESERVED_KNOBS = Object.freeze({ knobC8: "Energy" });
 
 /** Params never put on knobs (strip controls, not sound params). */
 const EXCLUDED = new Set(["volume", "pan"]);
@@ -89,12 +95,18 @@ export function layoutKnobs(defs, blocked = new Set()) {
 /** Knob-mappable defs for a controls instance, in priority then schema order. */
 function mappableDefs(controls) {
   const registry = controls._learnRegistry ?? {};
+  const selects = controls._selects ?? {};
   const schema = controls._instrument?.constructor.PARAMS;
   const inRegistry = (p) => !!registry[p] && !EXCLUDED.has(p);
+  const knobbable = (d) => {
+    const type = d.type ?? "number";
+    if (type === "number") return inRegistry(d.param);
+    return type === "enum" && !!selects[d.param]?.el; // choice → stepped knob
+  };
   if (schema) {
     return schema
       .map((d, i) => ({ d, i }))
-      .filter(({ d }) => (d.type ?? "number") === "number" && inRegistry(d.param))
+      .filter(({ d }) => knobbable(d))
       .sort((a, b) => (a.d.priority ?? 2) - (b.d.priority ?? 2) || a.i - b.i)
       .map(({ d }) => d);
   }
@@ -172,11 +184,17 @@ export class AutoMap {
    */
   get assignments() {
     const out = {};
-    const registry = this._current?._learnRegistry ?? {};
+    const controls = this._current;
+    const registry = controls?._learnRegistry ?? {};
+    const schema = controls?._instrument?.constructor.PARAMS ?? [];
     const map = this._map ?? {};
     for (const [param, binding] of Object.entries(map)) {
       const control = findControl(binding);
-      if (control) out[control.id] = { param, label: registry[param]?.getAttribute?.("label") ?? param };
+      if (!control) continue;
+      const def = schema.find((d) => d.param === param);
+      const label = registry[param]?.getAttribute?.("label") ?? def?.label ?? param;
+      const pos = paramPosition(controls, param);
+      out[control.id] = { param, label, ...(pos ?? {}), ...(def?.type === "enum" ? { choice: true } : {}) };
     }
     return out;
   }
@@ -213,7 +231,7 @@ export class AutoMap {
   /** Knob indices (0–23) occupied by manual bindings — removed from the layout. */
   _blockedKnobs(controls) {
     const knobIds = KNOB_ROWS.flat();
-    const blocked = new Set();
+    const blocked = new Set(Object.keys(RESERVED_KNOBS).map((id) => knobIds.indexOf(id)));
     for (const binding of Object.values(controls._paramBindings ?? {})) {
       const i = knobIds.indexOf(findControl(binding)?.id);
       if (i >= 0) blocked.add(i);

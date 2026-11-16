@@ -65,6 +65,31 @@ export function applyInputLearnMixin(targetClass) {
   }
 }
 
+/**
+ * Read a param back as a hardware position: { value: 0..1, display } — the
+ * inverse of the input mapping (log-aware for sliders/knobs, option index for
+ * selects). Used to mirror live values on the on-screen hardware map.
+ * @returns {{ value: number, display: string } | null}
+ */
+export function paramPosition(controls, param) {
+  const el = controls?._learnRegistry?.[param];
+  if (el) {
+    const v = parseFloat(el.value);
+    const min = parseFloat(el.getAttribute("min") ?? "0");
+    const max = parseFloat(el.getAttribute("max") ?? "1");
+    if (!Number.isFinite(v) || max === min) return null;
+    const log = el.getAttribute("scale") === "log" && min > 0 && max > 0 && v > 0;
+    const norm = log ? Math.log(v / min) / Math.log(max / min) : (v - min) / (max - min);
+    const display = el._valEl?.textContent || String(Math.round(v * 100) / 100);
+    return { value: Math.max(0, Math.min(1, norm)), display };
+  }
+  const sel = controls?._selects?.[param]?.el;
+  const n = sel?.options?.length ?? 0;
+  if (!n) return null;
+  const i = Math.max(0, sel.selectedIndex);
+  return { value: n > 1 ? i / (n - 1) : 0, display: sel.options[i]?.text ?? "" };
+}
+
 export const InputLearnMixin = {
   /** Initialize learn state. Call from the host constructor. */
   _initInputLearnState() {
@@ -215,10 +240,27 @@ export const InputLearnMixin = {
   _applyOne(param, binding, detail) {
     if (!bindingsEqual(binding, detail.binding)) return false;
     const control = this._learnRegistry[param];
-    if (!control) return false;
+    if (!control) return this._applyToSelect(param, detail);
     const value = this._inputValueToControlValue(detail, control);
     if (value == null) return false;
     this._setControlValueFromInput(control, param, value);
+    return true;
+  },
+
+  /**
+   * Choice params (registered <select>s): the knob's travel is split into one
+   * zone per option. Fires the select's normal change path only when the
+   * option actually changes.
+   */
+  _applyToSelect(param, detail) {
+    const el = this._selects?.[param]?.el;
+    const n = el?.options?.length ?? 0;
+    if (!n || detail?.value == null) return false;
+    const idx = Math.min(n - 1, Math.floor(Math.max(0, Math.min(1, detail.value)) * n));
+    if (el.selectedIndex !== idx) {
+      el.selectedIndex = idx;
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    }
     return true;
   },
 

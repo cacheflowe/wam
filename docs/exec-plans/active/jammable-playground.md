@@ -87,7 +87,7 @@ static PARAMS = [
 | ↑ / ↓ | Previous / next instrument (exists). |
 | Mute / Solo / Rec Arm | Mode select: **Steps** / **Mixer** / **Perform**; lit button = current mode. |
 | 16 buttons — Steps | Toggle steps of the focused pattern (exists). |
-| 16 buttons — Mixer | Top: mute slot 1–8 · Bottom: focus slot 1–8 (solo TBD). |
+| 16 buttons — Mixer | Top: mute slot 1–8 · Bottom: jam slot 1–8 (focus via ↑/↓). |
 | 16 buttons — Perform | Top: pattern A–D, prev/next preset, save preset · Bottom: mutate small / mutate big / randomize / undo / redo / lock group. |
 
 Placement is by `role` (fixed knob per role), then unfilled slots in a row get that row's highest-priority unplaced params. Manual MIDI-learn still wins. An on-screen **hardware map** strip shows what each knob/fader/button does for the focused instrument and current mode.
@@ -126,7 +126,7 @@ Placement is by `role` (fixed knob per role), then unfilled slots in a row get t
 - [ ] Tag the existing presets (part of Phase 5 curation).
 
 ### Phase 4 — LCXL performance layout
-- [x] Role-based auto-map (`layoutKnobs`, fixed `ROLE_SLOTS`, home-row fill, pages); volume/pan/enums excluded; manual-bound knobs removed from the layout.
+- [x] Role-based auto-map (`layoutKnobs`, fixed `ROLE_SLOTS`, home-row fill, pages); volume/pan excluded; enums with a registered select map as stepped knobs; manual-bound knobs removed from the layout.
 - [x] Faders → mixer (slot volumes, row order) with soft takeover; manually-learned faders leave the mixer.
 - [x] Button modes (Steps / Mixer / Perform) on Mute/Solo/Rec Arm with LED mode indicator (`midi/performance-surface.js`); `SequencerHardware.setEnabled` hands the buttons over.
 - [x] Perform actions via Controls' public performance API (`launchPattern` — bar-quantized, `stepPreset`, `mutate`, `undoSound`, …); new commands `mode-*`, `page-prev/next`; keyboard ←/→ page.
@@ -144,7 +144,7 @@ Placement is by `role` (fixed knob per role), then unfilled slots in a row get t
 
 ## Open questions
 
-- Mixer mode bottom row: focus-select vs. solo? (Proposed: focus; solo via shift-hold later.)
+- ~~Mixer mode bottom row: focus-select vs. solo?~~ Decided: **jam** per instrument; focus via ↑/↓.
 - More than 8 instruments: fader banks via ←/→ in Mixer mode?
 - Keep Device button as play/stop, or make it a shift modifier?
 - Pad's default `gate` of 4 steps — confirm by ear. Acid's fixed `hold = 0.7 × step` could become its `gate`.

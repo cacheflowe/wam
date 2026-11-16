@@ -97,6 +97,15 @@ Instruments declare `static PATTERN_ROLE` (kick, snare, hat, bass, lead, keys, p
 
 Every call takes an `rng` (`seededRng(seed)` for reproducibility) and returns `meta` describing the generator/options used (`describePattern(meta)` → "euclid 5/16 · walk", shown in the Rand tooltip).
 
+### Evolve (`global/evolver.js`)
+
+Patterns can change while they play, in two layers that coexist:
+
+- **Variations (gravity)** — `TrackEvolver.vary()` applies an op to the pattern's **home** for 1–2 bars, then `restore()` snaps back. Ops are weighted by **Energy** (low: thin / ghosts / kick-bass drop; mid: morph / nudge / shuffle notes / transpose; high: thicken / ratchets / drum fills). A variation never silences a track.
+- **Evolution (drift)** — `evolve()` permanently changes home (every 4th call: a fresh pattern for the role); `keep()` adopts the playing variation; `returnHome()` goes back to the **original** (what was loaded); `undo()` steps back through home history. A user edit during a variation counts as "keep".
+
+`Conductor` schedules this across tracks at each bar start (`clock.onTick` → `if (pos.downbeat) conductor.onBar(bar, tick)`, before the bar's steps play): expired variations restore — or stick with probability **Drift** —, with **Auto** on the last bar of a phrase gets drum fills (likelier with Energy), and each phrase start varies one track round-robin (or, with Drift, evolves it). Settings `{ energy, drift, auto, phrase }` save with the song; Drift defaults to 0 (always come home). Saving never stores a temporary variation — Controls swap in its home. Tracks opt out per instrument (`evolveEnabled: false`). UI: the **∿ Evolve** drawer panel; LCXL knob C8 = Energy, Perform buttons Evolve / Keep / Return. Tests: [tests/evolver.test.js](tests/evolver.test.js).
+
 ### Pattern playback (`global/pattern-track.js`)
 
 Pattern playback is headless. `PatternTrack` holds a track's patterns (A–D), chain and params, and `tick(tick, time, stepDur)` returns what sounds on that tick. Everything is **derived from the tick count since Play** (Interphase-style: one clock, tracks compute their position) rather than accumulated in counters:

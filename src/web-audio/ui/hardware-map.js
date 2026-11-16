@@ -4,7 +4,10 @@
  * Renders PerformanceSurface state (`wam-hardware-state` events): current
  * button mode, the focused instrument's knob assignments for the current
  * page, fader → instrument slots (with soft-takeover status), and what each
- * of the 16 channel buttons does right now. It's interactive too — mode
+ * of the 16 channel buttons does right now. Knobs show live values (a dial +
+ * the value, moving as you turn the hardware or the on-screen control) and in
+ * STEPS mode the buttons mirror the focused pattern + playhead like the LEDs.
+ * It's interactive too — mode
  * chips, page arrows and the 16 buttons go through the same code paths as
  * the hardware, so PERFORM actions work without a device.
  *
@@ -47,7 +50,13 @@ const CSS = /* css */ `
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: rgba(255,255,255,.02);
   }
   .wam-hw-cell[data-empty] { opacity: 0.3; }
-  .wam-hw-knob { border-radius: 10px; text-align: center; }
+  .wam-hw-knob { border-radius: 6px; display: flex; flex-direction: column; gap: 1px; padding: 2px 4px 3px; }
+  .wam-hw-ktop { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  .wam-hw-klabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wam-hw-kval { opacity: 0.7; font-size: 0.64rem; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wam-hw-dial { flex: none; width: 12px; height: 12px; border-radius: 50%;
+    background: conic-gradient(from 225deg, var(--wam-hw-dial, #e6c229) calc(var(--v) * 270deg), #333 0 270deg, transparent 0); }
+  .wam-hw-knob[data-choice] .wam-hw-dial { --wam-hw-dial: #6cf; }
   .wam-hw-btn { all: unset; cursor: pointer; border: 1px solid #2a2a3a; border-radius: 4px; padding: 2px 4px;
     min-height: 1.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
   .wam-hw-btn:hover { border-color: #666; }
@@ -55,6 +64,8 @@ const CSS = /* css */ `
   .wam-hw-btn[data-lit="green"] { background: #1f5f2a; border-color: #3c9a4b; color: #fff; }
   .wam-hw-btn[data-lit="amber"] { background: #6a4d10; border-color: #c9952a; color: #fff; }
   .wam-hw-btn[data-lit="red"] { background: #5f1f1f; border-color: #a33; color: #fff; }
+  .wam-hw-btn[data-lit="green-full"] { background: #3cb54f; border-color: #8f8; color: #111; }
+  .wam-hw-btn[data-lit="red-low"] { background: #3a1818; border-color: #a33; color: #fff; }
   .wam-hw-fader { display: flex; flex-direction: column; gap: 2px; }
   .wam-hw-bar { height: 4px; background: #222; border-radius: 2px; overflow: hidden; }
   .wam-hw-bar > i { display: block; height: 100%; background: #6c8; }
@@ -82,7 +93,9 @@ export class WamHardwareMap extends HTMLElement {
       cssInjected = true;
     }
     document.addEventListener("wam-hardware-state", this._onState);
-    this.addEventListener("click", (e) => this._handleClick(e));
+    // pointerdown, not click: the map re-renders as the playhead moves, which
+    // can swap the element between press and release and swallow a click.
+    this.addEventListener("pointerdown", (e) => this._handleClick(e));
     this.render(this.surface?.state ?? null);
   }
 
@@ -101,6 +114,9 @@ export class WamHardwareMap extends HTMLElement {
   }
 
   render(state) {
+    const key = state ? JSON.stringify(state) : "";
+    if (key === this._lastKey) return; // nothing visible changed
+    this._lastKey = key;
     this._state = state;
     if (!state) {
       this.textContent = "Hardware map appears once the playground starts.";
@@ -125,7 +141,12 @@ export class WamHardwareMap extends HTMLElement {
         ids
           .map((id) => {
             const a = state.knobs[id];
-            return `<span class="wam-hw-cell wam-hw-knob" ${a ? "" : "data-empty"} title="${esc(a?.param ?? "")}">${esc(a?.label ?? "—")}</span>`;
+            if (!a) return `<span class="wam-hw-cell wam-hw-knob" data-empty><span class="wam-hw-klabel">—</span></span>`;
+            const dial = a.value != null ? `<i class="wam-hw-dial" style="--v:${a.value.toFixed(3)}"></i>` : "";
+            return `<span class="wam-hw-cell wam-hw-knob" ${a.choice ? "data-choice" : ""} title="${esc(a.label)} (${esc(a.param)})${a.choice ? " — turn to step through the options" : ""}">
+                <span class="wam-hw-ktop">${dial}<span class="wam-hw-klabel">${esc(a.label)}</span></span>
+                ${a.display != null ? `<span class="wam-hw-kval">${esc(a.display)}</span>` : ""}
+              </span>`;
           })
           .join(""),
     ).join("");
@@ -165,11 +186,17 @@ export class WamHardwareMap extends HTMLElement {
 
   /** Approximate the device LED for a button cell (for display only). */
   _lit(state, row, i) {
+    if (state.mode === MODES.STEPS) {
+      const st = state.steps?.[row === "top" ? i : 8 + i];
+      if (!st) return null;
+      if (st.playing) return st.active ? "green-full" : "red-low";
+      return st.active ? "green" : null;
+    }
     if (state.mode === MODES.MIXER) {
       const f = state.faders[i];
       if (!f) return null;
       if (row === "top") return f.muted ? "red" : "green";
-      return f.focused ? "amber" : null;
+      return f.focused ? "amber" : "green";
     }
     if (state.mode === MODES.PERFORM && row === "top" && i < 4) {
       const p = state.patterns[i];

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { AutoMap, layoutKnobs, ROLE_SLOTS } from "../src/web-audio/midi/auto-map.js";
 import { bindingFor } from "../src/web-audio/midi/launch-control-xl.js";
 import WebAudioSynthAcid from "../src/web-audio/instruments/synth-acid.js";
-import WebAudioSynthPoly from "../src/web-audio/instruments/synth-poly.js";
+import WebAudioSynthPoly, { WebAudioSynthPolyControls } from "../src/web-audio/instruments/synth-poly.js";
+import { mountTrack } from "./helpers/track-harness.js";
 import WebAudioPercKick from "../src/web-audio/instruments/perc-kick.js";
 
 const KNOB = (row, col) => `knob${"ABC"[row]}${col + 1}`;
@@ -81,7 +82,7 @@ describe("AutoMap with real instruments", () => {
     }
   });
 
-  it("never maps volume/pan, enums, or faders", () => {
+  it("never maps volume/pan, enums without a select control, or faders", () => {
     const am = new AutoMap();
     const ctrl = fakeControls(WebAudioSynthPoly);
     am.focus(ctrl);
@@ -168,5 +169,47 @@ describe("AutoMap focus lifecycle", () => {
     expect(detail.page).toBe(0);
     expect(detail.pageCount).toBe(1);
     expect(detail.assignments.knobA1).toEqual({ param: "cutoff", label: "cutoff" });
+  });
+});
+
+describe("AutoMap with a real panel (Poly)", () => {
+  const knobInput = (binding, value) =>
+    document.dispatchEvent(new CustomEvent("wam-control-input", { detail: { binding: { source: "midi", ...binding }, value, kind: "absolute" } }));
+
+  it("page 2 knobs drive page-2 params, and assignments carry live values", () => {
+    const { ctrl } = mountTrack(null, { Instrument: WebAudioSynthPoly, Controls: WebAudioSynthPolyControls });
+    const am = new AutoMap(document);
+    am.focus(ctrl);
+    expect(am.pageCount).toBeGreaterThan(1);
+    am.stepPage(1);
+    const [param, binding] = Object.entries(ctrl._autoBindings).find(([p]) => ctrl._sliders[p]);
+    knobInput(binding, 1);
+    const el = ctrl._sliders[param];
+    expect(Number(el.value)).toBe(Number(el.getAttribute("max")));
+    const a = Object.values(am.assignments).find((x) => x.param === param);
+    expect(a.value).toBeCloseTo(1);
+    expect(typeof a.display).toBe("string");
+  });
+
+  it("choice params (enums with a select) map to knobs; the knob steps through the options", () => {
+    const { ctrl } = mountTrack(null, { Instrument: WebAudioSynthPoly, Controls: WebAudioSynthPolyControls });
+    const am = new AutoMap(document);
+    am.focus(ctrl);
+    let all = [];
+    for (let p = 0; p < am.pageCount; p++) {
+      am.setPage(p);
+      all.push(...Object.keys(ctrl._autoBindings));
+      if (ctrl._autoBindings.oscAType) break;
+    }
+    expect(all).toContain("oscAType");
+    const sel = ctrl._selects.oscAType.el;
+    const n = sel.options.length;
+    knobInput(ctrl._autoBindings.oscAType, 0.999);
+    expect(sel.selectedIndex).toBe(n - 1);
+    expect(ctrl._instrument.oscAType).toBe(sel.options[n - 1].value);
+    knobInput(ctrl._autoBindings.oscAType, 0);
+    expect(ctrl._instrument.oscAType).toBe(sel.options[0].value);
+    const a = Object.values(am.assignments).find((x) => x.param === "oscAType");
+    expect(a).toMatchObject({ choice: true, value: 0, display: sel.options[0].text });
   });
 });

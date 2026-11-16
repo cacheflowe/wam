@@ -1,4 +1,5 @@
 import { Clock } from "../web-audio/global/clock.js";
+import { Conductor } from "../web-audio/global/evolver.js";
 import WamAnalysisBus from "../web-audio/ui/analysis-bus.js";
 import "../web-audio/ui/visualizer.js";
 
@@ -147,6 +148,17 @@ export default class PlaygroundApp extends HTMLElement {
     this._isLoadingState = false;
     this._analysisBus = new WamAnalysisBus();
 
+    // Evolve: schedules pattern variations across instruments (global/evolver.js).
+    this._conductor = new Conductor({
+      tracks: () =>
+        this._slotEntries().map((e) => {
+          const ev = e.ctrl.evolver;
+          if (ev) ev.label = e.def.label;
+          return ev;
+        }),
+    });
+    this._conductor.addEventListener("change", () => this._debouncedSave?.());
+
     this._autosave = new PlaygroundAutosave({
       getState: () => this._getState(),
       onStatus: (status) => this._showSaveStatus(status),
@@ -164,6 +176,7 @@ export default class PlaygroundApp extends HTMLElement {
     // Launch Control XL performance layer: fader mixer (slots in row order),
     // Steps/Mixer/Perform button modes, knob paging, LED state.
     performanceSurface.setInstrumentsProvider(() => [...this._instruments, ...this._pendingInstruments].map((e) => e.ctrl));
+    performanceSurface.setConductor(this._conductor);
     performanceSurface.start();
 
     // Make sure raw MIDI and keyboard are translated into normalized
@@ -363,6 +376,7 @@ export default class PlaygroundApp extends HTMLElement {
     mkLauncher("songs", "♪ Songs");
     mkLauncher("midi", "🎛 MIDI");
     mkLauncher("sync", "⇄ Sync");
+    mkLauncher("evolve", "∿ Evolve");
     mkLauncher("record", "⏺ Record");
     mkLauncher("viz", "◎ Viz");
 
@@ -474,6 +488,9 @@ export default class PlaygroundApp extends HTMLElement {
 
     this._midiPanelEl.appendChild(document.createElement("wam-midi-monitor"));
     this._drawer.addPanel("midi", this._midiPanelEl, "MIDI");
+
+    // ---- Evolve panel (drawer) ----
+    this._drawer.addPanel("evolve", this._buildEvolvePanel(), "Evolve");
 
     // ---- Sync panel (drawer): Oversite server connection + what's shared ----
     this._drawer.addPanel("sync", document.createElement("wam-sync-panel"), "Sync");
@@ -679,6 +696,8 @@ export default class PlaygroundApp extends HTMLElement {
 
     this._clock.onTick((pos) => {
       const { step, time, bar, dur } = pos;
+      // Evolve runs at each bar start, before that bar's steps are scheduled.
+      if (pos.downbeat) this._conductor.onBar(bar, pos.tick);
       // Process DJ style arrangement chaining over measure boundary
       if (step === 0 && this._queuedState) {
         this._applyState(this._queuedState);
@@ -902,6 +921,7 @@ export default class PlaygroundApp extends HTMLElement {
     if (state.transport) {
       this._transportEl.fromJSON(state.transport);
     }
+    if (state.evolve) this._conductor.fromJSON(state.evolve);
 
     // 3. Load instruments — one bad instrument must not abort the rest.
     if (state.instruments && Array.isArray(state.instruments)) {
@@ -943,6 +963,7 @@ export default class PlaygroundApp extends HTMLElement {
       v: 1,
       songName: this._currentSongName || null,
       transport: this._transportEl.toJSON(),
+      evolve: this._conductor.toJSON(),
       instruments: [],
     };
     // Save active and pending instruments
@@ -971,6 +992,73 @@ export default class PlaygroundApp extends HTMLElement {
     el.hidden = false;
     el.textContent = status.label ?? "⚠ Not saving";
     el.title = status.error ?? "Autosave failed — see the console";
+  }
+
+  /**
+   * Evolve drawer panel: auto-variations, Energy, Drift, phrase length, which
+   * instruments take part, and a log of what changed. Energy is also knob C8
+   * on the Launch Control XL.
+   */
+  _buildEvolvePanel() {
+    const c = this._conductor;
+    const el = document.createElement("div");
+    el.className = "wam-evolve-panel";
+    el.style.cssText = "display:flex;flex-direction:column;gap:.8rem;font-size:.82rem;color:#c8c8e0;--pico-form-element-spacing-vertical:.25rem;--pico-form-element-spacing-horizontal:.5rem;";
+    el.innerHTML = `
+      <p style="margin:0;opacity:.75;font-size:.76rem">Patterns vary around their <b>home</b> and snap back (gravity). <b>Drift</b> lets good variations stick, so the song keeps moving. Per instrument: Perform mode → Evolve / Keep / Return.</p>
+      <label style="display:flex;gap:.5rem;align-items:center;margin:0"><input type="checkbox" name="auto" style="margin:0"> Auto-vary on phrase boundaries</label>
+      <label style="margin:0">Energy <span class="ev-val" data-for="energy"></span> <small style="opacity:.6">(knob C8)</small>
+        <input type="range" name="energy" min="0" max="1" step="0.01" style="margin:0"></label>
+      <label style="margin:0">Drift <span class="ev-val" data-for="drift"></span> <small style="opacity:.6">0 = always return home</small>
+        <input type="range" name="drift" min="0" max="1" step="0.01" style="margin:0"></label>
+      <label style="margin:0">Phrase <select name="phrase" style="margin:0;width:auto"><option value="2">2 bars</option><option value="4">4 bars</option><option value="8">8 bars</option><option value="16">16 bars</option></select></label>
+      <fieldset style="margin:0;padding:.5rem .7rem;border:1px solid #2a2a3a;border-radius:6px"><legend style="font-size:.72rem;opacity:.7">Taking part</legend><div class="ev-tracks" style="display:flex;flex-wrap:wrap;gap:.3rem .9rem"></div></fieldset>
+      <div><div style="font-size:.72rem;opacity:.7;margin-bottom:.25rem">Recent</div><ol class="ev-log" style="margin:0;padding-left:1.2rem;font-size:.75rem;opacity:.85"></ol></div>`;
+    const f = (n) => el.querySelector(`[name="${n}"]`);
+    const sync = () => {
+      f("auto").checked = c.auto;
+      f("energy").value = c.energy;
+      f("drift").value = c.drift;
+      f("phrase").value = String(c.phrase);
+      el.querySelector('[data-for="energy"]').textContent = `${Math.round(c.energy * 100)}%`;
+      el.querySelector('[data-for="drift"]').textContent = `${Math.round(c.drift * 100)}%`;
+    };
+    const renderTracks = () => {
+      const box = el.querySelector(".ev-tracks");
+      box.replaceChildren();
+      for (const e of this._slotEntries()) {
+        const ev = e.ctrl.evolver;
+        if (!ev) continue;
+        const lab = document.createElement("label");
+        lab.style.cssText = "display:flex;gap:.3rem;align-items:center;margin:0;font-size:.78rem";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.style.margin = "0";
+        cb.checked = ev.enabled;
+        cb.addEventListener("change", () => {
+          ev.enabled = cb.checked;
+          this._debouncedSave();
+        });
+        lab.append(cb, e.def.label);
+        box.appendChild(lab);
+      }
+      if (!box.children.length) box.textContent = "No pattern instruments yet.";
+    };
+    const renderLog = () => {
+      el.querySelector(".ev-log").innerHTML = c.log.map((x) => `<li>bar ${x.bar + 1} · ${x.label}: ${x.what}</li>`).join("") || "<li style=\"list-style:none;opacity:.6\">Nothing yet.</li>";
+    };
+    f("auto").addEventListener("change", () => (c.auto = f("auto").checked));
+    f("energy").addEventListener("input", () => (c.energy = f("energy").value));
+    f("drift").addEventListener("input", () => (c.drift = f("drift").value));
+    f("phrase").addEventListener("change", () => (c.phrase = f("phrase").value));
+    c.addEventListener("change", sync);
+    c.addEventListener("event", renderLog);
+    this._drawer.addEventListener("drawer-toggle", (e) => {
+      if (e.detail.open && e.detail.id === "evolve") renderTracks();
+    });
+    sync();
+    renderLog();
+    return el;
   }
 
   /** "Recover" list: recent autosaves from any tab + the pre-load backup. */

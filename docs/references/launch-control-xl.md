@@ -52,19 +52,20 @@ Other messages (`t` = template slot):
 
 ## Playground performance layout
 
-The Instrument Playground turns the XL into a performance controller (factory template 5 / channel 13). Source: [midi/performance-surface.js](../../src/web-audio/midi/performance-surface.js), [midi/auto-map.js](../../src/web-audio/midi/auto-map.js). An on-screen copy (`<wam-hardware-map>`, MIDI drawer — can dock to the bottom of the page) shows what every control does right now and is clickable.
+The Instrument Playground turns the XL into a performance controller (factory template 5 / channel 13). Source: [midi/performance-surface.js](../../src/web-audio/midi/performance-surface.js), [midi/auto-map.js](../../src/web-audio/midi/auto-map.js). An on-screen copy (`<wam-hardware-map>`, MIDI drawer — can dock to the bottom of the page) shows what every control does right now and is clickable. Knob cells show a live dial + value (they move as you turn the hardware or the on-screen control); in Steps mode the 16 button cells mirror the pattern and playhead like the LEDs.
 
 | Control | Function |
 |---|---|
-| **Knobs** | Focused instrument, **role-based**: each musical role has a fixed knob on every instrument. Row 1 *tone*: cutoff · resonance · env amount · drive · wave · tone · noise · keytrack. Row 2 *envelope*: attack · decay · sustain · release · gate · filter attack · filter decay · filter release. Row 3 *movement*: detune · unison · LFO rate · LFO depth · glide · pitch · pitch amount · pitch decay. Params without a fixed slot fill empty knobs in their group's row; overflow goes to page 2+. LEDs: amber = auto-mapped, red = manual MIDI-learn (manual always wins). |
+| **Knobs** | Focused instrument, **role-based**: each musical role has a fixed knob on every instrument. Row 1 *tone*: cutoff · resonance · env amount · drive · wave · tone · noise · keytrack. Row 2 *envelope*: attack · decay · sustain · release · gate · filter attack · filter decay · filter release. Row 3 *movement*: detune · unison · LFO rate · LFO depth · glide · pitch · pitch amount · pitch decay. Params without a fixed slot fill empty knobs in their group's row; overflow goes to page 2+. **Choice params** (waveform, filter type, LFO shape/sync/destination — anything with a select) are on knobs too: the knob's travel is split into one zone per option (blue dial on screen). LEDs: amber = auto-mapped, red = manual MIDI-learn (manual always wins). |
+| **Knob C8** | **Energy** (global, for Evolve — see [BACKEND.md → Evolve](../BACKEND.md)). Reserved from auto-map; LED shows the level. A manual MIDI-learn on C8 takes it over. |
 | **← / →** | Previous / next knob page (lit when the instrument has more than 24 knob params). |
 | **↑ / ↓** | Previous / next instrument. |
 | **Faders 1–8** | **Mixer** — volume of instrument slots 1–8 (row order), in every mode. *Soft takeover*: a fader only grabs a slot once it passes through the current level, so levels never jump. A fader you MIDI-learn to a param leaves the mixer. |
 | **Device** | Play / stop. |
 | **Mute / Solo / Record Arm** | Button mode **Steps / Mixer / Perform** (lit = current). |
 | **16 buttons — Steps** | Toggle steps 1–16 of the focused pattern; playhead follows. |
-| **16 buttons — Mixer** | Top: mute slot 1–8 (green = on, red = muted) · Bottom: focus slot 1–8 (amber = focused). |
-| **16 buttons — Perform** | Top: launch pattern A–D (switches at the next bar; green = playing, amber = queued) · prev preset · next preset · random pattern. Bottom: mutate subtle / medium / wild · randomize sound · undo · redo (lit when available). |
+| **16 buttons — Mixer** | Top: mute slot 1–8 (green = on, red = muted) · Bottom: **jam** slot 1–8 (plays that instrument's jam hit on the next step; amber = focused). Focus moves with ↑ / ↓. |
+| **16 buttons — Perform** | Top: launch pattern A–D (switches at the next bar; green = playing, amber = queued) · prev preset · next preset · random pattern · **evolve** (one permanent evolution step of the playing pattern, shaped by Energy). Bottom: mutate subtle / medium / wild · randomize sound · undo · redo (lit when available) · **keep** (adopt the playing variation; amber while one plays) · **return home** (back to the original pattern; red while away). |
 
 Keyboard mirrors: Space play/stop, ↑/↓ instruments, ←/→ knob pages.
 

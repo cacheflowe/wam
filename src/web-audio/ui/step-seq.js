@@ -637,6 +637,7 @@ export default class WebAudioStepSeq extends HTMLElement {
    * @param {number} i
    */
   setActiveStep(i) {
+    this.activeStep = i;
     this._stepEls.forEach((el, idx) => el.classList.toggle("wass-active", idx === i));
     // Let external listeners (e.g. hardware LED playhead) follow the position.
     this.dispatchEvent(new CustomEvent("step-active", { bubbles: true, detail: { index: i } }));
