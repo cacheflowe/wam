@@ -93,7 +93,9 @@ export class WebAudioControlsBase extends HTMLElement {
     this._jamKeyHandlers = [];
     // Sequencer (shared across all sequenced instruments)
     this._seq = null;
-    this._tick = 0; // ticks since Play — PatternTrack derives everything from it
+    this._tick = 0; // fallback tick counter when no clock is attached (tests, standalone)
+    /** Global Clock (global/clock.js). When set, pattern position comes from clock.current.tick. */
+    this.clock = null;
     this._track = new PatternTrack();
     this._lastPlayedIndex = -1;
     // Multi-pattern system
@@ -1083,7 +1085,9 @@ export class WebAudioControlsBase extends HTMLElement {
     this._onStepTick?.(index, time, stepDurationSec);
 
     this._syncTrack();
-    const result = this._track.tick(this._tick++, time, stepDurationSec);
+    const tick = this.clock?.current ? this.clock.current.tick : this._tick;
+    this._tick++;
+    const result = this._track.tick(tick, time, stepDurationSec);
     if (result.launched) this._onPatternLaunched(result.launched);
 
     // Follow the chain in the UI when the sounding pattern changes.

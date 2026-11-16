@@ -10,13 +10,13 @@
  *   registry instrument → Channel (FxChain → volume/mute/solo → pan) → master gain → master FxChain → destination
  *   → MasterLimiter (song's `transport.limiter`, default on)
  *   (master volume is applied BEFORE the master FX — same order as <wam-transport>)
- *   PatternTrack per instrument, driven by one WebAudioSequencer clock.
+ *   PatternTrack per instrument, all driven by one Clock (global/clock.js).
  *
  * v1 scope: step-sequenced synths and drum synths. Types that load audio files
  * or need live input through their UI (loop players, samplers, vocoder) are
  * reported in `skipped`. Sidechain ducking (compSourceId) isn't routed yet.
  */
-import WebAudioSequencer from "./sequencer.js";
+import { Clock } from "./clock.js";
 import { PatternTrack } from "./pattern-track.js";
 import { Channel, gainFaderState } from "./channel.js";
 import { FxChain } from "../fx/fx-chain.js";
@@ -34,11 +34,10 @@ export class SongPlayer {
   constructor(ctx, { destination = ctx.destination } = {}) {
     this.ctx = ctx;
     this.destination = destination;
-    this.clock = new WebAudioSequencer(ctx, { bpm: 120 });
-    this.clock.onStep((step, time) => this.tick(step, time));
+    this.clock = new Clock(ctx, { bpm: 120 });
+    this.clock.onTick((pos) => this._advance(pos));
     this.master = null;
     this.tracks = [];
-    this._tick = 0;
   }
 
   /**
@@ -48,6 +47,7 @@ export class SongPlayer {
    */
   async load(song) {
     this.dispose();
+    this.clock.rewind();
     const t = song.transport ?? {};
     const ctx = this.ctx;
 
@@ -141,9 +141,8 @@ export class SongPlayer {
   /** Start from the top of every chain. */
   play() {
     if (this.ctx.state === "suspended") this.ctx.resume();
-    this._tick = 0;
     for (const tr of this.tracks) tr.track.reset();
-    this.clock.start();
+    this.clock.start(); // tick 0
   }
 
   stop() {
@@ -151,14 +150,22 @@ export class SongPlayer {
   }
 
   /**
-   * One clock tick: advance every track and trigger what fires. Called by the
-   * clock; callable directly (tests, offline rendering).
-   * @param {number} step  0–15
-   * @param {number} time  AudioContext time of the tick
+   * Emit the next clock tick at `time` (offline rendering / tests). In
+   * real time, play() lets the clock drive this. `step` is ignored — the
+   * clock derives it from the tick count.
    */
-  tick(step, time) {
-    const dur = this.clock.stepDurationSec();
-    const tick = this._tick++;
+  tick(_step, time) {
+    return this.clock.advance(time);
+  }
+
+  /** Back to the top without starting (before an offline render). */
+  rewind() {
+    this.clock.rewind();
+    for (const tr of this.tracks) tr.track.reset();
+  }
+
+  /** Advance every track to this clock position and trigger what fires. */
+  _advance({ tick, step, time, dur }) {
     for (const tr of this.tracks) {
       tr.instrument.onTick(step);
       const r = tr.track.tick(tick, time, dur);

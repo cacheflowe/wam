@@ -1,4 +1,4 @@
-import WebAudioSequencer from "../web-audio/global/sequencer.js";
+import { Clock } from "../web-audio/global/clock.js";
 import WamAnalysisBus from "../web-audio/ui/analysis-bus.js";
 import "../web-audio/ui/visualizer.js";
 
@@ -133,8 +133,8 @@ export default class PlaygroundApp extends HTMLElement {
   connectedCallback() {
     this._ctx = null;
     this._transport = null;
-    this._seq = null;
-    this._globalStep = 0;
+    this._seq = null; // the Clock (sequencer-compatible) — see _initAudio
+    this._clock = null;
 
     // Live instrument entries: [{ def, ctrl, instrument, instanceId, row, tapNode? }]
     this._instruments = [];
@@ -618,11 +618,10 @@ export default class PlaygroundApp extends HTMLElement {
     this._ctx = new AudioContext();
     performanceStream.setContext(this._ctx);
 
-    this._seq = new WebAudioSequencer(this._ctx, {
-      bpm: 128,
-      steps: 16,
-      subdivision: 16,
-    });
+    // The one musical clock: every panel, loop player, the visualizer and the
+    // performance stream read their position from it (global/clock.js).
+    this._clock = new Clock(this._ctx, { bpm: 128 });
+    this._seq = this._clock; // transport/recorder use its sequencer-like surface
 
     this._transportEl.init(this._ctx, {
       bpm: 128,
@@ -651,7 +650,6 @@ export default class PlaygroundApp extends HTMLElement {
 
     this._transportEl.addEventListener("transport-play", () => {
       if (this._ctx.state === "suspended") this._ctx.resume();
-      this._globalStep = 0;
       // Flush any pending instruments — everything resets on play anyway
       for (const entry of this._pendingInstruments) this._instruments.push(entry);
       this._pendingInstruments = [];
@@ -679,7 +677,8 @@ export default class PlaygroundApp extends HTMLElement {
       }
     });
 
-    this._seq.onStep((step, time) => {
+    this._clock.onTick((pos) => {
+      const { step, time, bar, dur } = pos;
       // Process DJ style arrangement chaining over measure boundary
       if (step === 0 && this._queuedState) {
         this._applyState(this._queuedState);
@@ -698,18 +697,16 @@ export default class PlaygroundApp extends HTMLElement {
         this._pendingInstruments = [];
       }
 
-      const dur = this._seq.stepDurationSec();
-      const bar = Math.floor(this._globalStep / 16);
       // Performance stream: remember where we are for note payloads, and tick the beat.
       this._streamPos = { step, bar };
-      performanceStream.beat({ step, bar, beat: step >> 2, downbeat: step === 0, bpm: this._transportEl.bpm }, time);
+      performanceStream.beat({ step, bar, beat: pos.beat, downbeat: pos.downbeat, bpm: pos.bpm }, time);
       this._analysisBus.setBeat(step, bar, this._transportEl.bpm, dur, time);
       for (const entry of this._instruments) {
         if (entry.def.step) {
           entry.def.step(entry.ctrl, step, time, dur);
         } else {
           // Loop player (and any other step-less instrument that implements step())
-          entry.ctrl.step?.(this._globalStep, this._transportEl.bpm, time);
+          entry.ctrl.step?.(pos.tick, this._transportEl.bpm, time);
         }
       }
       const uiDelay = Math.max(0, (time - this._ctx.currentTime) * 1000);
@@ -718,7 +715,6 @@ export default class PlaygroundApp extends HTMLElement {
           entry.ctrl.setActiveStep?.(step);
         }
       }, uiDelay);
-      this._globalStep++;
     });
 
     this._transportEl.broadcastScale();
@@ -758,6 +754,7 @@ export default class PlaygroundApp extends HTMLElement {
     const ctrl = document.createElement(def.tag);
 
     ctrl.bind(instrument, this._ctx, def.bindOpts(bpm));
+    ctrl.clock = this._clock; // pattern position comes from the global clock
     ctrl.connect(this._transportEl.masterGain);
     this._transportEl.registerInstrument(ctrl);
     this._transportEl.broadcastScale();
