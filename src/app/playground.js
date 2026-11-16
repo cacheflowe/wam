@@ -40,6 +40,7 @@ import { performanceSurface } from "../web-audio/midi/performance-surface.js";
 import { performanceStream } from "../web-audio/global/performance-stream.js";
 import "../site/sync-panel.js";
 import { startSyncBridge } from "../site/sync-bridge.js";
+import { PlaygroundAutosave } from "./playground-autosave.js";
 import "../web-audio/ui/hardware-map.js";
 import {
   bindingFor,
@@ -342,6 +343,11 @@ export default class PlaygroundApp extends HTMLElement {
     this._isLoadingState = false;
     this._analysisBus = new WamAnalysisBus();
 
+    this._autosave = new PlaygroundAutosave({
+      getState: () => this._getState(),
+      onStatus: (status) => this._showSaveStatus(status),
+    });
+
     this._addCSS();
     this._buildUI();
     this._loadInitialState();
@@ -560,6 +566,13 @@ export default class PlaygroundApp extends HTMLElement {
     this._currentSongLabel.style.cssText = "opacity:0.85;margin-left:0.5rem;font-size:0.8rem;color:#4f8;";
     toolbar.appendChild(this._currentSongLabel);
 
+    // Autosave problems are shown here (hidden while saving works).
+    this._saveStatusEl = document.createElement("span");
+    this._saveStatusEl.className = "wam-save-status";
+    this._saveStatusEl.hidden = true;
+    this._saveStatusEl.style.cssText = "margin-left:0.75rem;font-size:0.78rem;color:#ff7a59;cursor:help;";
+    toolbar.appendChild(this._saveStatusEl);
+
     topBar.appendChild(toolbar);
     main.appendChild(topBar);
 
@@ -597,7 +610,11 @@ export default class PlaygroundApp extends HTMLElement {
       e.detail.callback(this._getState());
     });
     this._libraryEl.setSampleSongs(SAMPLE_SONGS);
-    this._drawer.addPanel("songs", this._libraryEl, "Songs & Saves");
+    const songsPanel = document.createElement("div");
+    songsPanel.style.cssText = "display:flex;flex-direction:column;gap:1rem;";
+    songsPanel.appendChild(this._libraryEl);
+    songsPanel.appendChild(this._buildRecoverPanel());
+    this._drawer.addPanel("songs", songsPanel, "Songs & Saves");
 
     // ---- MIDI panel (drawer): input picker + debug monitor ----
     this._midiPanelEl = document.createElement("div");
@@ -1050,8 +1067,16 @@ export default class PlaygroundApp extends HTMLElement {
     }
   }
 
-  async _applyState(state) {
+  /**
+   * Replace the session with `state`. Autosaves the result unless `save` is
+   * false (startup restore: the state already IS the save — re-saving it would
+   * make an unchanged refresh look like the newest work across tabs).
+   */
+  async _applyState(state, { save = true } = {}) {
     this._isLoadingState = true;
+    this._autosave.suspended = true;
+    const failures = [];
+    try {
 
     if (state.songName !== undefined) {
       this._setCurrentSongName(state.songName);
@@ -1077,15 +1102,20 @@ export default class PlaygroundApp extends HTMLElement {
       this._transportEl.fromJSON(state.transport);
     }
 
-    // 3. Load instruments
+    // 3. Load instruments — one bad instrument must not abort the rest.
     if (state.instruments && Array.isArray(state.instruments)) {
       for (const instDef of state.instruments) {
         const typeDef = INSTRUMENT_TYPES.find((t) => t.id === instDef.id);
-        if (typeDef) {
+        if (!typeDef) {
+          failures.push(`${instDef.id}: unknown instrument type`);
+          continue;
+        }
+        try {
           const entry = this._addInstrument(typeDef, false);
-          if (entry && instDef.state) {
-            entry.ctrl.fromJSON(instDef.state);
-          }
+          if (entry && instDef.state) entry.ctrl.fromJSON(instDef.state);
+        } catch (err) {
+          console.error(`[playground] Failed to restore "${instDef.id}":`, err);
+          failures.push(`${instDef.id}: ${err?.message ?? err}`);
         }
       }
     }
@@ -1093,9 +1123,18 @@ export default class PlaygroundApp extends HTMLElement {
     if (this._instruments.length === 0 && this._pendingInstruments.length === 0) {
       this._emptyMsg.style.display = "";
     }
+    } finally {
+      this._isLoadingState = false;
+      this._autosave.suspended = false;
+    }
 
-    this._isLoadingState = false;
-    this._debouncedSave();
+    if (failures.length) {
+      // Keep the original intact (backup) and tell the user; don't overwrite their save with a partial load.
+      this._showSaveStatus({ ok: false, label: "⚠ Restore problem", error: `Some instruments couldn't be restored (${failures.join("; ")}). The full saved state is kept as a backup — see Songs → Recover.` });
+      return failures;
+    }
+    if (save) this._debouncedSave();
+    return failures;
   }
 
   _getState() {
@@ -1116,35 +1155,72 @@ export default class PlaygroundApp extends HTMLElement {
     return state;
   }
 
+  /** Request an autosave (debounced; flushed on page hide/unload). See playground-autosave.js. */
   _debouncedSave() {
-    clearTimeout(this._saveTimer);
-    this._saveTimer = setTimeout(() => this._saveToLocalStorage(), 500);
+    this._autosave?.schedule();
   }
 
-  _saveToLocalStorage() {
-    try {
-      localStorage.setItem(PlaygroundApp.STORAGE_KEY, JSON.stringify(this._getState()));
-    } catch (e) {
-      // quota exceeded or private mode — ignore
+  _showSaveStatus(status) {
+    const el = this._saveStatusEl;
+    if (!el) return;
+    if (status.ok) {
+      el.hidden = true;
+      return;
     }
+    el.hidden = false;
+    el.textContent = status.label ?? "⚠ Not saving";
+    el.title = status.error ?? "Autosave failed — see the console";
   }
 
-  _loadFromLocalStorage() {
-    try {
-      const raw = localStorage.getItem(PlaygroundApp.STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
-    }
+  /** "Recover" list: recent autosaves from any tab + the pre-load backup. */
+  _buildRecoverPanel() {
+    const wrap = document.createElement("details");
+    wrap.className = "wam-recover";
+    wrap.innerHTML = `<summary style="cursor:pointer;font-size:.85rem;opacity:.85">Recover an autosave</summary>
+      <p style="font-size:.75rem;opacity:.7;margin:.4rem 0">Each tab autosaves separately. Recent sessions (newest first) — loading one replaces the current song (it's backed up first).</p>
+      <div class="wam-recover-list" style="display:flex;flex-direction:column;gap:.35rem"></div>`;
+    const list = wrap.querySelector(".wam-recover-list");
+    const render = () => {
+      list.replaceChildren();
+      const items = this._autosave.recent();
+      const backup = this._autosave.loadBackup();
+      if (backup?.state) items.push({ backup: true, savedAt: backup.savedAt, instruments: backup.state.instruments?.length ?? 0, songName: backup.state.songName, state: backup.state });
+      if (!items.length) list.textContent = "No autosaves yet.";
+      for (const it of items) {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;gap:.5rem;align-items:center;font-size:.78rem";
+        const when = new Date(it.savedAt).toLocaleString();
+        const what = `${it.songName ?? "Untitled"} · ${it.instruments} instrument${it.instruments === 1 ? "" : "s"}`;
+        const tag = it.backup ? "backup (before last load)" : it.thisTab ? "this tab" : "other tab";
+        const btn = document.createElement("button");
+        btn.textContent = "Load";
+        btn.className = "secondary outline";
+        btn.style.cssText = "margin:0;padding:.15rem .6rem;font-size:.75rem;width:auto";
+        btn.addEventListener("click", async () => {
+          if (!confirm(`Replace the current song with the autosave from ${when}?`)) return;
+          this._autosave.backup(this._getState(), "before-recover");
+          await this._applyState(it.state);
+          render();
+        });
+        const label = document.createElement("span");
+        label.textContent = `${when} — ${what} (${tag})`;
+        row.append(btn, label);
+        list.appendChild(row);
+      }
+    };
+    wrap.addEventListener("toggle", () => wrap.open && render());
+    return wrap;
   }
 
+  /** Share-link state from the URL: "#playground-app&s=<b64>" (or legacy "#s=<b64>"). */
   _loadFromURL() {
     try {
-      const hash = location.hash;
-      if (!hash.startsWith("#s=")) return null;
-      const json = atob(hash.slice(3).replace(/-/g, "+").replace(/_/g, "/"));
+      const part = location.hash.slice(1).split("&").find((p) => p.startsWith("s="));
+      if (!part) return null;
+      const json = atob(part.slice(2).replace(/-/g, "+").replace(/_/g, "/"));
       return JSON.parse(json);
     } catch (e) {
+      console.warn("[playground] Couldn't read the share link:", e);
       return null;
     }
   }
@@ -1166,7 +1242,7 @@ export default class PlaygroundApp extends HTMLElement {
   _shareURL() {
     const json = JSON.stringify(this._getState());
     const b64 = btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    const url = `${location.origin}${location.pathname}#s=${b64}`;
+    const url = `${location.origin}${location.pathname}#playground-app&s=${b64}`;
     navigator.clipboard?.writeText(url).then(
       () => {
         // Find existing share btn and update text if possible,
@@ -1179,13 +1255,24 @@ export default class PlaygroundApp extends HTMLElement {
   async _loadInitialState() {
     this._initAudio(); // Ensure transport is created
 
-    const pendingState = this._loadFromURL() || this._loadFromLocalStorage();
+    // A share link loads once; then drop it from the URL so a refresh restores
+    // the autosave (your edits) instead of reloading the shared song.
+    let pendingState = this._loadFromURL();
+    const fromURL = !!pendingState;
+    if (pendingState) {
+      history.replaceState(null, "", `${location.pathname}${location.search}#playground-app`);
+    } else {
+      pendingState = this._autosave.load()?.state ?? null;
+    }
     if (!pendingState) return;
 
+    this._autosave.backup(pendingState, "startup");
     try {
-      await this._applyState(pendingState);
+      await this._applyState(pendingState, { save: fromURL });
+      this._autosave.afterStartup();
     } catch (e) {
-      console.warn("Failed to load saved configuration", e);
+      console.error("[playground] Failed to load saved configuration", e);
+      this._showSaveStatus({ ok: false, label: "⚠ Restore problem", error: `Couldn't restore the saved song: ${e?.message ?? e}. It's kept as a backup — see Songs → Recover.` });
     }
   }
 }

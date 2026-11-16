@@ -34,7 +34,7 @@
 | Instrument parameters (cutoff, decay…) | Instrument class instance | Instrument lifetime |
 | UI + step sequencer state | `*Controls` Web Component | Component lifetime |
 | FX state | `WebAudioFxUnit` Web Component | Component lifetime |
-| Serialized state (JSON) | `toJSON()` / `fromJSON()` on Controls | App-managed; saved to `localStorage` |
+| Serialized state (JSON) | `toJSON()` / `fromJSON()` on Controls | App-managed; playground autosaves per tab to `localStorage` (`playground-autosave.js`) |
 | Lookahead timer | `WebAudioSequencer` | Between `start()` / `stop()` |
 
 ## End-to-End Flow (Sequencer → Audio Output)

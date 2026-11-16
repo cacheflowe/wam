@@ -41,7 +41,8 @@ class CustomApp extends HTMLElement {
   initHash() {
     const hash = document.location.hash.replace("%26", "&");
     const parts = hash.substring(1).split("&");
-    const demoId = parts[0];
+    // Legacy playground share links were "#s=<state>" (no route) — send them to the playground.
+    const demoId = parts[0].startsWith("s=") ? "playground-app" : parts[0];
     const isBare = parts.includes("bare");
     if (demoId) {
       document.body.appendChild(document.createElement(demoId));

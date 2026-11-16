@@ -301,7 +301,16 @@ toJSON()    // → { params, steps, fx, muted }
 fromJSON()  // ← restores params, steps, fx, mute state
 ```
 
-The app collects all controls' JSON into one state object, persisted to `localStorage` (debounced 500ms) and optionally encoded as a base64 URL hash for sharing.
+The app collects all controls' JSON into one state object. The playground autosaves it via [src/app/playground-autosave.js](src/app/playground-autosave.js) and can encode it as a share link (`#playground-app&s=<base64>`).
+
+### Session autosave (playground)
+
+- **Per tab:** each tab saves to `wam_playground:tab:<tabId>`; the tab id lives in `sessionStorage` (survives refresh). A refresh restores *that tab's* work — another open tab (e.g. one receiving the same MIDI or sync messages) can't overwrite it. A new tab starts from the newest save across tabs. Old single-key saves (`wam_playground_settings`) are migrated on first load.
+- **Debounced 400 ms, flushed on `pagehide` / `visibilitychange` / `beforeunload`**, so a refresh right after an edit keeps it.
+- **Never silent:** serialization/storage errors log to the console and show a "⚠ Not saving" badge next to the song name; a full store prunes old tab saves and retries.
+- **Robust restore:** each instrument restores in its own try/catch (one bad instrument doesn't abort the load or leave saving disabled). The state about to be loaded is backed up first (`wam_playground:backup`). Startup restore doesn't re-save (an unchanged refresh isn't "newer work").
+- **Recovery:** Songs drawer → *Recover an autosave* lists recent sessions from any tab plus the pre-load backup.
+- **Share links** load once, then the URL is reset to `#playground-app` so a refresh restores your edits rather than the shared song. Legacy `#s=` links still open the playground.
 
 Missing keys in `fromJSON()` fall back to defaults (`?? defaultValue`), so older saved states load cleanly when new parameters are added.
 
@@ -313,8 +322,8 @@ user drags slider
   → controls-base slider-input handler applies audio change
   → handler calls this._emitChange()
   → controls-change event bubbles to app
-  → app's controls-change listener calls _debouncedSave()
-  → 500ms later: localStorage.setItem(...)
+  → app's controls-change listener calls _debouncedSave() → autosave.schedule()
+  → 400ms later (or on page hide/unload): localStorage.setItem("wam_playground:tab:<tabId>", ...)
 ```
 
 Any user interaction that should be persisted **must** result in `_emitChange()` being called. The base class `slider-input` handler calls it automatically for all slider params (volume, pan, and SLIDER_DEFS params). Other interactions — selects, buttons, step changes — must call `_emitChange()` explicitly. Do not call `_emitChange()` from `_onSliderInput()` overrides; the base handler already calls it after `_onSliderInput` returns.

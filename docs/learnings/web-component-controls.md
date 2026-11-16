@@ -37,3 +37,18 @@ else el.removeAttribute("data-active");
 ```
 
 (`toggleAttribute(name, boolean)` is equally safe.) Any code that "clears" an attribute with `setAttribute(name, null)` will silently keep it present.
+
+
+## Playground: work lost on refresh (multi-tab clobbering, swallowed errors, broken share links)
+
+**Symptom:** an unsaved song in the playground didn't survive a refresh.
+
+**Root causes (any of):**
+- All tabs autosaved to ONE localStorage key — a second playground tab (common with MIDI controllers, which deliver input to every tab, or with Sync test tabs) overwrote the song whenever it saved.
+- `_saveToLocalStorage` caught *every* error ("quota or private mode — ignore"), so a throwing `toJSON()` silently disabled saving.
+- `_applyState` had no per-instrument error handling: one throwing `fromJSON()` aborted the restore and left `_isLoadingState = true`, so no later edit was ever saved.
+- Share links were `#s=…`, which the hash router treats as an element name (`createElement("s=…")` throws) — they never opened the playground.
+
+**Fix:** `src/app/playground-autosave.js` (per-tab keys via sessionStorage, flush on pagehide, visible errors, backups, recovery list), `_applyState` try/finally + per-instrument isolation, share links as `#playground-app&s=…` (router maps legacy `#s=`).
+
+**Testing gotcha:** when checking that a step toggle persisted, compare against the value *after* toggling — default patterns already have steps active, so a toggle can turn a step OFF.
