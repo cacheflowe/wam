@@ -3,34 +3,10 @@ import WamAnalysisBus from "../web-audio/ui/analysis-bus.js";
 import "../web-audio/ui/visualizer.js";
 
 // Import all instrument modules (registers custom elements as a side-effect)
-import "../web-audio/instruments/perc-kick.js";
-import "../web-audio/instruments/perc-hihat.js";
-import "../web-audio/instruments/perc-snare.js";
-import "../web-audio/instruments/synth-acid.js";
-import "../web-audio/instruments/synth-808.js";
-import "../web-audio/instruments/synth-fm.js";
-import "../web-audio/instruments/synth-mono.js";
-import "../web-audio/instruments/synth-pad.js";
-import "../web-audio/instruments/synth-poly.js";
-import "../web-audio/instruments/synth-blipfx.js";
-import "../web-audio/instruments/sample-looper.js";
-import "../web-audio/instruments/sample-player.js";
 import "../web-audio/ui/transport.js";
 
-import WebAudioPercKick from "../web-audio/instruments/perc-kick.js";
-import WebAudioPercHihat from "../web-audio/instruments/perc-hihat.js";
-import WebAudioPercSnare from "../web-audio/instruments/perc-snare.js";
-import WebAudioSynthAcid from "../web-audio/instruments/synth-acid.js";
-import WebAudioSynth808 from "../web-audio/instruments/synth-808.js";
-import WebAudioSynthFM from "../web-audio/instruments/synth-fm.js";
-import WebAudioSynthMono from "../web-audio/instruments/synth-mono.js";
-import WebAudioSynthPad from "../web-audio/instruments/synth-pad.js";
-import WebAudioSynthPoly from "../web-audio/instruments/synth-poly.js";
-import WebAudioSynthBlipFX from "../web-audio/instruments/synth-blipfx.js";
-import WebAudioLoopPlayer from "../web-audio/instruments/sample-looper.js";
-import WebAudioSamplePlayer from "../web-audio/instruments/sample-player.js";
-import WebAudioVocoderFx from "../web-audio/fx/fx-vocoder.js";
 import { tryGlobKeys, tryGlobModules, resolveSamples, resolveSongs } from "../web-audio/global/sample-utils.js";
+import { INSTRUMENTS, createInstrument, controlsOptions } from "../web-audio/instruments/registry.js";
 import "../web-audio/ui/arrangement-library.js";
 import { focusManager } from "../web-audio/ui/focus-manager.js";
 import { sequencerHardware } from "../web-audio/midi/sequencer-hardware.js";
@@ -127,201 +103,29 @@ const SAMPLE_FILES_SNARES = resolveSamples(samplesConfig.snares);
 const SAMPLE_FILES_HITS = resolveSamples(samplesConfig.hits);
 const LOOP_FILES_VOCALS = resolveSamples(samplesConfig.vocals);
 /**
- * Registry of available instrument types.
- * Each entry describes how to instantiate a headless instrument, create its
- * controls element, and call `step()` with the right arguments.
+ * Instrument types for this app: the library registry
+ * (web-audio/instruments/registry.js) + this app's sample folders.
+ * Each entry: { id, label, color, make(ctx), tag, bindOpts(bpm), step|null }.
  */
-const INSTRUMENT_TYPES = [
-  {
-    id: "kick",
-    label: "Kick",
-    color: "#f44",
-    make: (ctx) => new WebAudioPercKick(ctx),
-    tag: "wam-perc-kick-controls",
-    bindOpts: (bpm) => ({ color: "#f44", fx: { bpm } }),
-    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
-  },
-  {
-    id: "hihat",
-    label: "Hi-Hat",
-    color: "#ff0",
-    make: (ctx) => new WebAudioPercHihat(ctx),
-    tag: "wam-perc-hihat-controls",
-    bindOpts: (bpm) => ({ color: "#ff0", fx: { bpm } }),
-    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
-  },
-  {
-    id: "snare",
-    label: "Snare",
-    color: "#f80",
-    make: (ctx) => new WebAudioPercSnare(ctx),
-    tag: "wam-perc-snare-controls",
-    bindOpts: (bpm) => ({ color: "#f80", fx: { bpm } }),
-    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
-  },
-  {
-    id: "acid",
-    label: "Acid",
-    color: "#8f0",
-    make: (ctx) => new WebAudioSynthAcid(ctx),
-    tag: "wam-synth-acid-controls",
-    bindOpts: (bpm) => ({
-      color: "#8f0",
-      fx: { bpm, reverbWet: 0.15, delayInterval: 0.75, delayFeedback: 0.35, delayMix: 0 },
-    }),
-    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
-  },
-  {
-    id: "bass808",
-    label: "808 Bass",
-    color: "#f04",
-    make: (ctx) => new WebAudioSynth808(ctx),
-    tag: "wam-synth-808-controls",
-    bindOpts: (bpm) => ({ color: "#f04", fx: { bpm } }),
-    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
-  },
-  {
-    id: "fm",
-    label: "FM Synth",
-    color: "#4df",
-    make: (ctx) => new WebAudioSynthFM(ctx),
-    tag: "wam-synth-fm-controls",
-    bindOpts: (bpm) => ({
-      color: "#4df",
-      fx: { bpm, reverbWet: 0.2, delayInterval: 0.5, delayFeedback: 0.4, delayMix: 0.1 },
-    }),
-    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
-  },
-  {
-    id: "mono",
-    label: "Mono Synth",
-    color: "#6df",
-    make: (ctx) => new WebAudioSynthMono(ctx),
-    tag: "wam-synth-mono-controls",
-    bindOpts: (bpm) => ({ color: "#6df", fx: { bpm } }),
-    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
-  },
-  {
-    id: "pad",
-    label: "Pad",
-    color: "#a8f",
-    make: (ctx) => new WebAudioSynthPad(ctx),
-    tag: "wam-synth-pad-controls",
-    bindOpts: (bpm) => ({ color: "#a8f", fx: { bpm, reverbWet: 0.3, delayMix: 0.1 } }),
-    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
-  },
-  {
-    id: "poly",
-    label: "Poly Synth",
-    color: "#7cf",
-    make: (ctx) => new WebAudioSynthPoly(ctx),
-    tag: "wam-synth-poly-controls",
-    bindOpts: (bpm) => ({ color: "#7cf", fx: { bpm, reverbWet: 0.15, delayMix: 0 } }),
-    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
-  },
-  {
-    id: "blipfx",
-    label: "BlipFX",
-    color: "#fa8",
-    make: (ctx) => new WebAudioSynthBlipFX(ctx, { volume: 0.5 }),
-    tag: "wam-synth-blipfx-controls",
-    bindOpts: (bpm) => ({ color: "#fa8", fx: { bpm } }),
-    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
-  },
-  {
-    id: "loop-breaks",
-    label: "Loop Player (Breaks)",
-    color: "#8fa",
-    make: (ctx) =>
-      new WebAudioLoopPlayer(ctx, {
-        speedMultiplier: 1,
-        subdivision: 4,
-        returnSteps: 1,
-        randomChance: 0.1,
-        reverseChance: 0.04,
-        volume: 0.8,
-        useTimeStretch: true,
-      }),
-    tag: "wam-sample-looper-controls",
-    bindOpts: (bpm) => ({ color: "#8fa", files: LOOP_FILES_BREAKS, basePath: "", fx: { bpm } }),
-    // Loop player uses (globalStep, bpm, time) — owner tracks globalStep externally
-    step: null,
-  },
-  {
-    id: "loop-perc",
-    label: "Loop Player (Perc)",
-    color: "#8df",
-    make: (ctx) =>
-      new WebAudioLoopPlayer(ctx, {
-        speedMultiplier: 1,
-        subdivision: 4,
-        returnSteps: 1,
-        randomChance: 0.1,
-        reverseChance: 0.04,
-        volume: 0.8,
-        useTimeStretch: true,
-      }),
-    tag: "wam-sample-looper-controls",
-    bindOpts: (bpm) => ({ color: "#8df", files: LOOP_FILES_PERCL, basePath: "", fx: { bpm } }),
-    // Loop player uses (globalStep, bpm, time) — owner tracks globalStep externally
-    step: null,
-  },
-  {
-    id: "sampler-kicks",
-    label: "Sampler (Kicks)",
-    color: "#f8a",
-    make: (ctx) => new WebAudioSamplePlayer(ctx),
-    tag: "wam-sample-player-controls",
-    bindOpts: (bpm) => ({ color: "#f8a", files: SAMPLE_FILES_KICKS, basePath: "", fx: { bpm } }),
-    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
-  },
-  {
-    id: "sampler-snares",
-    label: "Sampler (Snares)",
-    color: "#fa8",
-    make: (ctx) => new WebAudioSamplePlayer(ctx),
-    tag: "wam-sample-player-controls",
-    bindOpts: (bpm) => ({ color: "#fa8", files: SAMPLE_FILES_SNARES, basePath: "", fx: { bpm } }),
-    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
-  },
-  {
-    id: "sampler-hits",
-    label: "Sampler (Hits)",
-    color: "#8af",
-    make: (ctx) => new WebAudioSamplePlayer(ctx),
-    tag: "wam-sample-player-controls",
-    bindOpts: (bpm) => ({ color: "#8af", files: SAMPLE_FILES_HITS, basePath: "", fx: { bpm } }),
-    step: (ctrl, step, time, dur) => ctrl.step(step, time, dur),
-  },
-  {
-    id: "vocoder",
-    label: "Vocoder",
-    color: "#4fd",
-    make: (ctx) => new WebAudioVocoderFx(ctx),
-    tag: "wam-vocoder-fx-controls",
-    bindOpts: () => ({ color: "#4fd" }),
-    step: null,
-  },
-  {
-    id: "loop-vocals",
-    label: "Loop Player (Vocals)",
-    color: "rgb(192, 157, 68)",
-    make: (ctx) =>
-      new WebAudioLoopPlayer(ctx, {
-        speedMultiplier: 1,
-        subdivision: 4,
-        returnSteps: 1,
-        randomChance: 0.1,
-        reverseChance: 0.04,
-        volume: 0.8,
-        useTimeStretch: true,
-      }),
-    tag: "wam-sample-looper-controls",
-    bindOpts: (bpm) => ({ color: "rgb(192, 157, 68)", files: LOOP_FILES_VOCALS, basePath: "", fx: { bpm } }),
-    // Loop player uses (globalStep, bpm, time) — owner tracks globalStep externally
-    step: null,
-  },
-];
+const SAMPLE_SETS = {
+  breaks: LOOP_FILES_BREAKS,
+  percloops: LOOP_FILES_PERCL,
+  kicks: SAMPLE_FILES_KICKS,
+  snares: SAMPLE_FILES_SNARES,
+  hits: SAMPLE_FILES_HITS,
+  vocals: LOOP_FILES_VOCALS,
+};
+const stepSequenced = (ctrl, step, time, dur) => ctrl.step(step, time, dur);
+const INSTRUMENT_TYPES = INSTRUMENTS.map((def) => ({
+  id: def.id,
+  label: def.label,
+  color: def.color,
+  make: (ctx) => createInstrument(def, ctx),
+  tag: def.controlsTag,
+  bindOpts: (bpm) => controlsOptions(def, { bpm, files: SAMPLE_SETS[def.samples] }),
+  // Step-less types (loop players) own their timing: step(globalStep, bpm, time).
+  step: def.sequenced ? stepSequenced : null,
+}));
 
 export default class PlaygroundApp extends HTMLElement {
   static STORAGE_KEY = "wam_playground_settings";

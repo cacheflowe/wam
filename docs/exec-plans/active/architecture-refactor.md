@@ -78,8 +78,9 @@ Not adopting: static globals, string-prefixed UI keys, clock-message triggering 
 ### Phase 1 — Headless pattern engine + song player
 - [x] `global/pattern-track.js`: `trackPosition` (pure, derived from tick), `stepFires`, `PatternTrack` (patterns, chain, density, rotation at read time, speed sub-steps, launch/queue). [tests/pattern-track.test.js](../../../tests/pattern-track.test.js).
 - [x] `Controls.step()` delegates (one `_tick` counter; old `_seqPosition` / `_globalStep` / `_seqRotate` gone). Phase 0 tests passed unchanged except the four decided changes, which flipped deliberately: chain + density fixed, rotation storm gone (0 `rotate()` calls), conditions count played cycles, Play restarts the chain. Verified in-browser with `wobbler` (chained acid/fm alternate A/B per bar).
-- [ ] `instruments/index.js`: instrument registry (id, label, color, class, controls tag, default FX, pattern generators) — moved out of the playground.
-- [ ] `global/song-player.js`: load a song JSON → instruments + `PatternTrack`s driven by the `Sequencer`. No UI.
+- [x] `instruments/registry.js`: instrument registry (id, label, color, class, controls tag, constructor options, default FX, sequenced, app sample set) + `createInstrument` / `controlsOptions`. Playground's 190-line table → a 12-line mapping that adds its sample folders; verified identical to the old table for all 17 types. Pattern generators get added in 1b.
+- [ ] **Headless audio channel** (prerequisite found 2026-11-16): the FX chain's composition (order, defaults, BPM sync, `toJSON`/`fromJSON`) lives in `<wam-fx-unit>` (an HTMLElement), and volume / pan / mute nodes live in Controls. Extract `fx/fx-chain.js` (audio only; `<wam-fx-unit>` becomes its UI) and a `Channel` (instrument → FX → pan → volume/mute) that Controls render. Same "audio logic in the UI" pattern as `step()`.
+- [ ] `global/song-player.js`: load a song JSON → registry instruments + `Channel`s + `PatternTrack`s driven by the `Sequencer`. No UI.
 - [ ] Global clock object (tick, bar, bpm, optional BPM easing) published to tracks + the performance stream; Controls stop keeping their own `_tick`.
 
 ### Phase 1b — Generators, evolve, scale-degree notes
