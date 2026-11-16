@@ -398,13 +398,13 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     });
     this._chordSizeSelect.addEventListener("change", () => {
       this._chordSize = parseInt(this._chordSizeSelect.value);
-      this._instrument._chordSize = this._chordSize;
+      this._instrument.chordSize = this._chordSize;
       this._emitChange();
     });
     chordWrap.appendChild(this._chordSizeSelect);
     seqCtrl.appendChild(chordWrap);
-    this._instrument._chordSize = this._chordSize;
-    this._instrument._scaleName = this._scaleName;
+    this._instrument.chordSize = this._chordSize;
+    this._instrument.setScale(this._rootMidi, this._scaleName);
 
     // Step sequencer
     this._createSequencer(expanded, color);
@@ -425,7 +425,7 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
 
   setScale(rootMidi, scaleName) {
     this._rootMidi = rootMidi;
-    if (this._instrument) this._instrument._scaleName = scaleName;
+    if (this._instrument) this._instrument.setScale(rootMidi, scaleName);
     this._scaleName = scaleName;
     this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 36, 72));
   }
@@ -524,7 +524,7 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
   _restoreExtra(obj) {
     if (obj.chordSize != null) {
       this._chordSize = obj.chordSize;
-      this._instrument._chordSize = obj.chordSize;
+      this._instrument.chordSize = obj.chordSize;
       if (this._chordSizeSelect) this._chordSizeSelect.value = obj.chordSize;
     }
   }

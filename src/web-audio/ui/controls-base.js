@@ -19,6 +19,7 @@ import {
 import { quantize } from "../global/param-schema.js";
 import { describeTrigger } from "../global/note-event.js";
 import { PatternTrack } from "../global/pattern-track.js";
+import { Channel } from "../global/channel.js";
 import {
   canWritePresets,
   deletePresetFromRepo,
@@ -162,9 +163,11 @@ export class WebAudioControlsBase extends HTMLElement {
     this.style.setProperty("--fx-accent", color);
 
     // Channel strip — always visible, no global collapse (sections toggle independently)
+    // The audio channel (instrument → FX → fader → pan); the strip is its UI.
+    this._channel = new Channel(ctx, { volume: instrument.volume });
     const strip = createChannelStrip(this, {
       title: options.title || this._defaultTitle(),
-      getOutGain: () => this._out,
+      channel: this._channel,
       initialVol: instrument.volume,
       initialPan: 0,
       noCollapse: false,
@@ -216,6 +219,7 @@ export class WebAudioControlsBase extends HTMLElement {
       setMuted: strip.setMuted,
       toggleMuted: strip.toggleMuted,
       setPreMuteVolume: strip.setPreMuteVolume,
+      setVolume: strip.setVolume,
       getVolume: strip.getVolume,
     };
     this._soloHandle = {
@@ -353,14 +357,10 @@ export class WebAudioControlsBase extends HTMLElement {
       if (!this._instrument) return;
       const { param, value } = e.detail;
       if (param === "volume") {
-        if (this._muteHandle?.isMuted()) {
-          this._muteHandle.setPreMuteVolume(value);
-        } else {
-          if (this._out) this._out.gain.value = value;
-        }
+        this._channel.volume = value; // independent of mute/solo (derived gain)
         e.stopPropagation();
       } else if (param === "pan") {
-        if (this._pan) this._pan.pan.value = value;
+        this._channel.pan = value;
         e.stopPropagation();
       } else {
         this._onSliderInput(param, value);
@@ -1011,7 +1011,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
   /** Channel-strip volume (pre-mute), 0..1. */
   get volume() {
-    return this._muteHandle?.getVolume() ?? 1;
+    return this._channel?.volume ?? 1;
   }
 
   /** Set channel-strip volume through the control event path (respects mute). */
@@ -1239,27 +1239,20 @@ export class WebAudioControlsBase extends HTMLElement {
 
   /** Wire instrument → FX → _preFader → _out → _pan, plus waveform + meter analysers. */
   _setupRouting(instrument, ctx, strip, waveform, color) {
-    // _preFader: post-FX, pre-volume/mute — safe tap point for bus sends
-    this._preFader = ctx.createGain();
+    const ch = this._channel;
+    ch.setFx(this._fxUnit?.chain ?? null);
+    ch.attach(instrument);
+    // Aliases kept for existing readers (bus taps, analysis bus, connect()).
+    this._preFader = ch.preFader; // post-FX, pre-volume/mute — bus sends tap here
+    this._out = ch.post; // post-fader (meters / waveform)
+    this._pan = ch.panner;
 
-    this._out = ctx.createGain();
-    this._out.gain.value = instrument.volume;
-    if (this._fxUnit) {
-      instrument.connect(this._fxUnit.input);
-      this._fxUnit.connect(this._preFader);
-    } else {
-      instrument.connect(this._preFader);
-    }
-    this._preFader.connect(this._out);
-
-    this._pan = ctx.createStereoPanner();
-    this._out.connect(this._pan);
     const analyser = ctx.createAnalyser();
-    this._out.connect(analyser);
+    ch.post.connect(analyser);
     this._analyser = analyser;
     const meterAnalyser = ctx.createAnalyser();
     meterAnalyser.fftSize = 256;
-    this._out.connect(meterAnalyser);
+    ch.post.connect(meterAnalyser);
     this._meterAnalyser = meterAnalyser;
     strip.meter.setAnalyser(meterAnalyser);
     waveform.init(analyser, color, { fixed: true });
@@ -2031,14 +2024,14 @@ export class WebAudioControlsBase extends HTMLElement {
     }
     // Volume lives on controls._out, not on the instrument. Serialize it separately,
     // using getVolume() so a muted instrument doesn't save 0.
-    params.volume = this._muteHandle?.getVolume() ?? 1;
+    params.volume = this._channel?.volume ?? 1;
     this._extraToJSON(params);
     const obj = {
       params,
       fx: this._fxUnit?.toJSON(),
       muted: this._muteHandle?.isMuted() ?? false,
       soloed: this._soloHandle?.isSoloed() ?? false,
-      pan: this._pan?.pan.value ?? 0,
+      pan: this._channel?.pan ?? 0,
       jamBinding: this._jamBinding ?? null,
       midiParamBindings: { ...this._paramBindings },
       speedMultiplier: this._speedMultiplier,
@@ -2138,8 +2131,8 @@ export class WebAudioControlsBase extends HTMLElement {
       this._soloHandle?.setSoloed(obj.soloed);
       WebAudioControlsBase._applySolo();
     }
-    if (obj.pan != null && this._pan) {
-      this._pan.pan.value = obj.pan;
+    if (obj.pan != null && this._channel) {
+      this._channel.pan = obj.pan;
       if (this._panSlider) this._panSlider.value = obj.pan;
     }
     // Jam: prefer the unified binding; fall back to legacy jamMidi / jamKey.
@@ -2226,7 +2219,7 @@ export class WebAudioControlsBase extends HTMLElement {
   /** Restore a single param. Override for special handling (e.g. oscType → wave buttons). */
   _restoreParam(key, val) {
     if (key === "volume") {
-      if (this._out) this._out.gain.value = val;
+      if (this._channel) this._channel.volume = val;
       if (this._channelStripVolSlider) this._channelStripVolSlider.value = val;
       return;
     }

@@ -1,7 +1,7 @@
 /**
  * WebAudioFxUnit — reusable effects web component (reverb + delay + chorus + filter).
  *
- * Composed from standalone FX classes:
+ * UI for an FxChain (fx-chain.js — the audio). Composed from standalone FX classes:
  *   - WebAudioFxReverb     (convolution reverb with wet/dry)
  *   - WebAudioFxDelay      (dub-style delay with BPM sync, feedback filter, LFO)
  *   - WebAudioFxChorus     (multi-voice chorus with stereo spread)
@@ -21,42 +21,32 @@
  *   fx.bpm = 140; // live BPM update
  */
 
-import WebAudioFxReverb from "./fx-reverb.js";
-import WebAudioFxDelay from "./fx-delay.js";
-import WebAudioFxChorus from "./fx-chorus.js";
-import WebAudioFxFilter from "./fx-filter.js";
-import WebAudioFxCompressor from "./fx-compressor.js";
 import "../ui/slider.js";
 import "../ui/filter-sweep.js";
 import "../ui/instrument-source-picker.js";
+import { FxChain } from "./fx-chain.js";
 import { injectControlsCSS, createSection, createCtrl } from "../ui/controls-factory.js";
 
 export default class WebAudioFxUnit extends HTMLElement {
   static #cssInjected = false;
 
-  // Tempo-sync release divisions, indexed by the "compReleaseBeats" knob.
-  // `beats` = length in quarter-note beats.
-  static RELEASE_DIVISIONS = [
-    { label: "1/1", beats: 4 },
-    { label: "1/2", beats: 2 },
-    { label: "1/4", beats: 1 },
-    { label: "1/8", beats: 0.5 },
-    { label: "1/8T", beats: 1 / 3 },
-    { label: "1/16", beats: 0.25 },
-  ];
+  /** Tempo-sync release divisions (see FxChain). */
+  static RELEASE_DIVISIONS = FxChain.RELEASE_DIVISIONS;
 
   constructor() {
     super();
     this._ctx = null;
-    this._in = null;
-    this._out = null;
-    this._reverb = null;
-    this._delay = null;
-    this._chorus = null;
-    this._filter = null;
-    this._compressor = null;
+    /** @type {FxChain|null} the audio; this element is its UI */
+    this.chain = null;
     this._sidechainPicker = null;
   }
+
+  // Stage accessors (the UI code below reads these).
+  get _reverb() { return this.chain?.reverb ?? null; }
+  get _delay() { return this.chain?.delay ?? null; }
+  get _chorus() { return this.chain?.chorus ?? null; }
+  get _filter() { return this.chain?.filter ?? null; }
+  get _compressor() { return this.chain?.compressor ?? null; }
 
   /**
    * @param {AudioContext} ctx
@@ -91,63 +81,7 @@ export default class WebAudioFxUnit extends HTMLElement {
    */
   init(ctx, options = {}) {
     this._ctx = ctx;
-
-    // ---- Audio chain (serial: filter → delay → chorus → reverb) ----
-    this._in = ctx.createGain();
-    this._out = ctx.createGain();
-
-    this._filter = new WebAudioFxFilter(ctx, {
-      sweep: options.filterSweep ?? 0,
-      q: options.filterQ ?? 0.7,
-    });
-
-    this._delay = new WebAudioFxDelay(ctx, {
-      interval: options.delayInterval ?? 0.75,
-      bpm: options.bpm ?? 120,
-      feedback: options.delayFeedback ?? 0.35,
-      wet: options.delayMix ?? 0,
-      filterSweep: options.delayFilterSweep ?? 0,
-      modulation: 0,
-    });
-
-    this._chorus = new WebAudioFxChorus(ctx, {
-      voices: options.chorusVoices ?? 3,
-      rate: options.chorusRate ?? 0.8,
-      depth: options.chorusDepth ?? 0.5,
-      delay: options.chorusDelay ?? 10,
-      feedback: options.chorusFeedback ?? 0,
-      wet: options.chorusWet ?? 0,
-      spread: options.chorusSpread ?? 1,
-      shape: options.chorusShape ?? "sine",
-    });
-
-    this._reverb = new WebAudioFxReverb(ctx, {
-      decay: options.reverbDecay ?? 2.5,
-      wet: options.reverbWet ?? 0,
-      preDelay: options.reverbPreDelay ?? 0,
-      hpFreq: options.reverbHpFreq ?? 80,
-      lpFreq: options.reverbLpFreq ?? 8000,
-      damping: options.reverbDamping ?? 0.5,
-      width: options.reverbWidth ?? 1,
-    });
-
-    this._compressor = new WebAudioFxCompressor(ctx, {
-      amount: options.compAmount ?? 0.7,
-      attack: (options.compAttack ?? 10) / 1000,
-      release: (options.compRelease ?? 200) / 1000,
-      threshold: options.compThreshold ?? 0.1,
-    });
-    this._bpm = options.bpm ?? 120;
-    this._compSync = (options.compSync ?? 0) >= 0.5;
-    this._compReleaseBeats = options.compReleaseBeats ?? 3;
-    this._compReleaseMs = options.compRelease ?? 200;
-
-    this._in.connect(this._filter.input);
-    this._filter.connect(this._delay.input);
-    this._delay.connect(this._chorus.input);
-    this._chorus.connect(this._reverb.input);
-    this._reverb.connect(this._compressor.input);
-    this._compressor.connect(this._out);
+    this.chain = new FxChain(ctx, options);
 
     // ---- UI ----
     WebAudioFxUnit._injectCSS();
@@ -157,32 +91,17 @@ export default class WebAudioFxUnit extends HTMLElement {
   // ---- Properties ----
 
   set bpm(v) {
-    this._bpm = v;
-    if (this._delay) this._delay.bpm = v;
-    if (this._compSync) this._applyCompRelease();
-  }
-
-  /** Apply the compressor release time from either the free (ms) or tempo-synced setting. */
-  _applyCompRelease() {
-    if (!this._compressor) return;
-    if (this._compSync) {
-      const divs = WebAudioFxUnit.RELEASE_DIVISIONS;
-      const div = divs[this._compReleaseBeats] ?? divs[3];
-      const secPerBeat = 60 / (this._bpm || 120);
-      this._compressor.release = Math.max(0.01, div.beats * secPerBeat);
-    } else {
-      this._compressor.release = this._compReleaseMs / 1000;
-    }
+    if (this.chain) this.chain.bpm = v;
   }
 
   // ---- Routing ----
 
   get input() {
-    return this._in;
+    return this.chain?.input ?? null;
   }
 
   connect(node) {
-    this._out.connect(node.input ?? node);
+    this.chain.connect(node);
     return this;
   }
 
@@ -193,47 +112,22 @@ export default class WebAudioFxUnit extends HTMLElement {
 
   /** Tear down internal nodes. Called when the host channel is removed. */
   destroy() {
-    this._compressor?.destroy();
+    this.chain?.destroy();
   }
 
   // ---- Serialization ----
 
   toJSON() {
-    return {
-      reverbWet: this._reverb?.wet ?? 0,
-      reverbDecay: this._reverb?.decay ?? 2.5,
-      reverbPreDelay: this._reverb?.preDelay ?? 0,
-      reverbHpFreq: this._reverb?.hpFreq ?? 80,
-      reverbLpFreq: this._reverb?.lpFreq ?? 8000,
-      reverbDamping: this._reverb?.damping ?? 0.5,
-      reverbWidth: this._reverb?.width ?? 1,
-      delayInterval: this._delay?.interval ?? 0.75,
-      delayFeedback: this._delay?.feedback ?? 0.35,
-      delayMix: this._delay?.wet ?? 0,
-      delayFilterSweep: this._delay?.filterSweep ?? 0,
-      delayModulation: this._delay?.modulation ?? 0,
-      chorusVoices: this._chorus?.voices ?? 3,
-      chorusRate: this._chorus?.rate ?? 0.8,
-      chorusDepth: this._chorus?.depth ?? 0.5,
-      chorusDelay: this._chorus?.delay ?? 10,
-      chorusFeedback: this._chorus?.feedback ?? 0,
-      chorusWet: this._chorus?.wet ?? 0,
-      chorusSpread: this._chorus?.spread ?? 1,
-      chorusShape: ["sine", "triangle"].indexOf(this._chorus?.shape ?? "sine"),
-      filterSweep: this._filter?.sweep ?? 0,
-      filterQ: this._filter?.q ?? 0.7,
-      compAmount: this._compressor?.amount ?? 0.7,
-      compAttack: Math.round((this._compressor?.attack ?? 0.01) * 1000),
-      compRelease: this._compReleaseMs ?? 200,
-      compSync: this._compSync ? 1 : 0,
-      compReleaseBeats: this._compReleaseBeats ?? 3,
-      compThreshold: this._compressor?.threshold ?? 0.1,
-      compSourceId: this._sidechainPicker?.value ?? null,
-    };
+    if (!this.chain) return null;
+    return { ...this.chain.toJSON(), compSourceId: this._sidechainPicker?.value ?? null };
   }
 
-  fromJSON(obj) {
-    if (!obj) return;
+  fromJSON(saved) {
+    if (!saved || !this.chain) return;
+    // Legacy names/values → current (see FxChain.normalize); raw legacy values go straight to the chain.
+    const { params: obj, legacy } = FxChain.normalize(saved);
+    obj.compSourceId = saved.compSourceId;
+    this.chain.applyLegacy(legacy);
 
     /** Set a knob value and dispatch its event so handleFxInput applies the change. */
     const restore = (param, value, selector) => {
@@ -264,12 +158,7 @@ export default class WebAudioFxUnit extends HTMLElement {
     restore("delayFeedback", obj.delayFeedback);
     restore("delayMix", obj.delayMix);
     restore("delayModulation", obj.delayModulation);
-    if (obj.delayFilterSweep != null) {
-      restore("delayFilterSweep", obj.delayFilterSweep, 'wam-filter-sweep[param="delayFilterSweep"]');
-    } else if (obj.delayFilterFreq != null && this._delay) {
-      // backwards-compat: old saves stored raw LP frequency
-      this._delay.filterFreq = obj.delayFilterFreq;
-    }
+    restore("delayFilterSweep", obj.delayFilterSweep, 'wam-filter-sweep[param="delayFilterSweep"]');
 
     // Chorus
     restore("chorusVoices", obj.chorusVoices);
@@ -279,21 +168,10 @@ export default class WebAudioFxUnit extends HTMLElement {
     restore("chorusFeedback", obj.chorusFeedback);
     restore("chorusWet", obj.chorusWet);
     restore("chorusSpread", obj.chorusSpread);
-    if (obj.chorusShape != null) {
-      // backwards-compat: old saves stored string, new saves store index
-      const shapes = ["sine", "triangle"];
-      const idx = typeof obj.chorusShape === "string" ? Math.max(0, shapes.indexOf(obj.chorusShape)) : obj.chorusShape;
-      restore("chorusShape", idx);
-    }
+    restore("chorusShape", obj.chorusShape);
 
     // Filter
-    if (obj.filterSweep != null) {
-      restore("filterSweep", obj.filterSweep, "wam-filter-sweep");
-    } else {
-      // backwards-compat: old saves had separate lpFreq/hpFreq
-      if (obj.lpFreq != null && this._filter) this._filter.lpFreq = obj.lpFreq;
-      if (obj.hpFreq != null && this._filter) this._filter.hpFreq = obj.hpFreq;
-    }
+    restore("filterSweep", obj.filterSweep, "wam-filter-sweep");
     restore("filterQ", obj.filterQ);
 
     // Sidechain compressor
@@ -524,104 +402,14 @@ export default class WebAudioFxUnit extends HTMLElement {
     this._compressor.onReduction = (gr) => {
       if (this._grFill) this._grFill.style.width = `${Math.min(100, gr * 100)}%`;
     };
-    this._applyCompRelease();
-
     this._sidechainPicker.addEventListener("source-change", (e) => {
       this._compressor?.setSidechainSource(e.detail.tapNode);
     });
 
-    // Delegated listener for all knobs and sliders
+    // Delegated listener for all knobs and sliders → the chain
     const handleFxInput = (e) => {
       const { param, value } = e.detail;
-      switch (param) {
-        case "reverbWet":
-          if (this._reverb) this._reverb.wet = value;
-          break;
-        case "reverbPreDelay":
-          if (this._reverb) this._reverb.preDelay = value;
-          break;
-        case "reverbHpFreq":
-          if (this._reverb) this._reverb.hpFreq = value;
-          break;
-        case "reverbLpFreq":
-          if (this._reverb) this._reverb.lpFreq = value;
-          break;
-        case "reverbDecay":
-          if (this._reverb) this._reverb.decay = value;
-          break;
-        case "reverbDamping":
-          if (this._reverb) this._reverb.damping = value;
-          break;
-        case "reverbWidth":
-          if (this._reverb) this._reverb.width = value;
-          break;
-        case "delayFeedback":
-          if (this._delay) this._delay.feedback = value;
-          break;
-        case "delayMix":
-          if (this._delay) this._delay.wet = value;
-          break;
-        case "delayFilterSweep":
-          if (this._delay) this._delay.filterSweep = value;
-          break;
-        case "delayInterval":
-          if (this._delay) this._delay.interval = value;
-          break;
-        case "delayModulation":
-          if (this._delay) this._delay.modulation = value;
-          break;
-        case "chorusVoices":
-          if (this._chorus) this._chorus.voices = Math.round(value);
-          break;
-        case "chorusRate":
-          if (this._chorus) this._chorus.rate = value;
-          break;
-        case "chorusDepth":
-          if (this._chorus) this._chorus.depth = value;
-          break;
-        case "chorusDelay":
-          if (this._chorus) this._chorus.delay = value;
-          break;
-        case "chorusFeedback":
-          if (this._chorus) this._chorus.feedback = value;
-          break;
-        case "chorusSpread":
-          if (this._chorus) this._chorus.spread = value;
-          break;
-        case "chorusShape":
-          if (this._chorus) this._chorus.shape = ["sine", "triangle"][Math.round(value)] || "sine";
-          break;
-        case "chorusWet":
-          if (this._chorus) this._chorus.wet = value;
-          break;
-        case "filterSweep":
-          if (this._filter) this._filter.sweep = value;
-          break;
-        case "filterQ":
-          if (this._filter) this._filter.q = value;
-          break;
-        case "compAmount":
-          if (this._compressor) this._compressor.amount = value;
-          break;
-        case "compAttack":
-          if (this._compressor) this._compressor.attack = value / 1000;
-          break;
-        case "compRelease":
-          this._compReleaseMs = value;
-          this._applyCompRelease();
-          break;
-        case "compSync":
-          this._compSync = value >= 0.5;
-          this._applyCompRelease();
-          break;
-        case "compReleaseBeats":
-          this._compReleaseBeats = Math.round(value);
-          this._applyCompRelease();
-          break;
-        case "compThreshold":
-          if (this._compressor) this._compressor.threshold = value;
-          break;
-      }
+      this.chain?.set(param, value);
     };
     this.addEventListener("knob-input", handleFxInput);
     this.addEventListener("slider-input", handleFxInput);

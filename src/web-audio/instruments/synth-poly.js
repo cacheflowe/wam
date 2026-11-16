@@ -484,7 +484,7 @@ export class WebAudioSynthPolyControls extends WebAudioControlsBase {
 
   set bpm(v) {
     super.bpm = v;
-    if (this._instrument) this._instrument._bpm = v;
+    if (this._instrument) this._instrument.bpm = v;
   }
 
   /** Build a labeled <select> bound to an instrument param. */
@@ -611,13 +611,13 @@ export class WebAudioSynthPolyControls extends WebAudioControlsBase {
     });
     this._chordSizeSelect.addEventListener("change", () => {
       this._chordSize = parseInt(this._chordSizeSelect.value);
-      this._instrument._chordSize = this._chordSize;
+      this._instrument.chordSize = this._chordSize;
       this._emitChange();
     });
     chordWrap.appendChild(this._chordSizeSelect);
     seqCtrl.appendChild(chordWrap);
-    this._instrument._chordSize = this._chordSize;
-    this._instrument._scaleName = this._scaleName;
+    this._instrument.chordSize = this._chordSize;
+    this._instrument.setScale(this._rootMidi, this._scaleName);
 
     this._createSequencer(expanded, color);
   }
@@ -638,7 +638,7 @@ export class WebAudioSynthPolyControls extends WebAudioControlsBase {
   setScale(rootMidi, scaleName) {
     this._rootMidi = rootMidi;
     this._scaleName = scaleName;
-    this._instrument._scaleName = scaleName;
+    this._instrument.setScale(rootMidi, scaleName);
     this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 24, 84));
   }
 
@@ -682,7 +682,7 @@ export class WebAudioSynthPolyControls extends WebAudioControlsBase {
   _restoreExtra(obj) {
     if (obj.chordSize != null) {
       this._chordSize = obj.chordSize;
-      this._instrument._chordSize = obj.chordSize;
+      this._instrument.chordSize = obj.chordSize;
       if (this._chordSizeSelect) this._chordSizeSelect.value = obj.chordSize;
     }
   }

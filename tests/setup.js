@@ -122,6 +122,10 @@ class MockAudioContext {
   createAnalyser() { return makeAnalyser(); }
   createStereoPanner() { return makeStereoPanner(); }
   createMediaStreamSource() { return makeNode(); }
+  createChannelMerger() { return makeNode(); }
+  createChannelSplitter() { return makeNode(); }
+  createConstantSource() { return makeNode({ offset: makeAudioParam(0), start() {}, stop() {} }); }
+  get audioWorklet() { return { addModule: () => Promise.resolve() }; }
   createBuffer(channels, length, sampleRate) { return makeAudioBuffer(channels, length, sampleRate); }
   resume() { this.state = "running"; return Promise.resolve(); }
   suspend() { this.state = "suspended"; return Promise.resolve(); }
@@ -162,5 +166,15 @@ if (typeof HTMLCanvasElement !== "undefined") {
 globalThis.ResizeObserver ??= class {
   observe() {}
   unobserve() {}
+  disconnect() {}
+};
+
+// Minimal AudioWorkletNode so worklet-backed FX (compressor, pitch shift) construct in tests.
+globalThis.AudioWorkletNode ??= class {
+  constructor() {
+    this.port = { onmessage: null, postMessage() {} };
+    this.parameters = new Map();
+  }
+  connect() { return this; }
   disconnect() {}
 };

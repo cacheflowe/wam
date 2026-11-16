@@ -86,6 +86,25 @@ Acid synth + breakbeat loop player demo.
 
 ---
 
+## Playing a playground song without UI
+
+Songs saved from the Instrument Playground (`src/data/songs/*.json`, or the Songs drawer's export) play headless with `SongPlayer` — same instruments, FX, mix and pattern rules as the playground, no Web Components on the page:
+
+```js
+import { SongPlayer } from "wam/src/web-audio/global/song-player.js";
+import song from "./my-song.json" with { type: "json" };
+
+const ctx = new AudioContext();
+const player = new SongPlayer(ctx); // optional { destination }
+const { tracks, skipped } = await player.load(song);
+document.querySelector("#play").onclick = () => player.play(); // needs a user gesture
+// player.stop(); player.bpm = 132;
+```
+
+- **Supported (v1):** the step-sequenced synths and drum synths (kick, snare, hi-hat, acid, 808, FM, mono, pad, poly, BlipFX). Loop players, samplers and the vocoder are listed in `skipped` — they load audio files / live input through their UI today.
+- **Offline render (e.g. export a WAV):** load into an `OfflineAudioContext` and drive `player.tick(step, time)` yourself instead of `play()`, then `ctx.startRendering()`.
+- For visuals, combine with the [performance stream](references/performance-stream.md).
+
 ## Building a custom audio graph
 
 If you want individual instruments rather than a full app, wire them manually.

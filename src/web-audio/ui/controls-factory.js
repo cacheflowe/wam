@@ -1,6 +1,7 @@
 // Register the sibling control elements as a side effect so a bare
 // `import "./controls-factory.js"` still pulls in the full basic-control family.
 import "./level-meter.js";
+import { gainFaderState } from "../global/channel.js";
 import "./knob.js";
 import "./param-display.js";
 
@@ -463,7 +464,8 @@ export function createSection(label) {
  * @param {HTMLElement} parentEl
  * @param {object} opts
  * @param {string}   opts.title
- * @param {function} opts.getOutGain   Getter returning the controls output GainNode
+ * @param {object}   [opts.channel]    Fader state { volume, muted, soloSuppressed } — a Channel (global/channel.js)
+ * @param {function} [opts.getOutGain] Legacy: a getter for a single gain node (wrapped in gainFaderState)
  * @param {number}   [opts.initialVol=1]
  * @param {number}   [opts.initialPan=0]
  * @param {boolean}  [opts.pan=true]   Set false to omit the pan slider (e.g. master bus)
@@ -471,8 +473,10 @@ export function createSection(label) {
  */
 export function createChannelStrip(
   parentEl,
-  { title, getOutGain, initialVol = 1, initialPan = 0, pan = true, noCollapse = false, showMuteSolo = true },
+  { title, channel = null, getOutGain, initialVol = 1, initialPan = 0, pan = true, noCollapse = false, showMuteSolo = true },
 ) {
+  // Volume / mute / solo live in the fader state (derived gain — see global/channel.js); the strip is just its UI.
+  const fader = channel ?? gainFaderState(getOutGain, initialVol);
   if (!noCollapse && CHANNEL_STRIP_COLLAPSED_DEFAULT) parentEl.setAttribute("data-collapsed", "");
 
   const strip = document.createElement("div");
@@ -576,15 +580,11 @@ export function createChannelStrip(
 
   parentEl.appendChild(strip);
 
-  let muted = false;
-  let soloed = false;
-  let soloSuppressed = false;
-  let preMuteVolume = 1;
-  let preSoloVolume = 1;
+  let soloed = false; // UI state; the mixer turns it into fader.soloSuppressed on other channels
 
   const syncMuteButton = () => {
     if (!muteBtn) return;
-    muteBtn.classList.toggle("wam-muted", muted);
+    muteBtn.classList.toggle("wam-muted", fader.muted);
     muteBtn.textContent = "Mute";
   };
 
@@ -594,22 +594,13 @@ export function createChannelStrip(
     soloBtn.textContent = "Solo";
   };
 
-  const applyMuteState = (nextMuted, { restoreOnUnmute = true } = {}) => {
-    muted = !!nextMuted;
-    const out = getOutGain();
-    if (muted) {
-      // Capture the real volume — use preSoloVolume if currently suppressed
-      if (!soloSuppressed) preMuteVolume = out?.gain.value ?? 1;
-      else preMuteVolume = preSoloVolume;
-      if (out) out.gain.value = 0;
-    } else if (restoreOnUnmute && !soloSuppressed) {
-      if (out) out.gain.value = preMuteVolume;
-    }
+  const setMuted = (v) => {
+    fader.muted = v;
     syncMuteButton();
   };
 
   muteBtn?.addEventListener("click", () => {
-    applyMuteState(!muted, { restoreOnUnmute: true });
+    setMuted(!fader.muted);
     parentEl.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
   });
 
@@ -629,41 +620,31 @@ export function createChannelStrip(
     volSlider,
     panSlider,
     meter,
-    isMuted: () => muted,
+    fader,
+    isMuted: () => fader.muted,
     isSoloed: () => soloed,
-    getVolume: () => {
-      if (muted) return preMuteVolume;
-      if (soloSuppressed) return preSoloVolume;
-      return getOutGain()?.gain.value ?? 1;
+    /** The channel's volume (independent of mute/solo). */
+    getVolume: () => fader.volume,
+    setVolume: (v) => {
+      fader.volume = v;
     },
+    /** @deprecated volume is independent of mute now — same as setVolume. */
     setPreMuteVolume: (v) => {
-      preMuteVolume = v;
+      fader.volume = v;
     },
-    setMuted: (v) => {
-      // Keep existing behavior for state restore: unmuting does not overwrite restored volume.
-      applyMuteState(v, { restoreOnUnmute: false });
-    },
-    /** Live toggle — same path as clicking the Mute button (restores volume on unmute). */
+    setMuted,
+    /** Live toggle — same as clicking the Mute button. */
     toggleMuted: () => {
-      applyMuteState(!muted, { restoreOnUnmute: true });
+      setMuted(!fader.muted);
       parentEl.dispatchEvent(new CustomEvent("controls-change", { bubbles: true }));
     },
     setSoloed: (v) => {
       soloed = !!v;
       syncSoloButton();
     },
-    /** Suppress/restore gain for solo coordination (does not affect mute state). */
+    /** Silence/restore for solo coordination (independent of mute and volume). */
     applySoloSuppress: (suppressed) => {
-      const out = getOutGain();
-      if (suppressed && !soloSuppressed && !muted) {
-        // Entering suppression — capture the real current gain
-        preSoloVolume = out?.gain.value ?? 1;
-        if (out) out.gain.value = 0;
-      } else if (!suppressed && soloSuppressed && !muted) {
-        // Leaving suppression — restore the captured gain
-        if (out) out.gain.value = preSoloVolume;
-      }
-      soloSuppressed = suppressed;
+      fader.soloSuppressed = suppressed;
     },
   };
 }

@@ -129,6 +129,7 @@ export class WebAudioTransportControls extends HTMLElement {
       isMuted: strip.isMuted,
       setMuted: strip.setMuted,
       setPreMuteVolume: strip.setPreMuteVolume,
+      setVolume: strip.setVolume,
       getVolume: strip.getVolume,
     };
     this._volSlider = strip.volSlider;
@@ -138,11 +139,7 @@ export class WebAudioTransportControls extends HTMLElement {
 
     const handleVolInput = (e) => {
       if (e.detail.param === "volume") {
-        if (this._muteHandle.isMuted()) {
-          this._muteHandle.setPreMuteVolume(e.detail.value);
-        } else {
-          this._masterGain.gain.value = e.detail.value;
-        }
+        this._muteHandle.setVolume(e.detail.value); // independent of mute (derived gain)
         this._emitChange();
         e.stopPropagation();
       }
@@ -437,7 +434,7 @@ export class WebAudioTransportControls extends HTMLElement {
     if (!obj) return;
     if (obj.bpm != null) this._setBpm(obj.bpm);
     if (obj.masterVolume != null) {
-      if (this._masterGain) this._masterGain.gain.value = obj.masterVolume;
+      this._muteHandle?.setVolume(obj.masterVolume);
       if (this._volSlider) this._volSlider.value = obj.masterVolume;
     }
     if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);

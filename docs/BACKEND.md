@@ -70,6 +70,20 @@ static PRESETS = presetMap(presetData);   // { name: params } — the shape appl
 
 **Saving presets.** Under `npm run dev`, the Presets panel's Save/Del buttons write straight to the JSON file through a dev-only Vite plugin ([vite-plugins/wam-preset-store.js](vite-plugins/wam-preset-store.js), `POST`/`DELETE /__wam/presets/<id>`). Its own writes skip HMR so saving mid-jam doesn't reload the page. Production builds have no endpoint and fall back to localStorage user presets. Presets can carry `tags`; when any preset is tagged, the dropdown groups by first tag. ◀ ▶ (and `controls.stepPreset(±1)`) step through presets.
 
+### Headless playback stack (architecture-refactor Phase 1)
+
+Everything that makes sound is plain classes; Web Components are UI over them.
+
+| Piece | File | Role |
+|---|---|---|
+| Instrument registry | `instruments/registry.js` | Type id → class, controls tag, color, constructor options, default FX, `sequenced`, app sample set. `createInstrument`, `controlsOptions`. |
+| `FxChain` | `fx/fx-chain.js` | filter → delay → chorus → reverb → sidechain compressor. Flat params via `set()`, `toJSON`/`fromJSON` (+ legacy save normalization), BPM sync. `<wam-fx-unit>` is its UI (`fxUnit.chain`). |
+| `Channel` | `global/channel.js` | instrument → input → [FxChain] → preFader (bus tap) → fader → pan. Fader gain is **derived**: `volume × !muted × !soloSuppressed` — volume, mute and solo are independent state (no "pre-mute volume" juggling). Controls own one (`ctrl._channel`); the strip is UI over its fader state. `gainFaderState()` applies the same model to a single node (master bus). |
+| `PatternTrack` | `global/pattern-track.js` | Pattern playback derived from the clock tick (below). |
+| `SongPlayer` | `global/song-player.js` | Loads a song JSON → registry instruments + Channels + PatternTracks on one `WebAudioSequencer` clock; master = gain → FxChain (same order as `<wam-transport>`). Verified step-for-step against the UI panels (`tests/song-player.test.js`). |
+
+**Instrument musical context (public API, `instrument-base.js`):** `setScale(root, scaleName)`, `scaleName`, `scaleRoot`, `chordSize`, `bpm`, and `onTick(step)` (per-tick hook; acid's filter LFO uses it). Sampler adds `melodicMode`. Controls and the song player both use these — no more writing `instrument._scaleName` / `_chordSize` / `_bpm` from outside.
+
 ### Pattern playback (`global/pattern-track.js`)
 
 Pattern playback is headless. `PatternTrack` holds a track's patterns (A–D), chain and params, and `tick(tick, time, stepDur)` returns what sounds on that tick. Everything is **derived from the tick count since Play** (Interphase-style: one clock, tracks compute their position) rather than accumulated in counters:

@@ -48,6 +48,45 @@ export default class WebAudioInstrumentBase extends EventTarget {
   }
 
   /**
+   * Called on every clock tick (before any step fires) with the 0–15 step
+   * index. Override for per-tick state (e.g. acid's filter LFO position).
+   */
+  onTick(step) {}
+
+  // ---- Musical context (public: set by Controls or a headless song player) ----
+
+  /** Key/scale used by sequenced notes and chords. */
+  setScale(rootMidi, scaleName) {
+    if (rootMidi != null) this._rootMidi = rootMidi;
+    if (scaleName) this._scaleName = scaleName;
+  }
+
+  get scaleName() {
+    return this._scaleName ?? null;
+  }
+
+  /** Root (MIDI) of the current key — not to be confused with a sampler's own `rootMidi` pitch. */
+  get scaleRoot() {
+    return this._rootMidi ?? null;
+  }
+
+  /** Notes per sequenced chord for chord-capable instruments (1 = single notes). */
+  get chordSize() {
+    return this._chordSize ?? 1;
+  }
+  set chordSize(n) {
+    this._chordSize = n;
+  }
+
+  /** Tempo for tempo-synced behavior (LFOs etc.). Subclasses may override with side effects. */
+  get bpm() {
+    return this._bpm ?? 120;
+  }
+  set bpm(v) {
+    this._bpm = v;
+  }
+
+  /**
    * Apply a named preset from `this.constructor.PRESETS`.
    * Iterates all keys in the preset and sets `this[key] = val`.
    * Override in subclasses that need post-apply side-effects (e.g. BlipFX._rebake).

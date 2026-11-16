@@ -293,8 +293,8 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
     );
   }
 
-  /** Update internal LFO state. */
-  _onStepTick(index) {
+  /** Per-tick hook (see instrument-base onTick): the filter LFO follows the step position. */
+  onTick(index) {
     this._lfoStepPosition = index;
   }
 }
@@ -467,7 +467,7 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
   }
 
   _onStepTick(index) {
-    this._instrument._onStepTick(index);
+    this._instrument.onTick(index);
   }
 
   // ---- Serialization hooks ----
@@ -516,7 +516,7 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
 
   set bpm(v) {
     super.bpm = v;
-    if (this._instrument) this._instrument._bpm = v;
+    if (this._instrument) this._instrument.bpm = v;
   }
 
   // ---- Filter LFO animation ----

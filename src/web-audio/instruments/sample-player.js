@@ -31,6 +31,14 @@ export default class WebAudioSamplePlayer extends WebAudioInstrumentBase {
   /** trigger() argument layout, for note events (see global/note-event.js). */
   static TRIGGER_ARGS = { trigger: ["notes", "duration", "velocity", "time"], triggerDrum: ["velocity", "duration", "time"] };
 
+  /** Melodic mode: steps play notes (pitched) instead of one-shot hits. */
+  get melodicMode() {
+    return !!this._melodicMode;
+  }
+  set melodicMode(v) {
+    this._melodicMode = !!v;
+  }
+
   constructor(ctx, preset = "Default") {
     super(ctx, null);
     this._samples = new Map(); // key → { buffer, reverseBuffer, label }
@@ -385,7 +393,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     if (this._melodicMode) this._melodicBtn.classList.add("wam-wave-active");
     this._melodicBtn.addEventListener("click", () => {
       this._melodicMode = !this._melodicMode;
-      this._instrument._melodicMode = this._melodicMode;
+      this._instrument.melodicMode = this._melodicMode;
       this._melodicBtn.classList.toggle("wam-wave-active", this._melodicMode);
       // Update sequencer note options
       if (this._melodicMode) {
@@ -421,7 +429,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     });
     this._chordSizeSelect.addEventListener("change", () => {
       this._chordSize = parseInt(this._chordSizeSelect.value);
-      this._instrument._chordSize = this._chordSize;
+      this._instrument.chordSize = this._chordSize;
       this._emitChange();
     });
     chordWrap.appendChild(this._chordSizeSelect);
@@ -471,8 +479,8 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     });
 
     // ---- Step sequencer ----
-    this._instrument._melodicMode = this._melodicMode;
-    this._instrument._chordSize = this._chordSize;
+    this._instrument.melodicMode = this._melodicMode;
+    this._instrument.chordSize = this._chordSize;
     this._createSequencer(expanded, color);
 
     // Load samples
@@ -508,7 +516,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
   setScale(rootMidi, scaleName) {
     this._rootMidi = rootMidi;
     this._scaleName = scaleName;
-    this._instrument._scaleName = scaleName;
+    this._instrument.setScale(rootMidi, scaleName);
     if (this._seq && this._melodicMode) {
       this._seq.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 36, 72));
     }
@@ -565,7 +573,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     }
     if (obj.melodicMode != null) {
       this._melodicMode = obj.melodicMode;
-      this._instrument._melodicMode = obj.melodicMode;
+      this._instrument.melodicMode = obj.melodicMode;
       if (this._melodicBtn) {
         this._melodicBtn.classList.toggle("wam-wave-active", obj.melodicMode);
       }
@@ -575,7 +583,7 @@ export class WebAudioSamplePlayerControls extends WebAudioControlsBase {
     }
     if (obj.chordSize != null) {
       this._chordSize = obj.chordSize;
-      this._instrument._chordSize = obj.chordSize;
+      this._instrument.chordSize = obj.chordSize;
       if (this._chordSizeSelect) this._chordSizeSelect.value = obj.chordSize;
     }
     if (obj.choke != null) {

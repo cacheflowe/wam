@@ -445,7 +445,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
   bind(instrument, ctx, options = {}) {
     this._chordSize = options.chordSize ?? 3;
     instrument._chordSize = this._chordSize;
-    instrument._scaleName = this._scaleName;
+    instrument.setScale(this._rootMidi, this._scaleName);
     // Set BPM on instrument so LFO interval computes correctly
     if (options.fx?.bpm) instrument.bpm = options.fx.bpm;
     super.bind(instrument, ctx, options);
@@ -575,7 +575,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     });
     this._chordSizeSelect.addEventListener("change", () => {
       this._chordSize = parseInt(this._chordSizeSelect.value);
-      this._instrument._chordSize = this._chordSize;
+      this._instrument.chordSize = this._chordSize;
       this._emitChange();
     });
     chordWrap.appendChild(this._chordSizeSelect);
@@ -637,7 +637,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
   _restoreExtra(obj) {
     if (obj.chordSize != null) {
       this._chordSize = obj.chordSize;
-      if (this._instrument) this._instrument._chordSize = obj.chordSize;
+      if (this._instrument) this._instrument.chordSize = obj.chordSize;
       if (this._chordSizeSelect) this._chordSizeSelect.value = obj.chordSize;
     }
     const inst = this._instrument;
@@ -664,7 +664,7 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
   setScale(rootMidi, scaleName) {
     this._rootMidi = rootMidi;
     this._scaleName = scaleName;
-    if (this._instrument) this._instrument._scaleName = scaleName;
+    if (this._instrument) this._instrument.setScale(rootMidi, scaleName);
     this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 24, 48));
   }
 
