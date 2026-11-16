@@ -17,14 +17,14 @@
   },
   "devDependencies": {
     "@vitejs/plugin-basic-ssl": "^2.3.0",
-    "@vitest/coverage-v8": "^4.1.8",
+    "@vitest/coverage-v8": "^5.1.0",
     "cross-env": "^10.1.0",
-    "jsdom": "^29.1.1",
-    "vite": "^8.0.16",
-    "vitest": "^4.1.8"
+    "jsdom": "^31.0.1",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
   },
   "dependencies": {
-    "oversite": "^1.0.9",
-    "p5": "^2.3.0"
+    "oversite": "^1.0.11",
+    "p5": "^2.4.0"
   }
 }
