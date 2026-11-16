@@ -137,8 +137,10 @@ export class PerformanceSurface {
   /** The Evolve conductor: knob C8 drives its energy; its LED mirrors it. */
   setConductor(conductor) {
     this._conductor?.removeEventListener("change", this._onChange);
+    this._conductor?.removeEventListener("event", this._onChange);
     this._conductor = conductor;
     conductor?.addEventListener("change", this._onChange);
+    conductor?.addEventListener("event", this._onChange);
     this.requestRefresh();
   }
 
@@ -328,8 +330,11 @@ export class PerformanceSurface {
       mode: this._mode,
       page: this._autoMap?.page ?? 0,
       pageCount: this._autoMap?.pageCount ?? 1,
-      knobs: { ...(this._autoMap?.assignments ?? {}), ...(this._conductor ? { knobC8: { param: "energy", label: "⚡ Energy", value: this.energy, display: `${Math.round(this.energy * 100)}%` } } : {}) },
+      knobs: { ...(this._autoMap?.assignments ?? {}), ...(this._conductor ? { knobC8: { param: "energy", label: "Energy", value: this.energy, display: `${Math.round(this.energy * 100)}%` } } : {}) },
       energy: this.energy,
+      evolve: this._conductor
+        ? { energy: this._conductor.energy, drift: this._conductor.drift, auto: this._conductor.auto, log: this._conductor.log.slice(0, 4) }
+        : null,
       focusedTitle: focused?._defaultTitle?.() ?? null,
       buttons: BUTTON_LABELS[this._mode],
       faders: FADERS.map((_, i) => {

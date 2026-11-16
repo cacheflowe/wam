@@ -118,6 +118,10 @@ Focus **Acid** first (↑/↓, or click its panel).
 |---|---|---|---|
 | 9.1 | Click the **Mixer / Perform / Steps** chips on the map. | Mode changes (device LEDs follow if connected). | |
 | 9.2 | In Perform mode, click **Mutate medium** / **Undo sound** on the map. | Same as the hardware buttons. | |
+| 9.3 | With the XL plugged in and MIDI drawer → Hardware map = **Auto**, reload. | The map opens as a **right column** (one row per channel: Tone / Envelope / Movement knobs + fader, then the 16 buttons, then Evolve). Unplug → it moves back into the drawer; replug → column again. | |
+| 9.4 | Turn knobs on the device and on screen; sweep a **Wave** knob. | Dials and values in the column move live; the Wave knob steps Saw → Square → Tri → Sine (blue dial). | |
+| 9.5 | Press **→** for knob page 2. | Column shows page 2 (filter type, LFO shapes/destinations, …); turning those knobs changes them. | |
+| 9.6 | Narrow the browser below ~1100px. | Column drops to the bottom dock; widen again → column. | |
 
 ---
 

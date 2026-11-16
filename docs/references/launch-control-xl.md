@@ -52,7 +52,7 @@ Other messages (`t` = template slot):
 
 ## Playground performance layout
 
-The Instrument Playground turns the XL into a performance controller (factory template 5 / channel 13). Source: [midi/performance-surface.js](../../src/web-audio/midi/performance-surface.js), [midi/auto-map.js](../../src/web-audio/midi/auto-map.js). An on-screen copy (`<wam-hardware-map>`, MIDI drawer — can dock to the bottom of the page) shows what every control does right now and is clickable. Knob cells show a live dial + value (they move as you turn the hardware or the on-screen control); in Steps mode the 16 button cells mirror the pattern and playhead like the LEDs.
+The Instrument Playground turns the XL into a performance controller (factory template 5 / channel 13). Source: [midi/performance-surface.js](../../src/web-audio/midi/performance-surface.js), [midi/auto-map.js](../../src/web-audio/midi/auto-map.js). An on-screen copy (`<wam-hardware-map>`) shows what every control does right now and is clickable. Placement (MIDI drawer → Hardware map): **Auto** (default — a right-hand column while an XL is connected, otherwise in the drawer), Right column, Bottom, or Drawer only; the column falls back to the bottom dock below ~1100px. The column layout is the device turned 90° (one row per channel strip) plus an Evolve strip (Energy + recent events). Knob cells show a live dial + value (they move as you turn the hardware or the on-screen control); in Steps mode the 16 button cells mirror the pattern and playhead like the LEDs.
 
 | Control | Function |
 |---|---|

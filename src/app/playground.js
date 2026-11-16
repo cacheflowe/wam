@@ -315,6 +315,7 @@ export default class PlaygroundApp extends HTMLElement {
     sequencerHardware.stop();
     autoMap.stop();
     focusManager.stop();
+    this._teardownHardwareMap?.();
   }
 
   // ---- UI ----
@@ -338,6 +339,10 @@ export default class PlaygroundApp extends HTMLElement {
         main {
           padding: 1rem;
         }
+      }
+      /* Room for the hardware-map column (see the MIDI drawer placement setting). */
+      body.wam-hw-column-open main {
+        margin-right: var(--wam-hw-column-width, 380px);
       }
     `;
     this.appendChild(style);
@@ -460,31 +465,55 @@ export default class PlaygroundApp extends HTMLElement {
     autoMapLabel.append(autoMapToggle, "Auto-map knobs to focused instrument");
     this._midiPanelEl.appendChild(autoMapLabel);
 
-    // On-screen map of the Launch Control XL layout (clickable; can dock to the bottom).
+    // On-screen map of the Launch Control XL layout (clickable). Placement:
+    //   auto    — right column while an LCXL is connected, else in this drawer
+    //   column  — always the right column     bottom — docked to the bottom
+    //   drawer  — only in this drawer
+    // A column falls back to the bottom dock on narrow screens.
     this._hardwareMap = document.createElement("wam-hardware-map");
     this._hardwareMap.surface = performanceSurface;
-    const dockLabel = document.createElement("label");
-    dockLabel.style.cssText = autoMapLabel.style.cssText;
-    const dockToggle = document.createElement("input");
-    dockToggle.type = "checkbox";
-    const dockKey = "wam_hardware_map_docked";
-    const setDocked = (on) => {
-      dockToggle.checked = on;
-      if (on) {
-        this._hardwareMap.setAttribute("docked", "");
-        document.body.appendChild(this._hardwareMap);
-      } else {
-        this._hardwareMap.removeAttribute("docked");
-        this._midiPanelEl.insertBefore(this._hardwareMap, dockLabel.nextSibling);
-      }
-      try { localStorage.setItem(dockKey, on ? "1" : "0"); } catch {}
+    const placeLabel = document.createElement("label");
+    placeLabel.style.cssText = autoMapLabel.style.cssText;
+    const placeSelect = document.createElement("select");
+    placeSelect.className = "wam-select";
+    placeSelect.style.cssText = "margin:0;width:auto;font-size:0.8rem;padding:0.15rem 0.4rem;";
+    for (const [v, t] of [["auto", "Auto (right column when an LCXL is connected)"], ["column", "Right column"], ["bottom", "Bottom of the page"], ["drawer", "In this drawer only"]]) {
+      placeSelect.add(new Option(t, v));
+    }
+    placeLabel.append("Hardware map:", placeSelect);
+    this._midiPanelEl.appendChild(placeLabel);
+    const placeKey = "wam_hardware_map_place";
+    let place = "auto";
+    try {
+      place = localStorage.getItem(placeKey) ?? (localStorage.getItem("wam_hardware_map_docked") === "1" ? "bottom" : "auto");
+    } catch {}
+    placeSelect.value = place;
+    const narrow = window.matchMedia?.("(max-width: 1100px)");
+    const applyPlace = () => {
+      let where = place === "auto" ? (ledFeedback.connected ? "column" : "drawer") : place;
+      if (where === "column" && narrow?.matches) where = "bottom";
+      const map = this._hardwareMap;
+      map.toggleAttribute("docked", where === "bottom");
+      if (where === "column") map.setAttribute("layout", "column");
+      else map.removeAttribute("layout");
+      if (where === "drawer") this._midiPanelEl.insertBefore(map, placeLabel.nextSibling);
+      else if (map.parentNode !== document.body) document.body.appendChild(map);
+      document.body.classList.toggle("wam-hw-column-open", where === "column");
     };
-    dockToggle.addEventListener("change", () => setDocked(dockToggle.checked));
-    dockLabel.append(dockToggle, "Dock hardware map at the bottom of the page");
-    this._midiPanelEl.appendChild(dockLabel);
-    let docked = false;
-    try { docked = localStorage.getItem(dockKey) === "1"; } catch {}
-    setDocked(docked);
+    placeSelect.addEventListener("change", () => {
+      place = placeSelect.value;
+      try { localStorage.setItem(placeKey, place); } catch {}
+      applyPlace();
+    });
+    document.addEventListener("wam-lcxl-connection", applyPlace);
+    narrow?.addEventListener?.("change", applyPlace);
+    applyPlace();
+    this._teardownHardwareMap = () => {
+      document.removeEventListener("wam-lcxl-connection", applyPlace);
+      narrow?.removeEventListener?.("change", applyPlace);
+      document.body.classList.remove("wam-hw-column-open");
+      if (this._hardwareMap.parentNode === document.body) this._hardwareMap.remove();
+    };
 
     this._midiPanelEl.appendChild(document.createElement("wam-midi-monitor"));
     this._drawer.addPanel("midi", this._midiPanelEl, "MIDI");

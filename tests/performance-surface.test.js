@@ -195,7 +195,7 @@ describe("PerformanceSurface", () => {
     expect(conductor.energy).toBeCloseTo(0.9);
     surface.refresh();
     expect(out.leds.knobC8).toBe(ledColorByPercent(0.9));
-    expect(surface.state.knobs.knobC8).toMatchObject({ label: "⚡ Energy", display: "90%" });
+    expect(surface.state.knobs.knobC8).toMatchObject({ label: "Energy", display: "90%" });
   });
 
   it("state mirrors the focused pattern and playhead (for the on-screen step buttons)", () => {

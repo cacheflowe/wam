@@ -34,6 +34,19 @@ export class LedFeedback {
     return this._out;
   }
 
+  /** True while a Launch Control XL output port is selected. */
+  get connected() {
+    return !!this._out.output;
+  }
+
+  /** Dispatches `wam-lcxl-connection` { connected } when that changes. */
+  _announce() {
+    const connected = this.connected;
+    if (connected === this._wasConnected) return;
+    this._wasConnected = connected;
+    this._target.dispatchEvent(new CustomEvent("wam-lcxl-connection", { detail: { connected } }));
+  }
+
   start() {
     if (this._started) return;
     this._started = true;
@@ -60,6 +73,7 @@ export class LedFeedback {
   /** Manually set the output port (e.g. from a UI selector). */
   setOutput(port) {
     this._out.setOutput(port);
+    this._announce();
     return this;
   }
 
@@ -69,6 +83,7 @@ export class LedFeedback {
     // On Windows the LED port is usually the secondary "MIDIOUT2 (...)" port.
     const port = lc.find((o) => /\b(2|4|MIDIOUT)\b/i.test(o.name || "")) || lc[0] || null;
     this._out.setOutput(port);
+    this._announce();
   }
 
   _handleFeedback(detail) {
