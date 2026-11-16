@@ -342,7 +342,7 @@ export default class PlaygroundApp extends HTMLElement {
       }
       /* Room for the hardware-map column (see the MIDI drawer placement setting). */
       body.wam-hw-column-open main {
-        margin-right: var(--wam-hw-column-width, 380px);
+        margin-right: var(--wam-hw-column-width, 540px);
       }
     `;
     this.appendChild(style);
