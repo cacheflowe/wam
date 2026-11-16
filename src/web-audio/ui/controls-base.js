@@ -18,6 +18,7 @@ import {
 } from "../global/sound-design.js";
 import { quantize } from "../global/param-schema.js";
 import { describeTrigger } from "../global/note-event.js";
+import { PatternTrack } from "../global/pattern-track.js";
 import {
   canWritePresets,
   deletePresetFromRepo,
@@ -91,8 +92,9 @@ export class WebAudioControlsBase extends HTMLElement {
     this._jamKeyHandlers = [];
     // Sequencer (shared across all sequenced instruments)
     this._seq = null;
-    this._seqPosition = 0;
-    this._globalStep = 0;
+    this._tick = 0; // ticks since Play — PatternTrack derives everything from it
+    this._track = new PatternTrack();
+    this._lastPlayedIndex = -1;
     // Multi-pattern system
     this._patterns = null;   // { A: {steps}, B: {steps}, C: {steps}, D: {steps} }
     this._chain = [0];       // indices into pattern names [A,B,C,D]
@@ -968,7 +970,7 @@ export class WebAudioControlsBase extends HTMLElement {
 
   /** Name of a pattern waiting for the next bar, or null. */
   get queuedPattern() {
-    return this._queuedPattern != null ? ["A", "B", "C", "D"][this._queuedPattern] : null;
+    return this._track.queued;
   }
 
   /** Does a pattern have any active steps? */
@@ -982,18 +984,15 @@ export class WebAudioControlsBase extends HTMLElement {
    * follows, so step buttons edit what you hear.
    */
   launchPattern(name) {
-    const idx = ["A", "B", "C", "D"].indexOf(name);
-    if (idx < 0 || !this._patterns?.[name]) return;
-    this._queuedPattern = idx;
-    if (this._seqPosition % 16 === 0) this._applyQueuedPattern();
+    if (!this._patterns?.[name]) return;
+    this._syncTrack();
+    this._track.launch(name);
+    if (this._track.queued == null) this._onPatternLaunched(name);
     else this.dispatchEvent(new CustomEvent("pattern-queued", { bubbles: true, detail: { name } }));
   }
 
-  _applyQueuedPattern() {
-    const idx = this._queuedPattern;
-    this._queuedPattern = null;
-    const name = ["A", "B", "C", "D"][idx];
-    this._chain = [idx];
+  /** UI follow-up once the track has switched to a launched pattern (chain already = [it]). */
+  _onPatternLaunched(name) {
     this._chainPosition = 0;
     this._playingPattern = name;
     const color = this._defaultColor?.() || "#0f0";
@@ -1049,28 +1048,30 @@ export class WebAudioControlsBase extends HTMLElement {
     return null;
   }
 
-  /**
-   * Called by the base step() when the pattern completes a full cycle and
-   * rotation is active.
-   * @param {number} offset  Rotation offset from pattern params
-   */
-  _seqRotate(offset) {
-    this._seq?.rotate(offset);
+  /** Point the headless track at this panel's live pattern data (shared references). */
+  _syncTrack() {
+    const t = this._track;
+    t.patterns = this._patterns ?? { A: { steps: this._instrument?.steps ?? [] } };
+    t.chain = this._chain ?? [0];
+    t.params = this._seq?.getPatternParams() ?? {};
+    t.speed = this.speedMultiplier ?? 1;
   }
 
   /**
    * Base sequencer step handler. Called on each global tick.
-   * Handles: speed multiplier, bar density, rotation, probability, ratchet, conditions.
-   * Calls instrument.triggerSequenceStep() for active steps, _triggerJam() if pending.
-   * Subclasses that need custom timing logic can override, but most should not.
+   * Playback rules (speed, density, chain, rotation, probability, conditions)
+   * live in the headless PatternTrack (global/pattern-track.js), which derives
+   * everything from this panel's tick count since Play. This method applies the
+   * result: trigger the instrument, follow the chain in the UI, play queued jams.
+   * Ratchets and gate are applied by the instrument (_triggerRatcheted).
    *
-   * @param {boolean} [isManual]  Bypass playback counters and fire this exact step
-   *   immediately (e.g. a UI preview click) instead of advancing the sequence.
+   * @param {boolean} [isManual]  Bypass playback and fire this exact step
+   *   immediately (e.g. a UI preview click).
    */
   step(index, time, stepDurationSec, isManual = false) {
     if (!this._instrument || !this._seq) return;
 
-    // Manual trigger: bypass playback counters, fire immediately.
+    // Manual trigger: bypass playback, fire immediately.
     if (isManual) {
       this._seq.setActiveStep(index);
       const s = this._instrument.steps[index];
@@ -1081,88 +1082,40 @@ export class WebAudioControlsBase extends HTMLElement {
     // Hook for instrument-specific per-tick processing (e.g. acid LFO position)
     this._onStepTick?.(index, time, stepDurationSec);
 
-    // Speed multiplier: 0.5x skips odd ticks
-    const multiplier = this.speedMultiplier ?? 1;
-    if (multiplier === 0.5 && index % 2 !== 0) return;
+    this._syncTrack();
+    const result = this._track.tick(this._tick++, time, stepDurationSec);
+    if (result.launched) this._onPatternLaunched(result.launched);
 
-    // Pattern parameters
-    const patternParams = this._seq?.getPatternParams() ?? {};
-    const playEvery = patternParams.playEvery ?? 1;
-    const rotationOffset = patternParams.rotationOffset ?? 0;
-    const rotationIntervalBars = patternParams.rotationIntervalBars ?? 1;
-
-    // Apply rotation physically when local sequencer completes a full cycle
-    if (this._seqPosition > 0 && this._seqPosition % 16 === 0 && rotationOffset > 0) {
-      const localBar = this._seqPosition / 16;
-      if (localBar % rotationIntervalBars === 0) {
-        this._seqRotate(rotationOffset);
-      }
+    // Follow the chain in the UI when the sounding pattern changes.
+    if (result.position.played && result.position.chainIndex !== this._chainPosition) {
+      this._chainPosition = result.position.chainIndex;
+      this._playingPattern = result.patternName;
+      const color = this._defaultColor?.() || "#0f0";
+      this._updateChainBar(color);
+      this._updateTabPlayingIndicators(color);
     }
 
-    // Bar density
-    const currentBar = Math.floor(this._globalStep / 16);
-    if (currentBar % playEvery !== 0) {
-      this._globalStep++;
-      return;
-    }
-
-    // Chain: advance pattern position at bar boundaries
-    if (this._seqPosition > 0 && this._seqPosition % 16 === 0) {
-      const localBar = this._seqPosition / 16;
-      const chainEntryEvery = playEvery; // chain advances every playEvery bars
-      if (localBar % chainEntryEvery === 0 && this._chain.length > 0) {
-        const prevPos = this._chainPosition;
-        this._chainPosition = (this._chainPosition + 1) % this._chain.length;
-        if (this._chainPosition !== prevPos) {
-          const patternName = ['A', 'B', 'C', 'D'][this._chain[this._chainPosition]];
-          this._playingPattern = patternName;
-          const color = this._defaultColor?.() || '#0f0';
-          // Update chain bar and tab indicators
-          this._updateChainBar(color);
-          this._updateTabPlayingIndicators(color);
-        }
-      }
-    }
-
-    // A pattern launched from hardware takes over at the bar boundary.
-    if (this._queuedPattern != null && this._seqPosition % 16 === 0) this._applyQueuedPattern();
-
-    // Get active pattern's steps (falls back to the live-edited instrument steps)
-    const activePatternName = ['A', 'B', 'C', 'D'][this._chain[this._chainPosition] ?? 0];
-    const activePattern = this._patterns?.[activePatternName];
-    const steps = activePattern?.steps ?? this._instrument.steps;
-
-    // Advance sequencer position (2x = 2 steps per tick, offset in time)
-    const stepsToAdvance = multiplier === 2 ? 2 : 1;
-    const subStepDur = stepDurationSec / stepsToAdvance;
     let stepFired = false;
-    for (let si = 0; si < stepsToAdvance; si++) {
-      const subTime = time + si * subStepDur;
-      const stepIndex = this._seqPosition % 16;
-      const s = steps[stepIndex];
-
-      this._setMiniStripPlayhead(activePatternName, stepIndex);
-
-      if (s?.active) {
-        if (Math.random() < (s.probability ?? 1)) {
-          if (!s.conditions || s.conditions === "off" || this._meetsCondition(s.conditions, currentBar)) {
-            stepFired = true;
-            this._instrument.triggerSequenceStep(stepIndex, s, subTime, subStepDur);
-          }
-        }
+    for (const slot of result.slots) {
+      this._setMiniStripPlayhead(result.patternName, slot.index);
+      this._lastPlayedIndex = slot.index;
+      if (slot.fires) {
+        stepFired = true;
+        this._instrument.triggerSequenceStep(slot.index, slot.step, slot.time, slot.dur);
       }
-
-      this._seqPosition++;
     }
 
     if (this._jamPending && !stepFired) this._triggerJam(time, stepDurationSec);
     this._jamPending = false;
-    this._globalStep++;
   }
 
-  /** Highlight the currently playing step in the UI. */
-  setActiveStep() {
-    this._seq?.setActiveStep((this._seqPosition - 1 + 16) % 16);
+  /**
+   * Highlight the step that's playing (accounts for rotation). Pass -1 to clear.
+   * @param {number} [index]  ignored except -1 (the playground passes the global step)
+   */
+  setActiveStep(index) {
+    if (index === -1) return this._seq?.setActiveStep(-1);
+    this._seq?.setActiveStep(this._lastPlayedIndex ?? -1);
   }
 
   /**
@@ -2343,8 +2296,14 @@ export class WebAudioControlsBase extends HTMLElement {
 
   /** Reset sequencer playhead to the beginning. Call on transport stop/play. */
   resetSequencer() {
-    this._globalStep = 0;
-    this._seqPosition = 0;
+    this._tick = 0;
+    this._lastPlayedIndex = -1;
+    this._syncTrack();
+    const pending = this._track.queued;
+    this._track.reset(); // back to the top of the chain; a pending launch applies now
+    if (pending) this._onPatternLaunched(pending);
+    this._chainPosition = 0;
+    this._playingPattern = ["A", "B", "C", "D"][this._chain?.[0] ?? 0];
     this._clearMiniStripPlayhead();
   }
 

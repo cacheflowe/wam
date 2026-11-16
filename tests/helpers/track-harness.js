@@ -52,6 +52,7 @@ export function trackState({ patterns = { A: [0] }, chain = [0], playEvery = 1, 
  *   fired           [{ tick, bar, index, time, dur }]  (triggerSequenceStep calls)
  *   hits            [{ time }]                          (instrument.trigger calls — ratchets show here)
  *   byBar(n)        fired step indices grouped per bar for the first n bars
+ *   positionsByBar(n)  bar positions (tick % 16) where hits land — what you hear
  */
 export function mountTrack(state, { Instrument = WebAudioPercKick, Controls = WebAudioPercKickControls, stepDur = 0.125 } = {}) {
   const tag = `test-track-${++tagCounter}`;
@@ -107,6 +108,12 @@ export function mountTrack(state, { Instrument = WebAudioPercKick, Controls = We
     byBar(nBars) {
       const out = Array.from({ length: nBars }, () => []);
       for (const f of fired) if (f.bar < nBars) out[f.bar].push(f.index);
+      return out;
+    },
+    /** Where in each bar (tick position 0–15) hits land — the audible result, independent of which stored step fired. */
+    positionsByBar(nBars) {
+      const out = Array.from({ length: nBars }, () => []);
+      for (const f of fired) if (f.bar < nBars) out[f.bar].push(f.tick % 16);
       return out;
     },
     unmount() {

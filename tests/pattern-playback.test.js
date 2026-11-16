@@ -1,10 +1,9 @@
 // Characterization tests for pattern playback (architecture-refactor Phase 0).
 //
-// They pin what Controls.step() does TODAY, driven only through the song
-// format (fromJSON) + step()/resetSequencer(), so they keep passing when
-// playback moves into a headless engine. Behaviors that look wrong are pinned
-// too and labelled KNOWN BUG / QUESTION — fixing one should be a deliberate,
-// visible edit to that test.
+// Driven only through the song format (fromJSON) + step()/resetSequencer(),
+// so they survived moving playback into the headless PatternTrack unchanged
+// (Phase 1). The former KNOWN BUG / QUESTION tests now state the fixed /
+// decided behavior and say what it was before.
 
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { mountTrack, trackState, steps } from "./helpers/track-harness.js";
@@ -40,13 +39,12 @@ describe("pattern playback — basics", () => {
     expect(t.fired.map((f) => f.index)).toEqual([0, 8]);
   });
 
-  it("QUESTION: resetSequencer keeps the chain position — Stop → Play mid-chain resumes on the current pattern, not pattern 1", () => {
+  it("Stop → Play mid-chain restarts the chain from pattern 1 (decided 2026-11-16; was: resumed on the current pattern)", () => {
     const t = mountTrack(trackState({ patterns: { A: [0], B: [8] }, chain: [0, 1] })).run(BAR + 4); // now in B
     t.ctrl.resetSequencer();
     t.fired.length = 0;
     t.run(BAR);
-    // If Play should restart the chain from the top: [0]
-    expect(t.fired.map((f) => f.index)).toEqual([8]);
+    expect(t.fired.map((f) => f.index)).toEqual([0]);
   });
 });
 
@@ -56,40 +54,42 @@ describe("pattern playback — density (playEvery)", () => {
     expect(t.byBar(4)).toEqual([[0, 8], [], [0, 8], []]);
   });
 
-  it("KNOWN BUG: with density, the chain advances every 2 *played* bars (A A B B), not every played bar (A B)", () => {
+  it("with density, the chain advances every played bar (fixed; was A A B B)", () => {
     const t = mountTrack(trackState({ patterns: { A: [0], B: [8] }, chain: [0, 1], playEvery: 2 })).run(8 * BAR);
-    // Expected once fixed: [[0], [], [8], [], [0], [], [8], []]
-    expect(t.byBar(8)).toEqual([[0], [], [0], [], [8], [], [8], []]);
+    expect(t.byBar(8)).toEqual([[0], [], [8], [], [0], [], [8], []]);
   });
 });
 
 describe("pattern playback — rotation", () => {
-  it("shifts the pattern left by N steps each bar", () => {
+  it("shifts the pattern left by N steps each bar (where hits land)", () => {
     const t = mountTrack(trackState({ patterns: { A: [0] }, rotationOffset: 1 })).run(4 * BAR);
-    expect(t.byBar(4)).toEqual([[0], [15], [14], [13]]);
+    expect(t.positionsByBar(4)).toEqual([[0], [15], [14], [13]]);
   });
 
   it("respects the rotation interval (bars)", () => {
     const t = mountTrack(trackState({ patterns: { A: [0] }, rotationOffset: 1, rotationIntervalBars: 2 })).run(5 * BAR);
-    expect(t.byBar(5)).toEqual([[0], [0], [15], [15], [14]]);
+    expect(t.positionsByBar(5)).toEqual([[0], [0], [15], [15], [14]]);
   });
 
-  it("with density, rotates once per played bar (audible result)", () => {
+  it("with density, rotates once per played bar", () => {
     const t = mountTrack(trackState({ patterns: { A: [0] }, rotationOffset: 1, playEvery: 2 })).run(6 * BAR);
-    expect(t.byBar(6)).toEqual([[0], [], [15], [], [14], []]);
+    expect(t.positionsByBar(6)).toEqual([[0], [], [15], [], [14], []]);
   });
 
-  it("KNOWN BUG: with density, rotate() runs on every tick of a skipped bar (net-zero, but floods step-change events)", () => {
+  it("rotation is applied at read time — the stored pattern never moves and no step-change storm (fixed; was 67 rotate() calls / 8 bars)", () => {
     const t = mountTrack(trackState({ patterns: { A: [0] }, rotationOffset: 3, playEvery: 2 }));
     let rotations = 0;
+    let stepChanges = 0;
     const orig = t.ctrl._seq.rotate.bind(t.ctrl._seq);
     t.ctrl._seq.rotate = (n) => {
       rotations++;
       return orig(n);
     };
+    t.ctrl._seq.addEventListener("step-change", () => stepChanges++);
     t.run(8 * BAR);
-    // Expected once fixed: 3 (one per played bar after the first). 16 extra per skipped bar today.
-    expect(rotations).toBe(67);
+    expect(rotations).toBe(0);
+    expect(stepChanges).toBe(0);
+    expect(t.ctrl.toJSON().patterns.A.steps.findIndex((s) => s.active)).toBe(0);
   });
 });
 
@@ -129,10 +129,9 @@ describe("pattern playback — per-step options", () => {
     expect(t.fired.map((f) => f.bar)).toEqual([0, 4]);
   });
 
-  it("QUESTION: with density 2, a 1:2 condition fires on every played bar (counts real bars, and played bars are all even)", () => {
+  it("trig conditions count played cycles: with density 2, 1:2 fires on every other played bar (decided 2026-11-16; was every played bar)", () => {
     const t = mountTrack(trackState({ patterns: { A: steps([0], { 0: { conditions: "1:2" } }) }, playEvery: 2 })).run(8 * BAR);
-    // If conditions should count *played* bars instead: [[0], [], [], [], [0], [], [], []]
-    expect(t.byBar(8)).toEqual([[0], [], [0], [], [0], [], [0], []]);
+    expect(t.byBar(8)).toEqual([[0], [], [], [], [0], [], [], []]);
   });
 
   it("ratchet N triggers the instrument N times within the step, evenly spaced", () => {

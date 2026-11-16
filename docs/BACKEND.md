@@ -70,6 +70,18 @@ static PRESETS = presetMap(presetData);   // { name: params } — the shape appl
 
 **Saving presets.** Under `npm run dev`, the Presets panel's Save/Del buttons write straight to the JSON file through a dev-only Vite plugin ([vite-plugins/wam-preset-store.js](vite-plugins/wam-preset-store.js), `POST`/`DELETE /__wam/presets/<id>`). Its own writes skip HMR so saving mid-jam doesn't reload the page. Production builds have no endpoint and fall back to localStorage user presets. Presets can carry `tags`; when any preset is tagged, the dropdown groups by first tag. ◀ ▶ (and `controls.stepPreset(±1)`) step through presets.
 
+### Pattern playback (`global/pattern-track.js`)
+
+Pattern playback is headless. `PatternTrack` holds a track's patterns (A–D), chain and params, and `tick(tick, time, stepDur)` returns what sounds on that tick. Everything is **derived from the tick count since Play** (Interphase-style: one clock, tracks compute their position) rather than accumulated in counters:
+
+- **Cycle** = one pass through the 16 steps: 16 ticks at 1×, 8 at 2× (two sub-steps per tick), 32 at 0.5× (a step every other tick).
+- **Density** (`playEvery`) plays every Nth cycle. **Chain position, rotation and trig conditions count *played* cycles**, so with density 2 a chain A→B plays A, –, B, –, and `1:2` fires on every other played cycle.
+- **Rotation** is an index offset applied at read time — the stored pattern (and saved song) never moves; the grid playhead shows the rotated position.
+- **Play** (tick 0) always starts at the top of the chain. **Launching** a pattern replaces the chain with it at the next cycle start (immediately when on a boundary).
+- Probability and conditions are checked per step (`stepFires`); ratchets and gate are applied by the instrument (`_triggerRatcheted`).
+
+`WebAudioControlsBase.step()` delegates to its `PatternTrack` (sharing the panel's pattern/chain arrays) and only applies the result: trigger the instrument, follow the chain in the UI, play queued jams. Behavior is pinned by [tests/pattern-playback.test.js](tests/pattern-playback.test.js) (through the song format) and [tests/pattern-track.test.js](tests/pattern-track.test.js) (the pure engine).
+
 ### Param schema (`global/param-schema.js`)
 
 Instruments declare their parameters as `static PARAMS` on the **instrument** class (not the Controls class), so the engine knows its own params headless. Each entry carries range/scale/step plus `group` (UI section + randomize-lock unit), `role` (shared vocabulary that drives hardware mapping — the same role lands on the same knob on every instrument), `priority`, and `rand` (the curated, musically useful sub-range for randomize/mutate, or `false`). Enum and bool params are included. Controls derive `SLIDER_DEFS = sliderDefs(Instrument.PARAMS)` and build each knob with `mkSlider("param", overrides?)`, so a param is declared exactly once. Migration status and the role list: [exec-plans/active/jammable-playground.md](exec-plans/active/jammable-playground.md). Validation: [tests/param-schema.test.js](tests/param-schema.test.js).

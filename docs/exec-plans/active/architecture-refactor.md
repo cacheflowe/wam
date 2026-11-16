@@ -43,6 +43,31 @@ Confirmed by [tests/pattern-playback.test.js](../../../tests/pattern-playback.te
 
 Ruled out (behave sensibly, now pinned): rotation does affect multi-pattern playback; at 0.5× speed, conditions and density count *pattern cycles* consistently.
 
+## Decisions (2026-11-16)
+
+| Question | Decision |
+|---|---|
+| Playback model | **One global clock; tracks derive position from the tick** (borrowed from Interphase's `Metronome` → `BEAT` → `Sequencer` design). No per-track counters. |
+| Trig conditions vs density | Conditions count **played cycles** (consistent with how they already counted at 0.5×). |
+| Stop → Play mid-chain | Play **restarts the chain from pattern 1**. |
+| Rotation | Applied at read time; stored patterns never move. |
+| Note storage | **Scale degrees by default** (`{ degree, octave }` relative to the song root, resolved against the current key/scale at play time) with optional per-step `accidental` (±1 semitone) and optional absolute `midi` escape hatch. Key changes transpose; scale changes keep melodic contour (degrees wrap into the next octave across scale sizes). Old songs convert losslessly on load (in-scale → degree; out-of-scale → degree + accidental) and the song JSON gains a format version. |
+
+All are overridable — say the word and the tests flip.
+
+## Borrowing from Interphase
+
+Reviewed `haxademic/.../media/audio/interphase` (Metronome, Sequencer, SequencerConfig, Scales, `core.data.patterns`). Adopting:
+
+- **Global clock → derived track position** (Phase 1, done for playback).
+- **Pattern generators as strategies** (`ISequencerPattern`: Interval, Sine-threshold, Noise-threshold, weighted Random, Techno) + pattern ops (`ensureOneStepActive`, `limitToMaxSteps`, `nudge`, `morph`), with **per-instrument generator lists** in the instrument registry (like `SequencerConfig`). Replaces the 7 copied `STEP_WEIGHTS` randomizers.
+- **Evolve**: per-track small (nudge/morph) vs. big (every 4th: new pattern + note scheme) pattern changes; global auto-evolve **staggered across tracks** so only one changes at a time.
+- **Play-time note schemes** (Interphase `notesByStep`): optional per-track generative melody (step + offset through the scale, 4th/5th harmony, octave jumps) on top of degree storage.
+- **Ensemble configs** → registry "kits" + a "new jam" starter.
+- BPM easing (glide between tempos).
+
+Not adopting: static globals, string-prefixed UI keys, clock-message triggering (wam's lookahead + audio-clock timestamps are more precise), hardcoded channel special cases.
+
 ## Phases
 
 ### Phase 0 — Characterization tests for pattern playback
@@ -51,11 +76,17 @@ Ruled out (behave sensibly, now pinned): rotation does affect multi-pattern play
 - [x] Findings pinned as `KNOWN BUG` / `QUESTION` (table above).
 
 ### Phase 1 — Headless pattern engine + song player
-- [ ] `global/pattern-track.js`: patterns A–D, chain, density, rotation, conditions, probability, jam queue, launch/queue — pure data + `tick()` → step events. No DOM.
-- [ ] `instruments/index.js`: the instrument registry (id, label, color, class, controls tag, default FX) — moved out of the playground.
-- [ ] `global/song-player.js`: load a song JSON → instruments + tracks, driven by the existing `Sequencer`. Works with no UI (client projects, generative apps, Node-free tests).
-- [ ] Controls own a `PatternTrack` and render it; `Controls.step()` delegates. Phase 0 tests pass unchanged.
-- [ ] Fix the confirmed `step()` bugs (one at a time, updating the KNOWN BUG tests).
+- [x] `global/pattern-track.js`: `trackPosition` (pure, derived from tick), `stepFires`, `PatternTrack` (patterns, chain, density, rotation at read time, speed sub-steps, launch/queue). [tests/pattern-track.test.js](../../../tests/pattern-track.test.js).
+- [x] `Controls.step()` delegates (one `_tick` counter; old `_seqPosition` / `_globalStep` / `_seqRotate` gone). Phase 0 tests passed unchanged except the four decided changes, which flipped deliberately: chain + density fixed, rotation storm gone (0 `rotate()` calls), conditions count played cycles, Play restarts the chain. Verified in-browser with `wobbler` (chained acid/fm alternate A/B per bar).
+- [ ] `instruments/index.js`: instrument registry (id, label, color, class, controls tag, default FX, pattern generators) — moved out of the playground.
+- [ ] `global/song-player.js`: load a song JSON → instruments + `PatternTrack`s driven by the `Sequencer`. No UI.
+- [ ] Global clock object (tick, bar, bpm, optional BPM easing) published to tracks + the performance stream; Controls stop keeping their own `_tick`.
+
+### Phase 1b — Generators, evolve, scale-degree notes
+- [ ] `global/pattern-gen.js`: Interphase-style generators + pattern ops; registry lists per instrument; replaces per-instrument `randomize()` pattern code.
+- [ ] Evolve: per-track (small/big) + staggered global auto-evolve; Perform-mode button.
+- [ ] Scale-degree note storage (+ accidental / absolute escape hatches), song format version + lossless migration, note picker shows degrees in the current key.
+- [ ] Optional per-track generative note scheme.
 
 ### Phase 2 — Schema-driven serialization and controls
 - [ ] `toJSON`/`fromJSON` param sections iterate `PARAMS` (numbers, enums, bools); delete per-instrument `_extraToJSON` copies.
