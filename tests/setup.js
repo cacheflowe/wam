@@ -86,6 +86,8 @@ function makeAnalyser() {
     frequencyBinCount: 128,
     getByteTimeDomainData() {},
     getByteFrequencyData() {},
+    getFloatTimeDomainData() {},
+    getFloatFrequencyData() {},
   });
 }
 
@@ -141,3 +143,24 @@ if (!globalThis.customElements) {
     get(name) { return this._registry.get(name); },
   };
 }
+
+// jsdom has no canvas: give UI components a no-op 2D context so panels that
+// draw (waveforms, meters, mini strips) can be built in tests.
+if (typeof HTMLCanvasElement !== "undefined") {
+  const noop2d = () =>
+    new Proxy(
+      {},
+      {
+        get: (t, k) => (k in t ? t[k] : k === "measureText" ? () => ({ width: 0 }) : k === "getImageData" ? () => ({ data: new Uint8ClampedArray(4) }) : () => {}),
+        set: (t, k, v) => ((t[k] = v), true),
+      },
+    );
+  HTMLCanvasElement.prototype.getContext = function () {
+    return (this.__ctx2d ??= noop2d());
+  };
+}
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
