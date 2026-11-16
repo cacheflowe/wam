@@ -83,7 +83,7 @@ Not adopting: static globals, string-prefixed UI keys, clock-message triggering 
 - [x] Public instrument musical context: `setScale`, `scaleName`, `scaleRoot`, `chordSize`, `bpm`, `onTick`, sampler `melodicMode` — Controls stopped writing `_scaleName` / `_chordSize` / `_melodicMode` / `_bpm` (part of Phase 4 done early).
 - [x] `global/song-player.js`: loads a song → registry instruments + Channels + PatternTracks on one clock; master gain → master FxChain (transport order). 15 per-instrument equivalence tests (wobbler + techdrift): headless fires the same steps at the same times as the UI panels. Renders offline in the browser (wobbler: 8 tracks, 80 notes / 4 bars).
 - [ ] Song player v2: samplers / loop players (sample loading without UI), vocoder, sidechain routing (`compSourceId`), performance-stream hookup.
-- [ ] Observation: wobbler renders with peak ≈ 1.24 (over full scale); the playground master has no limiter either. Consider a master safety limiter (separate decision).
+- [x] Master safety limiter (`fx/fx-limiter.js`: fast DynamicsCompressor + waveshaper ceiling at ≈ −0.1 dBFS) at the end of the master bus — before meters, recorder and output — in both `<wam-transport>` ("Limit" toggle on the master strip, default on, saved as `transport.limiter`) and `SongPlayer`. wobbler offline: peak 1.585 / 1,201 samples over full scale → 0.990 / 0, RMS unchanged.
 - [ ] Global clock object (tick, bar, bpm, optional BPM easing) published to tracks + the performance stream; Controls stop keeping their own `_tick`.
 
 ### Phase 1b — Generators, evolve, scale-degree notes

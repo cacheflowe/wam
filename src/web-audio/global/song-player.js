@@ -8,6 +8,7 @@
  *
  * Built from the same pieces the playground uses, so it sounds the same:
  *   registry instrument → Channel (FxChain → volume/mute/solo → pan) → master gain → master FxChain → destination
+ *   → MasterLimiter (song's `transport.limiter`, default on)
  *   (master volume is applied BEFORE the master FX — same order as <wam-transport>)
  *   PatternTrack per instrument, driven by one WebAudioSequencer clock.
  *
@@ -19,6 +20,7 @@ import WebAudioSequencer from "./sequencer.js";
 import { PatternTrack } from "./pattern-track.js";
 import { Channel, gainFaderState } from "./channel.js";
 import { FxChain } from "../fx/fx-chain.js";
+import { MasterLimiter } from "../fx/fx-limiter.js";
 import { instrumentDef, createInstrument } from "../instruments/registry.js";
 
 /** Instrument types the headless player can't run yet (need files / live input via their UI). */
@@ -54,7 +56,9 @@ export class SongPlayer {
     this.masterFx = new FxChain(ctx, { bpm: t.bpm ?? 120 });
     this.masterFx.fromJSON(t.fx);
     this.masterGain.connect(this.masterFx.input);
-    this.masterFx.connect(this.destination);
+    this.limiter = new MasterLimiter(ctx, { enabled: t.limiter ?? true });
+    this.masterFx.connect(this.limiter.input);
+    this.limiter.connect(this.destination);
     /** { volume, muted } for the master (derived gain, see channel.js) */
     this.master = gainFaderState(() => this.masterGain, t.masterVolume ?? 1);
     this.master.muted = !!t.muted;
@@ -174,6 +178,7 @@ export class SongPlayer {
     this.masterGain?.disconnect();
     this.masterFx?.disconnect();
     this.masterFx?.destroy();
+    this.limiter?.disconnect();
     this.tracks = [];
     this.master = this.masterGain = this.masterFx = null;
   }

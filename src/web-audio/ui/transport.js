@@ -1,4 +1,5 @@
 import "./slider.js";
+import { MasterLimiter } from "../fx/fx-limiter.js";
 import "./waveform.js";
 import "./recorder.js";
 import "./midi-input-picker.js";
@@ -136,6 +137,19 @@ export class WebAudioTransportControls extends HTMLElement {
     this._midiControls.volume = this._volSlider;
     this._wireInputLearn(this._volSlider, "volume");
     this._meter = strip.meter;
+
+    // Master safety limiter toggle (on by default; saved with the song).
+    this._limiterEnabled = true;
+    this._limiterBtn = document.createElement("button");
+    this._limiterBtn.className = "wam-toggle-btn wam-limiter-btn";
+    this._limiterBtn.textContent = "Limit";
+    this._limiterBtn.title = "Master safety limiter — keeps the mix (and recordings) from clipping. On by default.";
+    this._limiterBtn.toggleAttribute("data-active", true);
+    this._limiterBtn.addEventListener("click", () => {
+      this.limiterEnabled = !this.limiterEnabled;
+      this._emitChange();
+    });
+    strip.mixGroup.appendChild(this._limiterBtn);
 
     const handleVolInput = (e) => {
       if (e.detail.param === "volume") {
@@ -275,21 +289,25 @@ export class WebAudioTransportControls extends HTMLElement {
     this._fxUnit.init(ctx, { title: "Master FX", bpm, ...fxOptions });
     this._masterGain.connect(this._fxUnit.input);
 
+    // Safety limiter at the very end: everything downstream (meters, recorder, output) hears it.
+    this._limiter = new MasterLimiter(ctx, { enabled: this._limiterEnabled });
+    this._fxUnit.connect(this._limiter.input);
+
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 2048;
-    this._fxUnit.connect(analyser);
+    this._limiter.connect(analyser);
     this._out = analyser;
 
     const meterAnalyser = ctx.createAnalyser();
     meterAnalyser.fftSize = 256;
-    this._fxUnit.connect(meterAnalyser);
+    this._limiter.connect(meterAnalyser);
     this._meter?.setAnalyser(meterAnalyser);
 
     waveform.init(analyser, color);
 
     // Recorder — taps the post-FX output
     this._recorderEl.init(ctx);
-    this._recorderEl.connectFrom(this._fxUnit);
+    this._recorderEl.connectFrom(this._limiter);
     this._recorderEl.seq = this._seq;
   }
 
@@ -307,6 +325,17 @@ export class WebAudioTransportControls extends HTMLElement {
   /** Slot element where apps can append a share/export button. */
   get shareSlot() {
     return this._shareSlot;
+  }
+
+  /** Master safety limiter on/off. */
+  get limiterEnabled() {
+    return this._limiterEnabled;
+  }
+
+  set limiterEnabled(v) {
+    this._limiterEnabled = !!v;
+    if (this._limiter) this._limiter.enabled = this._limiterEnabled;
+    this._limiterBtn?.toggleAttribute("data-active", this._limiterEnabled);
   }
 
   /** The recorder element for external access. */
@@ -421,6 +450,7 @@ export class WebAudioTransportControls extends HTMLElement {
     return {
       bpm: this.bpm,
       masterVolume: this._muteHandle?.getVolume() ?? 1,
+      limiter: this._limiterEnabled,
       muted: this._muteHandle?.isMuted() ?? false,
       root: this._rootSelect ? parseInt(this._rootSelect.value) : null,
       scale: this._scaleSelect?.value ?? null,
@@ -438,6 +468,7 @@ export class WebAudioTransportControls extends HTMLElement {
       if (this._volSlider) this._volSlider.value = obj.masterVolume;
     }
     if (obj.muted != null) this._muteHandle?.setMuted(obj.muted);
+    if (obj.limiter != null) this.limiterEnabled = obj.limiter;
     if (obj.root != null && this._rootSelect) this._rootSelect.value = obj.root;
     if (obj.scale != null && this._scaleSelect) this._scaleSelect.value = obj.scale;
     this._paramBindings = {};
