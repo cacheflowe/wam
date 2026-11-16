@@ -1,6 +1,5 @@
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import "../ui/step-seq.js";
-import { STEP_WEIGHTS } from "../global/scales.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 import { sliderDefs } from "../global/param-schema.js";
 import presetData from "../presets/perc-snare.json" with { type: "json" };
@@ -32,6 +31,8 @@ export default class WebAudioPercSnare extends WebAudioInstrumentBase {
 
   /** trigger() argument layout, for note events (see global/note-event.js). */
   static TRIGGER_ARGS = { trigger: ["velocity", "time"] };
+  /** Pattern generator role + note range (see global/pattern-gen.js). */
+  static PATTERN_ROLE = "snare";
 
   /**
    * Param schema (see global/param-schema.js). Single source of truth for the
@@ -264,16 +265,6 @@ export class WebAudioPercSnareControls extends WebAudioControlsBase {
     this._instrument.trigger(0.8, time);
   }
 
-  randomize() {
-    const newSteps = Array.from({ length: 16 }, (_, i) => ({
-      active: Math.random() < STEP_WEIGHTS[i] * 0.6,
-      probability: 1,
-      ratchet: 1,
-      conditions: "off",
-    }));
-    this._instrument.steps = newSteps;
-    this._emitChange();
-  }
 
   // ---- Serialization ----
 

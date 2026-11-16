@@ -214,6 +214,9 @@ export default class WebAudioSynthPoly extends WebAudioInstrumentBase {
 
   /** trigger() argument layout, for note events (see global/note-event.js). */
   static TRIGGER_ARGS = { trigger: ["notes", "duration", "velocity", "time"] };
+  /** Pattern generator role + note range (see global/pattern-gen.js). */
+  static PATTERN_ROLE = "keys";
+  static NOTE_RANGE = [36, 72];
 
   constructor(ctx, preset = "Default") {
     super(ctx, null);
@@ -642,24 +645,6 @@ export class WebAudioSynthPolyControls extends WebAudioControlsBase {
     this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 24, 84));
   }
 
-  randomize() {
-    const noteOpts = scaleNoteOptions(this._rootMidi, this._scaleName, 36, 72);
-    const notes = noteOpts.map(([, midi]) => midi);
-    if (!notes.length) return;
-    const numActive = 3 + Math.floor(Math.random() * 4);
-    const activeSet = new Set([0]);
-    while (activeSet.size < numActive) activeSet.add(Math.floor(Math.random() * 16));
-    const newSteps = Array.from({ length: 16 }, (_, i) => ({
-      active: activeSet.has(i),
-      note: notes[Math.floor(Math.random() * notes.length)],
-      probability: 1,
-      ratchet: 1,
-      conditions: "off",
-    }));
-    newSteps[0] = { active: true, note: this._rootMidi, probability: 1, ratchet: 1, conditions: "off" };
-    this._instrument.steps = newSteps;
-    this._emitChange();
-  }
 
   // ---- Serialization ----
 

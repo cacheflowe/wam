@@ -14,6 +14,9 @@ export default class WebAudioSynthPad extends WebAudioInstrumentBase {
 
   /** trigger() argument layout, for note events (see global/note-event.js). */
   static TRIGGER_ARGS = { trigger: ["notes", "duration", "velocity", "time"] };
+  /** Pattern generator role + note range (see global/pattern-gen.js). */
+  static PATTERN_ROLE = "pad";
+  static NOTE_RANGE = [36, 72];
 
   /**
    * Param schema (see global/param-schema.js). Single source of truth for the
@@ -430,23 +433,6 @@ export class WebAudioSynthPadControls extends WebAudioControlsBase {
     this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 36, 72));
   }
 
-  randomize() {
-    const noteOpts = scaleNoteOptions(this._rootMidi, this._scaleName, 36, 72);
-    const notes = noteOpts.map(([, midi]) => midi);
-    if (!notes.length) return;
-    const numActive = 2 + Math.floor(Math.random() * 3);
-    const activeSet = new Set([0]);
-    while (activeSet.size < numActive) activeSet.add(Math.floor(Math.random() * 16));
-    const newSteps = Array.from({ length: 16 }, (_, i) => ({
-      active: activeSet.has(i),
-      note: notes[Math.floor(Math.random() * notes.length)],
-      probability: 1,
-      ratchet: 1,
-      conditions: "off",
-    }));
-    this._instrument.steps = newSteps;
-    this._emitChange();
-  }
 
   _makeFilterTypeSelect() {
     const wrap = createCtrl("Type");

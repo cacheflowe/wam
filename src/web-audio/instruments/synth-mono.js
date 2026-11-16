@@ -1,6 +1,6 @@
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import "../ui/step-seq.js";
-import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/scales.js";
+import { scaleNoteOptions, scaleNotesInRange } from "../global/scales.js";
 import { WebAudioControlsBase, createSection, createCtrl } from "../ui/controls-base.js";
 import { applyADSR, applyFilterEnv } from "../global/dsp/envelope.js";
 import { createUnisonOscBank } from "../global/dsp/oscillator.js";
@@ -15,6 +15,9 @@ export default class WebAudioSynthMono extends WebAudioInstrumentBase {
 
   /** trigger() argument layout, for note events (see global/note-event.js). */
   static TRIGGER_ARGS = { trigger: ["notes", "duration", "velocity", "time"] };
+  /** Pattern generator role + note range (see global/pattern-gen.js). */
+  static PATTERN_ROLE = "lead";
+  static NOTE_RANGE = [24, 72];
 
   /**
    * Param schema (see global/param-schema.js). Single source of truth for the
@@ -418,19 +421,6 @@ export class WebAudioSynthMonoControls extends WebAudioControlsBase {
     this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 24, 72));
   }
 
-  randomize() {
-    const noteOpts = scaleNoteOptions(this._rootMidi, this._scaleName, 24, 72);
-    const notes = noteOpts.map(([, midi]) => midi);
-    if (!notes.length) return;
-    const newSteps = Array.from({ length: 16 }, (_, i) => {
-      const active = Math.random() < STEP_WEIGHTS[i] * 0.6;
-      const note = notes[Math.floor(Math.random() * notes.length)];
-      return { active, note, probability: 1, ratchet: 1, conditions: "off" };
-    });
-    newSteps[0] = { active: true, note: this._rootMidi, probability: 1, ratchet: 1, conditions: "off" };
-    this._instrument.steps = newSteps;
-    this._emitChange();
-  }
 
   // Serialization
   _makeFilterTypeSelect() {

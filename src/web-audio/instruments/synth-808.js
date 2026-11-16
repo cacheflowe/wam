@@ -1,6 +1,6 @@
 import "../ui/slider.js";
 import "../ui/step-seq.js";
-import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/scales.js";
+import { scaleNoteOptions, scaleNotesInRange } from "../global/scales.js";
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 import { makeSoftClipCurve } from "../global/dsp/distortion.js";
@@ -33,6 +33,9 @@ export default class WebAudioSynth808 extends WebAudioInstrumentBase {
 
   /** trigger() argument layout, for note events (see global/note-event.js). */
   static TRIGGER_ARGS = { trigger: ["notes", "duration", "time"] };
+  /** Pattern generator role + note range (see global/pattern-gen.js). */
+  static PATTERN_ROLE = "bass";
+  static NOTE_RANGE = [24, 48];
 
   /**
    * Param schema (see global/param-schema.js). Single source of truth for the
@@ -308,26 +311,6 @@ export class WebAudioSynth808Controls extends WebAudioControlsBase {
     this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 24, 48));
   }
 
-  /** Randomize the step pattern — rhythm only, note chosen from current scale. */
-  randomize() {
-    const noteOpts = scaleNoteOptions(this._rootMidi, this._scaleName, 24, 48);
-    const notes = noteOpts.map(([, midi]) => midi);
-    if (!notes.length) return;
-    // Bias toward root and lower notes for bass feel
-    const root = this._rootMidi;
-    const pool = notes.flatMap((n) => {
-      const weight = n <= root + 12 ? 3 : 1;
-      return Array(weight).fill(n);
-    });
-    const newSteps = Array.from({ length: 16 }, (_, i) => {
-      const active = Math.random() < STEP_WEIGHTS[i] * 0.7; // sparser than acid
-      const note = pool[Math.floor(Math.random() * pool.length)];
-      return { active, note };
-    });
-    newSteps[0] = { active: true, note: root }; // always hit on beat 1
-    this._instrument.steps = newSteps;
-    this._emitChange();
-  }
 
   _extendJSON(obj) {}
 

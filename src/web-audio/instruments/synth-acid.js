@@ -1,6 +1,6 @@
 import "../ui/slider.js";
 import "../ui/step-seq.js";
-import { scaleNoteOptions, scaleNotesInRange, STEP_WEIGHTS } from "../global/scales.js";
+import { scaleNoteOptions, scaleNotesInRange } from "../global/scales.js";
 import WebAudioInstrumentBase from "../global/instrument-base.js";
 import { WebAudioControlsBase, createSection } from "../ui/controls-base.js";
 import { createCtrl } from "../ui/controls-factory.js";
@@ -34,6 +34,10 @@ export default class WebAudioSynthAcid extends WebAudioInstrumentBase {
 
   /** trigger() argument layout, for note events (see global/note-event.js). */
   static TRIGGER_ARGS = { trigger: ["notes", "duration", "accent", "time"] };
+  /** Pattern generator role + note range (see global/pattern-gen.js). */
+  static PATTERN_ROLE = "bass";
+  static NOTE_RANGE = [24, 60];
+  static PATTERN_ACCENTS = true;
 
   /** Beat-fraction intervals for the filter LFO rate. */
   static LFO_INTERVALS = [
@@ -565,31 +569,6 @@ export class WebAudioSynthAcidControls extends WebAudioControlsBase {
     this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 24, 60));
   }
 
-  /** Randomize the step pattern using weighted probability. */
-  randomize() {
-    const notes = scaleNotesInRange(this._rootMidi, this._scaleName, 24, 60);
-    if (!notes.length) return;
-    const root = this._rootMidi;
-    const pool = notes.flatMap((n) => {
-      const octaveAbove = Math.floor((n - root) / 12);
-      const weight = Math.max(1, 4 - octaveAbove * 2) + (n === root || n === root + 12 ? 2 : 0);
-      return Array(weight).fill(n);
-    });
-
-    let prevNote = root;
-    const currentSteps = this._instrument.steps;
-    const newSteps = currentSteps.map((s, i) => {
-      const active = Math.random() < STEP_WEIGHTS[i];
-      const nearby = pool.filter((n) => Math.abs(n - prevNote) <= 7);
-      const src = nearby.length >= 3 ? nearby : pool;
-      const note = src[Math.floor(Math.random() * src.length)];
-      if (active) prevNote = note;
-      const accent = [0, 4, 8, 12].includes(i) && Math.random() < 0.4;
-      return { ...s, active, note, accent };
-    });
-    newSteps[0] = { ...currentSteps[0], active: true, note: root, accent: Math.random() < 0.5 };
-    this._instrument.steps = newSteps;
-  }
 }
 
 customElements.define("wam-synth-acid-controls", WebAudioSynthAcidControls);

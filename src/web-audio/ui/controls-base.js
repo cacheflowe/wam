@@ -19,6 +19,7 @@ import {
 import { quantize } from "../global/param-schema.js";
 import { describeTrigger } from "../global/note-event.js";
 import { PatternTrack } from "../global/pattern-track.js";
+import { generatePattern, describePattern } from "../global/pattern-gen.js";
 import { Channel } from "../global/channel.js";
 import {
   canWritePresets,
@@ -1006,9 +1007,34 @@ export class WebAudioControlsBase extends HTMLElement {
     this._emitChange();
   }
 
-  /** Randomize the step pattern (instrument-specific generators). */
+  /** Randomize the step pattern (performance API). */
   randomizePattern() {
-    if (typeof this.randomize === "function" && this._seq) this.randomize();
+    if (this._seq) this.randomize();
+  }
+
+  /**
+   * New step pattern from the instrument's PATTERN_ROLE recipe
+   * (global/pattern-gen.js) in the current key. Subclasses with their own
+   * idea of "randomize" (BlipFX sound, sampler) override this.
+   * @param {object} [opts]  forwarded to generatePattern (e.g. { rhythm: "euclid" })
+   */
+  randomize(opts = {}) {
+    const Cls = this._instrument?.constructor;
+    const role = Cls?.PATTERN_ROLE;
+    if (!role || !this._seq) return null;
+    const { steps, meta } = generatePattern(role, {
+      root: this._rootMidi ?? 36,
+      scale: this._scaleName ?? "Minor",
+      range: Cls.NOTE_RANGE ?? [24, 60],
+      accent: !!Cls.PATTERN_ACCENTS,
+      ...opts,
+    });
+    this._lastPatternMeta = meta;
+    if (this._seqRandBtn) this._seqRandBtn.title = `New pattern. Last: ${describePattern(meta)}`;
+    this._instrument.steps = steps;
+    this.dispatchEvent(new CustomEvent("pattern-generated", { bubbles: true, detail: { meta } }));
+    this._emitChange();
+    return meta;
   }
 
   /** Channel-strip volume (pre-mute), 0..1. */
@@ -1949,6 +1975,7 @@ export class WebAudioControlsBase extends HTMLElement {
       const randBtn = document.createElement("button");
       randBtn.textContent = "⚄";
       randBtn.className = "wam-action-btn";
+      this._seqRandBtn = randBtn;
       randBtn.addEventListener("click", onRandomize);
       randWrap.appendChild(randBtn);
       seqCtrl.appendChild(randWrap);

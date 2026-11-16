@@ -86,6 +86,17 @@ Everything that makes sound is plain classes; Web Components are UI over them.
 
 **Instrument musical context (public API, `instrument-base.js`):** `setScale(root, scaleName)`, `scaleName`, `scaleRoot`, `chordSize`, `bpm`, and `onTick(step)` (per-tick hook; acid's filter LFO uses it). Sampler adds `melodicMode`. Controls and the song player both use these — no more writing `instrument._scaleName` / `_chordSize` / `_bpm` from outside.
 
+### Pattern generation (`global/pattern-gen.js`)
+
+Instruments declare `static PATTERN_ROLE` (kick, snare, hat, bass, lead, keys, pad, fx), `NOTE_RANGE` and optionally `PATTERN_ACCENTS`; `Controls.randomize()` (the sequencer 🎲 / Perform "Random pattern") calls `generatePattern(role, { root, scale, range, accent })`, which draws from the role's **recipe**:
+
+- **Rhythm generators** → 16 hits: Interphase's `interval`, `sine`, `noise`, `random`, `techno` plus `euclid` (E(k,16) + rotation), `weighted` (metric), `backbeat`, `offbeat`, `clave` (son/rumba/tresillo), `broken` (anticipations).
+- **Note schemes** → MIDI in key: `byStep` (Interphase), `walk`, `rootFifth`, `arp`, `motif`, `pedal`, `random`.
+- **Decorators** → wam step features: downbeat accents, ghost notes (probability on weak steps), ratchets, trig conditions, open hats.
+- **Ops** (Evolve): `rotate`, `nudge`, `morph`, `flip`, `thin`, `thicken`, `fill`, `reverse`, `invert`, `transpose`, `shuffleNotes`, `redecorate` — pure, return new step arrays.
+
+Every call takes an `rng` (`seededRng(seed)` for reproducibility) and returns `meta` describing the generator/options used (`describePattern(meta)` → "euclid 5/16 · walk", shown in the Rand tooltip).
+
 ### Pattern playback (`global/pattern-track.js`)
 
 Pattern playback is headless. `PatternTrack` holds a track's patterns (A–D), chain and params, and `tick(tick, time, stepDur)` returns what sounds on that tick. Everything is **derived from the tick count since Play** (Interphase-style: one clock, tracks compute their position) rather than accumulated in counters:

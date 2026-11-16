@@ -26,6 +26,8 @@ export default class WebAudioSynthBlipFX extends WebAudioInstrumentBase {
 
   /** trigger() argument layout, for note events (see global/note-event.js). */
   static TRIGGER_ARGS = { trigger: ["time"] };
+  /** Pattern generator role + note range (see global/pattern-gen.js). */
+  static PATTERN_ROLE = "fx";
 
   static SHAPES = ["Sine", "Triangle", "Saw", "Square", "Noise", "Tan"];
 

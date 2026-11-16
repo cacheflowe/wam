@@ -179,6 +179,9 @@ export default class WebAudioSynthFM extends WebAudioInstrumentBase {
 
   /** trigger() argument layout, for note events (see global/note-event.js). */
   static TRIGGER_ARGS = { trigger: ["notes", "duration", "time"] };
+  /** Pattern generator role + note range (see global/pattern-gen.js). */
+  static PATTERN_ROLE = "keys";
+  static NOTE_RANGE = [24, 48];
 
   /**
    * @param {AudioContext} ctx
@@ -668,19 +671,6 @@ export class WebAudioSynthFMControls extends WebAudioControlsBase {
     this._seq?.setNoteOptions(scaleNoteOptions(rootMidi, scaleName, 24, 48));
   }
 
-  randomize() {
-    const scaleNotes = scaleNotesInRange(this._rootMidi, this._scaleName, 24, 48);
-    if (!scaleNotes.length) return;
-    const numActive = 1 + Math.floor(Math.random() * 3);
-    const activeSet = new Set([0]);
-    while (activeSet.size < numActive) activeSet.add(Math.floor(Math.random() * 16));
-    const newSteps = Array.from({ length: 16 }, (_, i) => ({
-      active: activeSet.has(i),
-      note: scaleNotes[Math.floor(Math.random() * scaleNotes.length)],
-    }));
-    this._instrument.steps = newSteps;
-    this._emitChange();
-  }
 }
 
 customElements.define("wam-synth-fm-controls", WebAudioSynthFMControls);
