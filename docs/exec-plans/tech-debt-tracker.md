@@ -13,6 +13,7 @@ Last reviewed: 2026-04-27
 | 4 | `src/site/app.js` not yet created | High — no runnable demo | High | Justin Gitlin | Near-term |
 | 5 | Delay BPM-change click | Low — audible click when BPM changes while delay is active | Low | TODO | — |
 | 6 | No JSDoc on effects classes | Low — instruments have JSDoc, effects mostly don't | Low | TODO | — |
+| 11 | Some knob draws an SVG circle with NaN cx/cy when all 17 instrument types are added and mutated / preset-stepped (console errors, no visible break). Predates the Phase 3 split | Low — console noise, possibly a knob showing nothing | Low | TODO | — |
 | 8 | User presets + autosaved songs live in localStorage (~5 MB per origin) — move to IndexedDB | Low now — grows with saved presets/songs; a full store makes saves fail | Low | TODO | — |
 | 9 | oversite ≤ 1.0.11 `AppStoreDistributed.set()` labels object/array values `"type": "number"` (upstream bug). wam sends `trigger` / `transport.beat` / `instruments.list` through `set()` regardless (API-only rule) | Low — JSON-parsing receivers read `value` fine; strongly-typed receivers (Java/Arduino) mis-type these keys | Low | Justin (oversite) | — |
 | 10 | oversite: `AppStoreDistributed` has no `dispose()`/`close()`. Changing server/channel in the Sync drawer calls `SolidSocket.dispose()` on the old store, which stops reconnects but leaves its WebSocket open until page unload (a ghost client on the old server) | Low — idle connection, no messages sent | Low | Justin (oversite) | — |

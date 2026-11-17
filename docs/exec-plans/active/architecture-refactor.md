@@ -98,7 +98,8 @@ Not adopting: static globals, string-prefixed UI keys, clock-message triggering 
 - [ ] Migrate blipfx, sample player, loop player to `PARAMS`.
 
 ### Phase 3 — Split `controls-base.js`
-- [ ] Extract `ChannelStrip`, `PresetPanel` (presets + sound design + locks), `SequencerPanel` (grid, tabs, chain bar, density/rotate UI), composed by a thin `WebAudioControlsBase`.
+- [x] Step 1 — split by feature: `ui/controls/{sequencer-ui,playback,evolve,jam,presets,sound-design-ui,serialization}.js`, methods moved verbatim and installed onto the base prototype (`controls/install.js`). controls-base 2437 → ~610 lines; largest feature file 535. Behavior identical (same browser script output before/after; all instruments load, play, mutate, round-trip).
+- [ ] Step 2 — real components where the boundary is clean: `SequencerPanel` (grid, tabs, chain bar) and `PresetPanel` (presets + sound design + locks) as objects with explicit interfaces, composed by `WebAudioControlsBase`; shrink `bind()` (~250 lines).
 - [ ] Target: no file over ~600 lines in `ui/`.
 
 ### Phase 4 — Public APIs only

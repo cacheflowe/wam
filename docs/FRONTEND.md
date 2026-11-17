@@ -18,6 +18,22 @@ All UI is built with vanilla Web Components (`HTMLElement` subclasses). No Shado
 | `InstrumentSourcePicker` | `<wam-instrument-source-picker>` | `instrument-source-picker.js` | Instrument-bus dropdown for FX modulator/carrier/trigger routing; emits `source-change` |
 | `*Controls` | various | per-instrument files | UI panel for each instrument; wraps instrument + analyser + FxUnit + waveform |
 
+### `WebAudioControlsBase` layout
+
+`ui/controls-base.js` keeps the core (constructor, `bind()`, subclass hooks, FX unit, routing, panel visibility). Feature code lives in `ui/controls/`, each file a plain class whose methods are installed onto the base prototype by `installMethods()` (`controls/install.js`) — same state (`this._seq`, `this._patterns`, …), and subclasses override them as before:
+
+| File | Feature |
+|---|---|
+| `controls/sequencer-ui.js` | step grid, pattern tabs A–D, mini strips, chain bar, sequencer section |
+| `controls/playback.js` | `step()` (→ PatternTrack), launch / volume / mute / randomize pattern |
+| `controls/evolve.js` | Evolve adapter + Evolve / Keep / Return |
+| `controls/jam.js` | jam binding / keys / trigger notification, jam-learn input interception |
+| `controls/presets.js` | preset section, user presets, save / delete / export, `applyPreset` |
+| `controls/sound-design-ui.js` | randomize / mutate / undo / redo, section locks |
+| `controls/serialization.js` | `toJSON` / `fromJSON` + hooks |
+
+`installMethods` throws on a name collision, and groups are installed **before** `applyInputLearnMixin` (the mixin only fills gaps; `jam.js` overrides `_handleControlInput`). Pinned by [tests/controls-split.test.js](tests/controls-split.test.js).
+
 ## Controls Companion Pattern
 
 Each instrument file exports both the audio class and a Controls Web Component. The Controls component is bound to an instrument instance via `controls.bind(instrument, ctx, options)`.
