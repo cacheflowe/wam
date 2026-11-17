@@ -30,6 +30,7 @@ import { ensureMidiInputSource } from "../web-audio/input/midi-source.js";
 import { ensureKeyboardInputSource } from "../web-audio/input/keyboard-source.js";
 import { StoreKeys } from "../web-audio/global/store-keys.js";
 import "../web-audio/ui/drawer.js";
+import { songId, encodeState, parseShareHash, shareLink, showPlayOverlay, mountPlayFab, toast } from "./playground-share.js";
 import "../web-audio/ui/midi-monitor.js";
 import "../web-audio/ui/midi-input-picker.js";
 
@@ -44,6 +45,8 @@ const SAMPLE_SONGS = resolveSongs(
     { name: "Client 04", state: client04State },
   ],
 );
+/** Bundled song by share id ("electro-break"). */
+const sampleSongById = (id) => SAMPLE_SONGS.find((s) => songId(s.name) === id) ?? null;
 
 const samplesConfig = {
   breaks: {
@@ -316,6 +319,7 @@ export default class PlaygroundApp extends HTMLElement {
     autoMap.stop();
     focusManager.stop();
     this._teardownHardwareMap?.();
+    this._unmountPlayFab?.();
   }
 
   // ---- UI ----
@@ -379,6 +383,13 @@ export default class PlaygroundApp extends HTMLElement {
     };
     mkLauncher("add", "+ Add Instrument");
     mkLauncher("songs", "♪ Songs");
+    const shareBtn = document.createElement("button");
+    shareBtn.textContent = "⤴ Share";
+    shareBtn.title = "Share a link to this song (opens with a big Play button)";
+    shareBtn.style.cssText =
+      "background:#6366f1;border:1px solid #8b8dff;color:#fff;padding:.35rem .75rem;border-radius:4px;cursor:pointer;font-size:.8rem;font-weight:600;";
+    shareBtn.addEventListener("click", () => this._share());
+    toolbar.appendChild(shareBtn);
     mkLauncher("midi", "🎛 MIDI");
     mkLauncher("sync", "⇄ Sync");
     mkLauncher("evolve", "∿ Evolve");
@@ -690,9 +701,7 @@ export default class PlaygroundApp extends HTMLElement {
     this._vizEl.init(this._analysisBus, this._ctx);
     this._loadSketchByPath(this._sketchSelect.value, this._sketchModules);
 
-    this._transportEl.addEventListener("transport-share-click", () => {
-      this._shareURL();
-    });
+    this._unmountPlayFab = mountPlayFab(this._transportEl, () => this._ctx.resume());
 
     this._transportEl.addEventListener("transport-play", () => {
       if (this._ctx.state === "suspended") this._ctx.resume();
@@ -1130,19 +1139,6 @@ export default class PlaygroundApp extends HTMLElement {
     return wrap;
   }
 
-  /** Share-link state from the URL: "#playground-app&s=<b64>" (or legacy "#s=<b64>"). */
-  _loadFromURL() {
-    try {
-      const part = location.hash.slice(1).split("&").find((p) => p.startsWith("s="));
-      if (!part) return null;
-      const json = atob(part.slice(2).replace(/-/g, "+").replace(/_/g, "/"));
-      return JSON.parse(json);
-    } catch (e) {
-      console.warn("[playground] Couldn't read the share link:", e);
-      return null;
-    }
-  }
-
   async _loadSketchByPath(relativePath, sketchModules) {
     const loader = sketchModules[relativePath];
     if (!loader) {
@@ -1157,17 +1153,18 @@ export default class PlaygroundApp extends HTMLElement {
     this._vizEl?.setMode(mode);
   }
 
-  _shareURL() {
-    const json = JSON.stringify(this._getState());
-    const b64 = btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    const url = `${location.origin}${location.pathname}#playground-app&s=${b64}`;
-    navigator.clipboard?.writeText(url).then(
-      () => {
-        // Find existing share btn and update text if possible,
-        // but transport 'share-click' handles its own text updates as well.
-      },
-      () => prompt("Copy this URL:", url),
-    );
+  /**
+   * Share this song: an unchanged bundled song gets a short "&song=<id>" link,
+   * anything else the whole session (compressed). Phones get the native share
+   * sheet; elsewhere the link is copied. See playground-share.js.
+   */
+  async _share() {
+    const name = this._currentSongName?.replace(/ \(Next: .*\)$/, "") || null;
+    const bundled = name && sampleSongById(songId(name));
+    const param = bundled ? `song=${songId(name)}` : await encodeState(this._getState());
+    const url = `${location.origin}${location.pathname}#playground-app&${param}`;
+    const result = await shareLink({ url, title: name ? `${name} — WAM` : "A song made in WAM" });
+    if (result === "copied") toast(bundled ? `Link to "${name}" copied` : "Link copied — it contains the whole song");
   }
 
   async _loadInitialState() {
@@ -1175,21 +1172,47 @@ export default class PlaygroundApp extends HTMLElement {
 
     // A share link loads once; then drop it from the URL so a refresh restores
     // the autosave (your edits) instead of reloading the shared song.
-    let pendingState = this._loadFromURL();
-    const fromURL = !!pendingState;
-    if (pendingState) {
-      history.replaceState(null, "", `${location.pathname}${location.search}#playground-app`);
-    } else {
-      pendingState = this._autosave.load()?.state ?? null;
+    let shared = null;
+    try {
+      shared = await parseShareHash(location.hash);
+    } catch (e) {
+      console.warn("[playground] Couldn't read the share link:", e);
     }
+    let pendingState = null;
+    let sharedName = null;
+    if (shared?.songId) {
+      const song = sampleSongById(shared.songId);
+      if (song) ({ state: pendingState, name: sharedName } = song);
+      else console.warn(`[playground] No bundled song "${shared.songId}"`);
+    } else if (shared?.state) {
+      pendingState = shared.state;
+      sharedName = shared.state.songName ?? null;
+    }
+    const fromURL = !!pendingState;
+    if (shared) history.replaceState(null, "", `${location.pathname}${location.search}#playground-app`);
+    if (!pendingState) pendingState = this._autosave.load()?.state ?? null;
     if (!pendingState) return;
+
+    // Someone opened a share link: big Play button (also the tap audio needs).
+    const overlay = fromURL
+      ? showPlayOverlay({
+          title: sharedName,
+          onPlay: () => {
+            this._ctx.resume();
+            if (!this._transportEl.playing) this._transportEl.play();
+          },
+        })
+      : null;
 
     this._autosave.backup(pendingState, "startup");
     try {
       await this._applyState(pendingState, { save: fromURL });
+      if (sharedName) this._setCurrentSongName(sharedName);
+      overlay?.ready();
       this._autosave.afterStartup();
     } catch (e) {
       console.error("[playground] Failed to load saved configuration", e);
+      overlay?.remove();
       this._showSaveStatus({ ok: false, label: "⚠ Restore problem", error: `Couldn't restore the saved song: ${e?.message ?? e}. It's kept as a backup — see Songs → Recover.` });
     }
   }

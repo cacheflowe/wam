@@ -301,7 +301,7 @@ toJSON()    // → { params, steps, fx, muted }
 fromJSON()  // ← restores params, steps, fx, mute state
 ```
 
-The app collects all controls' JSON into one state object. The playground autosaves it via [src/app/playground-autosave.js](src/app/playground-autosave.js) and can encode it as a share link (`#playground-app&s=<base64>`).
+The app collects all controls' JSON into one state object. The playground autosaves it via [src/app/playground-autosave.js](src/app/playground-autosave.js) and can encode it as a share link (see *Share links* below).
 
 ### Session autosave (playground)
 
@@ -311,6 +311,18 @@ The app collects all controls' JSON into one state object. The playground autosa
 - **Robust restore:** each instrument restores in its own try/catch (one bad instrument doesn't abort the load or leave saving disabled). The state about to be loaded is backed up first (`wam_playground:backup`). Startup restore doesn't re-save (an unchanged refresh isn't "newer work").
 - **Recovery:** Songs drawer → *Recover an autosave* lists recent sessions from any tab plus the pre-load backup.
 - **Share links** load once, then the URL is reset to `#playground-app` so a refresh restores your edits rather than the shared song. Legacy `#s=` links still open the playground.
+
+### Share links (playground)
+
+The toolbar **⤴ Share** button ([src/app/playground-share.js](src/app/playground-share.js)) makes:
+
+| Link | When |
+|---|---|
+| `#playground-app&song=<id>` | the current song is a bundled song (`src/data/songs/*.json`), unchanged — id = slug of its name (`electro-break`) |
+| `#playground-app&z=<base64url>` | anything else: the whole session, UTF-8 JSON, `deflate-raw`-compressed (~6× shorter) |
+| `#playground-app&s=<base64url>` | same, uncompressed — browsers without `CompressionStream`, and old links |
+
+On phones (`pointer: coarse` + Web Share API) it opens the native share sheet; elsewhere it copies the link and shows a toast. Opening any share link shows a full-screen **▶ Play** overlay with the song name (the tap also unlocks audio); *Just look around* dismisses it. Below 760px a floating ▶/■ button stays in the bottom-right corner. Tests: [tests/playground-share.test.js](tests/playground-share.test.js).
 
 Missing keys in `fromJSON()` fall back to defaults (`?? defaultValue`), so older saved states load cleanly when new parameters are added.
 
