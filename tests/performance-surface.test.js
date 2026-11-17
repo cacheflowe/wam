@@ -221,7 +221,7 @@ describe("PerformanceSurface", () => {
     expect(s.focusedTitle).toBe("Acid");
     expect(s.faders[0]).toMatchObject({ title: "Acid", focused: true });
     expect(s.faders[2]).toBeNull();
-    expect(s.buttons.top[0]).toBe("Step 1");
+    expect(s.buttons.top[0]).toBe("1");
   });
 });
 

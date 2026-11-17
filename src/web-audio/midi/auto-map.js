@@ -192,7 +192,8 @@ export class AutoMap {
       const control = findControl(binding);
       if (!control) continue;
       const def = schema.find((d) => d.param === param);
-      const label = registry[param]?.getAttribute?.("label") ?? def?.label ?? param;
+      // Schema labels stand alone ("L1 Rate"); panel labels may rely on their section ("Rate").
+      const label = def?.label ?? registry[param]?.getAttribute?.("label") ?? param;
       const pos = paramPosition(controls, param);
       out[control.id] = { param, label, ...(pos ?? {}), ...(def?.type === "enum" ? { choice: true } : {}) };
     }

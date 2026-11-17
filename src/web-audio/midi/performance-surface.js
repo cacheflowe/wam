@@ -64,8 +64,8 @@ const PERFORM_BOTTOM = [
 /** Labels for the on-screen hardware map, per mode. */
 export const BUTTON_LABELS = {
   [MODES.STEPS]: {
-    top: TOP.map((_, i) => `Step ${i + 1}`),
-    bottom: BOTTOM.map((_, i) => `Step ${i + 9}`),
+    top: TOP.map((_, i) => String(i + 1)),
+    bottom: BOTTOM.map((_, i) => String(i + 9)),
   },
   [MODES.MIXER]: {
     top: TOP.map((_, i) => `Mute ${i + 1}`),
