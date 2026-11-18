@@ -321,6 +321,35 @@
         "octaveJumpProb": 0.17,
         "volume": 0.8
       }
+    },
+    {
+      "name": "SquarePunch",
+      "tags": [],
+      "params": {
+        "oscType": "square",
+        "detune": 0,
+        "unisonVoices": 1,
+        "unisonDetune": 0,
+        "subGain": 0,
+        "portamento": 0,
+        "attack": 0.001,
+        "decay": 0.1,
+        "sustain": 0,
+        "release": 0.2,
+        "filterType": "lowpass",
+        "filterFreq": 2000,
+        "filterQ": 5.7,
+        "filterEnvAmt": 3,
+        "filterAttack": 0.001,
+        "filterDecay": 0.08,
+        "filterSustain": 0,
+        "filterRelease": 0.2,
+        "lfoRate": 2,
+        "lfoDepth": 0,
+        "lfoShape": "sine",
+        "lfoDest": "filter",
+        "volume": 1
+      }
     }
   ]
 }
