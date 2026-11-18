@@ -1,6 +1,6 @@
 {
   "v": 1,
-  "songName": null,
+  "songName": "SynthHouse",
   "transport": {
     "bpm": 119,
     "masterVolume": 1,
@@ -44,7 +44,7 @@
   },
   "evolve": {
     "energy": 0.5039370078740157,
-    "drift": 0,
+    "drift": 0.07,
     "auto": false,
     "phrase": 4
   },
@@ -55,8 +55,8 @@
       "state": {
         "params": {
           "volume": 0.16,
-          "cutoff": 133.2214808844673,
-          "resonance": 10.5,
+          "cutoff": 562,
+          "resonance": 17.1,
           "envMod": 0.7,
           "decay": 0.35,
           "attack": 0.008,
@@ -70,7 +70,7 @@
           "octaveOffset": 1,
           "octaveJumpProb": 0.14,
           "oscType": "sawtooth",
-          "filterLfoActive": true,
+          "filterLfoActive": false,
           "filterLfoInterval": 4
         },
         "fx": {
@@ -653,9 +653,7 @@
             ]
           }
         },
-        "chain": [
-          0
-        ],
+        "chain": [0],
         "preset": "Growl"
       }
     },
@@ -1124,10 +1122,7 @@
             ]
           }
         },
-        "chain": [
-          0,
-          1
-        ]
+        "chain": [0, 1]
       }
     },
     {
@@ -1135,26 +1130,26 @@
       "instanceId": 2,
       "state": {
         "params": {
-          "volume": 0.79,
+          "volume": 0.49,
           "toneFreq": 163,
           "toneSweep": 146,
           "toneDecay": 0.03,
-          "noiseFreq": 1574,
+          "noiseFreq": 2022,
           "noiseDecay": 0.3,
           "noiseSweep": 0.31,
           "noiseMix": 0.6,
-          "buzz": 0.23,
+          "buzz": 0.48,
           "clapMode": false,
           "toneWave": "sine"
         },
         "fx": {
-          "reverbWet": 0.18000000715255737,
-          "reverbDecay": 2.1,
-          "reverbPreDelay": 68.00000369548798,
+          "reverbWet": 0.3100000023841858,
+          "reverbDecay": 0.8,
+          "reverbPreDelay": 30.99999949336052,
           "reverbHpFreq": 80,
-          "reverbLpFreq": 13379,
+          "reverbLpFreq": 9618,
           "reverbDamping": 0.5,
-          "reverbWidth": 0.26,
+          "reverbWidth": 0.86,
           "delayInterval": 0.5,
           "delayFeedback": 0.49000000953674316,
           "delayMix": 0,
@@ -1599,29 +1594,27 @@
             ]
           }
         },
-        "chain": [
-          0
-        ]
+        "chain": [0]
       }
     },
     {
       "id": "poly",
-      "instanceId": 6,
+      "instanceId": 3,
       "state": {
         "params": {
-          "volume": 0.36,
+          "volume": 0.35000000000000003,
           "oscASemi": 0,
           "oscADetune": 0,
           "oscALevel": 0.7,
           "oscBSemi": 0,
           "oscBDetune": 3,
           "oscBLevel": 0.54,
-          "subLevel": 0.49,
+          "subLevel": 0.6,
           "noiseLevel": 0.28,
           "unisonVoices": 2,
-          "unisonDetune": 0,
+          "unisonDetune": 4,
           "filterFreq": 1800,
-          "filterQ": 5,
+          "filterQ": 0.699999988079071,
           "filterEnvAmt": 2.5,
           "filterKeytrack": 0.5,
           "filterAttack": 0.001,
@@ -1633,7 +1626,7 @@
           "sustain": 0,
           "release": 0.2,
           "gate": 1,
-          "glide": 0,
+          "glide": 0.05,
           "lfo1Rate": 5,
           "lfo1Depth": 0,
           "lfo2Rate": 0.5,
@@ -2167,28 +2160,26 @@
             ]
           }
         },
-        "chain": [
-          0
-        ],
+        "chain": [0],
         "chordSize": 1
       }
     },
     {
       "id": "hihat",
-      "instanceId": 7,
+      "instanceId": 4,
       "state": {
         "params": {
           "volume": 0.25,
           "tone": 317,
           "metalMix": 0.62,
           "filterFreq": 7663,
-          "filterQ": 1.4,
+          "filterQ": 0.699999988079071,
           "decay": 0.1,
           "openDecay": 0.45
         },
         "fx": {
           "reverbWet": 0.550000011920929,
-          "reverbDecay": 2.5,
+          "reverbDecay": 1.4000000000000001,
           "reverbPreDelay": 79.99999821186066,
           "reverbHpFreq": 45,
           "reverbLpFreq": 10306,
@@ -2196,7 +2187,7 @@
           "reverbWidth": 1,
           "delayInterval": 0.75,
           "delayFeedback": 0.3499999940395355,
-          "delayMix": 0,
+          "delayMix": 0.07000000029802322,
           "delayFilterSweep": 0,
           "delayModulation": 0,
           "chorusVoices": 3,
@@ -2220,7 +2211,10 @@
         "muted": false,
         "soloed": false,
         "pan": 0.12999999523162842,
-        "jamBinding": null,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "5"
+        },
         "midiParamBindings": {},
         "speedMultiplier": 1,
         "patternParams": {
@@ -2229,9 +2223,9 @@
           "rotationIntervalBars": 1
         },
         "sections": {
-          "ctrl": false,
-          "fx": false,
-          "seq": false
+          "ctrl": true,
+          "fx": true,
+          "seq": true
         },
         "patterns": {
           "A": {
@@ -2699,14 +2693,12 @@
             ]
           }
         },
-        "chain": [
-          0
-        ]
+        "chain": [0]
       }
     },
     {
       "id": "mono",
-      "instanceId": 8,
+      "instanceId": 5,
       "state": {
         "params": {
           "volume": 0.22,
@@ -2721,7 +2713,7 @@
           "release": 0.2,
           "gate": 1,
           "filterFreq": 2000,
-          "filterQ": 5.7,
+          "filterQ": 5.699999809265137,
           "filterEnvAmt": 3,
           "filterAttack": 0.001,
           "filterDecay": 0.08,
@@ -2767,10 +2759,13 @@
           "compThreshold": 0.1,
           "compSourceId": null
         },
-        "muted": false,
+        "muted": true,
         "soloed": false,
         "pan": 0,
-        "jamBinding": null,
+        "jamBinding": {
+          "source": "keyboard",
+          "key": "6"
+        },
         "midiParamBindings": {},
         "speedMultiplier": 1,
         "patternParams": {
@@ -3249,9 +3244,7 @@
             ]
           }
         },
-        "chain": [
-          0
-        ],
+        "chain": [0],
         "steps": [
           {
             "active": false,
