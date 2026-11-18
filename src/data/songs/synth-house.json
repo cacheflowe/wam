@@ -1609,8 +1609,8 @@
           "oscBSemi": 0,
           "oscBDetune": 3,
           "oscBLevel": 0.54,
-          "subLevel": 0.6,
-          "noiseLevel": 0.28,
+          "subLevel": 0.65,
+          "noiseLevel": 0.05,
           "unisonVoices": 2,
           "unisonDetune": 4,
           "filterFreq": 1800,
@@ -2172,7 +2172,7 @@
           "volume": 0.25,
           "tone": 317,
           "metalMix": 0.62,
-          "filterFreq": 7663,
+          "filterFreq": 8223,
           "filterQ": 0.699999988079071,
           "decay": 0.1,
           "openDecay": 0.45
@@ -2223,9 +2223,9 @@
           "rotationIntervalBars": 1
         },
         "sections": {
-          "ctrl": true,
-          "fx": true,
-          "seq": true
+          "ctrl": false,
+          "fx": false,
+          "seq": false
         },
         "patterns": {
           "A": {
@@ -2701,7 +2701,7 @@
       "instanceId": 5,
       "state": {
         "params": {
-          "volume": 0.22,
+          "volume": 0.14,
           "detune": 0,
           "unisonVoices": 1,
           "unisonDetune": 0,
@@ -2729,13 +2729,13 @@
           "lfoDest": "filter"
         },
         "fx": {
-          "reverbWet": 0,
-          "reverbDecay": 2.5,
-          "reverbPreDelay": 0,
+          "reverbWet": 0.23999999463558197,
+          "reverbDecay": 0.5,
+          "reverbPreDelay": 48.99999871850014,
           "reverbHpFreq": 80,
           "reverbLpFreq": 8000,
           "reverbDamping": 0.5,
-          "reverbWidth": 1,
+          "reverbWidth": 0.52,
           "delayInterval": 0.75,
           "delayFeedback": 0.3499999940395355,
           "delayMix": 0.10000000149011612,
@@ -2745,8 +2745,8 @@
           "chorusRate": 0.8,
           "chorusDepth": 0.5,
           "chorusDelay": 10,
-          "chorusFeedback": 0,
-          "chorusWet": 0,
+          "chorusFeedback": 0.15000000596046448,
+          "chorusWet": 0.6100000143051147,
           "chorusSpread": 1,
           "chorusShape": 0,
           "filterSweep": 0,
@@ -2759,7 +2759,7 @@
           "compThreshold": 0.1,
           "compSourceId": null
         },
-        "muted": true,
+        "muted": false,
         "soloed": false,
         "pan": 0,
         "jamBinding": {
